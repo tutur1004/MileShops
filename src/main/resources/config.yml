@@ -1,0 +1,23 @@
+# Debug mode
+debug: false
+# Storage system
+storage:
+  #   Available storage type (Please fill related connection section)
+  #   (sql)     |=>  MySQL
+  #   (sql)     |=>  MariaDB (Recommended)
+  #   (sql)     |=>  Postgres
+  #   (NoSQL)   |=>  ElasticSearch
+  type: mysql
+  sql:
+    prefix: "shop_"
+    hostname: "localhost"
+    port: "3306"
+    database: "minecraft"
+    username: "user"
+    password: "pass"
+  elasticsearch:
+    prefix: "shop-"
+    hostname: "elasticsearch"
+    port: "9200"
+    username: "user"
+    password: "pass"

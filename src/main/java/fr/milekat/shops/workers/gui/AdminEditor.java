@@ -1,0 +1,178 @@
+package fr.milekat.shops.workers.gui;
+
+import fr.milekat.shops.Main;
+import fr.milekat.shops.api.classes.Shop;
+import fr.milekat.shops.api.classes.ShopType;
+import fr.milekat.shops.api.classes.Trade;
+import fr.milekat.shops.workers.ShopsManager;
+import fr.mrmicky.fastinv.FastInv;
+import fr.mrmicky.fastinv.ItemBuilder;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.*;
+import java.util.stream.IntStream;
+
+public class AdminEditor extends FastInv {
+    private final Player player;
+    private int currentPage = 1;
+    private final Shop shop;
+    private final Map<Integer, List<Trade>> trades;
+
+    public AdminEditor(Player player, @NotNull Shop shop, @NotNull List<Trade> trades) {
+        super(54, ChatColor.DARK_AQUA + "Editing " + shop.getName());
+        this.player = player;
+        this.shop = shop;
+        Map<Integer, List<Trade>> tradesPages = new HashMap<>();
+        int pageTradeCount = 1;
+        int page = 1;
+        List<Trade> tradesLoop = new LinkedList<>();
+        for (Trade trade : trades) {
+            tradesLoop.add(trade);
+            pageTradeCount++;
+            tradesPages.put(page, tradesLoop);
+            if (pageTradeCount > ShopsManager.EDITOR_TRADES_PER_PAGE) {
+                tradesLoop = new LinkedList<>();
+                pageTradeCount = 1;
+                page++;
+            }
+        }
+        this.trades = tradesPages;
+        //  Setup base inventory
+        setItems(0, 53, ShopsManager.PANE_BLACK);
+        //  Setup exit button
+        setItem(getInventory().getSize() - 5, new ItemBuilder(Material.BARRIER)
+                .name(ChatColor.RED + "Close").build(), event -> event.getWhoClicked().closeInventory());
+        //  Show content to player
+        updatePageContent();
+    }
+
+    private void pageButtons() {
+        setItem(4, new ItemBuilder(Material.PAPER)
+                .amount(this.currentPage)
+                .name(ChatColor.GOLD + "Click to save page (" + (this.currentPage) + ")")
+                .build(),
+                event -> savePage());
+        if (this.currentPage > 1 ) {
+            setItem(45, ShopsManager.PAGE_LEFT, event -> {
+                savePage();
+                if (this.currentPage > 1) {
+                    this.currentPage--;
+                }
+                updatePageContent();
+            });
+        } else {
+            setItem(45, ShopsManager.PANE_BLACK);
+        }
+        if ((nonNullItem(getFirstItemSlot(8)) && nonNullItem(getResultItemSlot(8))) ||
+                trades.containsKey(currentPage + 1)) {
+            setItem(53, ShopsManager.PAGE_RIGHT, event -> {
+                if (this.currentPage >= 64) return;
+                savePage();
+                this.currentPage++;
+                updatePageContent();
+            });
+        } else {
+            setItem(53, ShopsManager.PANE_BLACK);
+        }
+    }
+
+    private void updatePageContent() {
+        setItems(9, 17, new ItemStack(Material.AIR));
+        if (shop.getType().equals(ShopType.VANILLA)) {
+            setItems(18, 26, new ItemStack(Material.AIR));
+        }
+        setItems(36, 45, new ItemStack(Material.AIR));
+        if (trades.containsKey(this.currentPage)) {
+            int position = 0;
+            for (Trade trade : trades.get(this.currentPage)) {
+                displayTrade(position, trade);
+                position++;
+            }
+        }
+        pageButtons();
+    }
+
+    private void displayTrade(int pagePosition, @NotNull Trade trade) {
+        setItem(9 + pagePosition, trade.getFirstItem());
+        if (shop.getType().equals(ShopType.VANILLA) && trade.getSecondItem() != null){
+            setItem(18 + pagePosition, trade.getSecondItem());
+        }
+        setItem(36 + pagePosition, trade.getResultItem());
+    }
+
+    private void savePage() {
+        List<Trade> newTrades = new LinkedList<>();
+        IntStream.rangeClosed(0, 8).forEach(index -> {
+            if (nonNullItem(getFirstItemSlot(index)) && nonNullItem(getResultItemSlot(index))) {
+                newTrades.add(new Trade(
+                        shop.getUuid(),
+                        index + (9 * currentPage),
+                        getFirstItemSlot(index),
+                        shop.getType().equals(ShopType.VANILLA) ? getSecondItemSlot(index) : null,
+                        getResultItemSlot(index))
+                );
+            }
+        });
+        this.trades.put(this.currentPage, newTrades);
+    }
+
+    private boolean nonNullItem(ItemStack item) {
+        return item != null && !item.getType().equals(Material.AIR);
+    }
+
+    private @NotNull ItemStack getFirstItemSlot(int position) {
+        return Objects.requireNonNullElse(this.getInventory().getItem(9 + position),
+                new ItemStack(Material.AIR)).clone();
+    }
+    private @NotNull ItemStack getSecondItemSlot(int position) {
+        return Objects.requireNonNullElse(this.getInventory().getItem(18 + position),
+                new ItemStack(Material.AIR)).clone();
+    }
+    private @NotNull ItemStack getResultItemSlot(int position) {
+        return Objects.requireNonNullElse(this.getInventory().getItem(36 + position),
+                new ItemStack(Material.AIR)).clone();
+    }
+
+    @Override
+    protected void onClick(@NotNull InventoryClickEvent event) {
+        if (event.getClickedInventory()==null || event.getClickedInventory().getType().equals(InventoryType.CHEST)) {
+            int slot = event.getSlot();
+            if (shop.getType().equals(ShopType.VANILLA)) {
+                if (slot <= 8 || (slot >= 27 && slot <= 35) || (slot >= 45 && slot <= 53)) return;
+            } else if (shop.getType().equals(ShopType.INVENTORY)) {
+                if (slot <= 8 || (slot >= 18 && slot <= 35) || (slot >= 45 && slot <= 53)) return;
+            }
+        }
+        event.setCancelled(false);
+        savePage();
+        pageButtons();
+    }
+
+    @Override
+    public void onClose(@NotNull InventoryCloseEvent event) {
+        Main.message(event.getPlayer(), "&6Saving trades...");
+        savePage();
+        List<Trade> tradeList = new LinkedList<>();
+        this.trades.values().forEach(trades -> trades
+                .stream()
+                .sorted(Comparator.comparingInt(Trade::getTradePosition))
+                .forEach(tradeList::add));
+        if (tradeList.size()==0) {
+            Main.message(event.getPlayer(), "&cNo valid trades, disabling shop");
+            return;
+        }
+        int position = 1;
+        for (Trade trade : tradeList) {
+            trade.setTradePosition(position);
+            position++;
+        }
+        Main.getStorage().asyncSaveShopTrades(this.shop, tradeList, player);
+    }
+}

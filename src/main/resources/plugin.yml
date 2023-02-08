@@ -1,0 +1,24 @@
+name: CustomShops
+author: MileKat
+main: fr.milekat.shops.Main
+version: 0.1
+api-version: 1.16
+description: "API/Plugin to create custom shops"
+depend:
+  - PlayerNPC
+libraries:
+  # Utils
+  - com.fasterxml.jackson.core:jackson-databind:2.14.0
+  - com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.14.0
+  # Storage
+  - com.zaxxer:HikariCP:4.0.3
+  - mysql:mysql-connector-java:8.0.30
+  - org.mariadb.jdbc:mariadb-java-client:3.0.8
+  - org.postgresql:postgresql:42.5.1
+  - co.elastic.clients:elasticsearch-java:8.5.2
+commands:
+  shop:
+    description: "Open the main gui"
+    usage: /shop
+    aliases:
+      - s
