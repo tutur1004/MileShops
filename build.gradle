@@ -33,9 +33,9 @@ dependencies {
     compileOnly group: 'com.mojang', name: 'authlib', version: '1.5.26'
 
     //  Utils
-    implementation group: 'com.github.tutur1004', name: 'MilekatUtils', version: '834fa1d4da'
+    implementation group: 'com.github.tutur1004', name: 'MilekatUtils', version: '0ddc794f2f'
     implementation group: 'fr.mrmicky', name: 'FastInv', version: '3.0.3'
-    compileOnly group: 'dev.sergiferry', name: 'playernpc', version: '2022.8'
+    compileOnly group: 'dev.sergiferry', name: 'playernpc', version: '2023.2'
     compileOnly group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.14.0'
     compileOnly group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.14.0'
 
