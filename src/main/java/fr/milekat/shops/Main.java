@@ -7,10 +7,10 @@ import fr.milekat.shops.storage.exeptions.StorageLoaderException;
 import fr.milekat.shops.workers.Test;
 import fr.milekat.shops.workers.commands.ShopsCmd;
 import fr.milekat.shops.workers.listeners.ShopsListeners;
+import fr.milekat.utils.Configs;
 import fr.mrmicky.fastinv.FastInvManager;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
@@ -19,22 +19,22 @@ import java.util.Arrays;
 
 public class Main extends JavaPlugin {
     private static JavaPlugin plugin;
-    private static FileConfiguration configFile;
+    private static Configs config;
     public static Boolean DEBUG = false;
     private static Storage LOADED_STORAGE;
 
     @Override
     public void onEnable() {
         plugin = this;
-        configFile = this.getConfig();
-        DEBUG = configFile.getBoolean("debug");
+        config = new Configs(this.getConfig());
+        DEBUG = config.getBoolean("debug");
         debug("Debug enable");
         //  Init internal lib
         NPCLib.getInstance().registerPlugin(plugin);
         FastInvManager.register(plugin);
         //  Load storage
         try {
-            LOADED_STORAGE = new Storage(configFile);
+            LOADED_STORAGE = new Storage(config);
             debug("Storage enable, API is now available");
         } catch (StorageLoaderException exception) {
             warning("Storage load failed, disabling plugin..");
@@ -117,8 +117,8 @@ public class Main extends JavaPlugin {
      * Get config file
      * @return Config file
      */
-    public static FileConfiguration getFileConfig() {
-        return configFile;
+    public static Configs getConfigs() {
+        return config;
     }
 
     /**

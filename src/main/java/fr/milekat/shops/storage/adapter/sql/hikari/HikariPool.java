@@ -3,7 +3,7 @@ package fr.milekat.shops.storage.adapter.sql.hikari;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import fr.milekat.shops.storage.adapter.sql.SQLDataBaseConnection;
-import org.bukkit.configuration.file.FileConfiguration;
+import fr.milekat.utils.Configs;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Connection;
@@ -16,7 +16,7 @@ public abstract class HikariPool implements SQLDataBaseConnection {
     private HikariDataSource hikari;
 
     @Override
-    public void init(@NotNull FileConfiguration config) {
+    public void init(@NotNull Configs config) {
         HikariConfig hikariConfig = new HikariConfig();
 
         // set pool name so the logging output can be linked back to us

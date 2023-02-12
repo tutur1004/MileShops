@@ -1,7 +1,7 @@
 package fr.milekat.shops.storage.adapter.sql;
 
 
-import org.bukkit.configuration.file.FileConfiguration;
+import fr.milekat.utils.Configs;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Connection;
@@ -10,7 +10,7 @@ import java.sql.SQLException;
 public interface SQLDataBaseConnection {
     String getImplementationName();
 
-    void init(@NotNull FileConfiguration configs);
+    void init(@NotNull Configs configs);
 
     void close();
 

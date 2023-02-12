@@ -7,8 +7,8 @@ import fr.milekat.shops.storage.StorageImplementation;
 import fr.milekat.shops.storage.exeptions.StorageExecuteException;
 import fr.milekat.shops.storage.exeptions.StorageLoaderException;
 import fr.milekat.shops.workers.utils.TradeMode;
+import fr.milekat.utils.Configs;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
@@ -28,7 +28,7 @@ public class SQLStorage implements StorageImplementation {
     private final String SCHEMA_FILE = "shop_schema.sql";
     private final SQLDataBaseConnection DB;
     private final String DatabaseName;
-    private final String PREFIX = Main.getFileConfig().getString("storage.sql.prefix");
+    private final String PREFIX = Main.getConfigs().getString("storage.sql.prefix");
     private final List<String> TABLES = Arrays.asList("TBD");
 
     /*
@@ -45,7 +45,7 @@ public class SQLStorage implements StorageImplementation {
     /*
         Main DB
      */
-    public SQLStorage(@NotNull FileConfiguration config) throws StorageLoaderException {
+    public SQLStorage(@NotNull Configs config) throws StorageLoaderException {
         DatabaseName = config.getString("storage.sql.database");
         DB = new SQLConnection(config).getSqlDataBaseConnection();
         try {

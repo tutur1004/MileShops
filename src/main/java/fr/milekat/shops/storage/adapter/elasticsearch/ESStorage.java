@@ -13,8 +13,8 @@ import fr.milekat.shops.storage.exeptions.StorageExecuteException;
 import fr.milekat.shops.storage.exeptions.StorageLoaderException;
 import fr.milekat.shops.workers.utils.PlayerTradeMode;
 import fr.milekat.shops.workers.utils.TradeMode;
+import fr.milekat.utils.Configs;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,7 +30,7 @@ public class ESStorage implements StorageImplementation {
     /*
         Main DB
     */
-    public ESStorage(@NotNull FileConfiguration config) throws StorageLoaderException {
+    public ESStorage(@NotNull Configs config) throws StorageLoaderException {
         this.PREFIX = config.getString("storage.elasticsearch.prefix");
         try {
             DB = new ESConnection(config);

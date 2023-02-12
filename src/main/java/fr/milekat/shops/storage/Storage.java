@@ -8,7 +8,7 @@ import fr.milekat.shops.storage.adapter.sql.SQLStorage;
 import fr.milekat.shops.storage.exeptions.StorageExecuteException;
 import fr.milekat.shops.storage.exeptions.StorageLoaderException;
 import fr.milekat.shops.workers.utils.TradeMode;
-import org.bukkit.configuration.file.FileConfiguration;
+import fr.milekat.utils.Configs;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -23,7 +23,7 @@ public class Storage {
     public static Map<Map.Entry<String, TradeMode>, Date> TRADE_MODE_CACHE = new HashMap<>();
     private final StorageImplementation executor;
 
-    public Storage(@NotNull FileConfiguration config) throws StorageLoaderException {
+    public Storage(@NotNull Configs config) throws StorageLoaderException {
         String storageType = config.getString("storage.type");
         Main.debug("Loading storage type: " + storageType);
         switch (Objects.requireNonNull(storageType).toLowerCase()) {

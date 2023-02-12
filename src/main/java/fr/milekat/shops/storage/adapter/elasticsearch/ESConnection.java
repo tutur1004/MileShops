@@ -8,37 +8,33 @@ import co.elastic.clients.transport.rest_client.RestClientTransport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.storage.exeptions.StorageLoaderException;
+import fr.milekat.utils.Configs;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.util.Objects;
 
 public class ESConnection {
     private final RestClient restClient;
     private final ElasticsearchTransport transport;
     public final JacksonJsonpMapper jsonpMapper;
 
-    public ESConnection(@NotNull FileConfiguration config) throws StorageLoaderException {
+    public ESConnection(@NotNull Configs config) throws StorageLoaderException {
         //  Fetch connections vars from config.yml file
         String hostname = config.getString("storage.elasticsearch.hostname");
-        int port = Integer.parseInt(Objects.requireNonNull(config.getString("storage.elasticsearch.port")));
+        int port = config.getInt("storage.elasticsearch.port", 9200);
         String username = config.getString("storage.elasticsearch.username", null);
         String password = config.getString("storage.elasticsearch.password", null);
         //  Check hostname/port
         Main.debug("Hostname:" + hostname);
         Main.debug("Port:" + port);
         Main.debug("Username:" + username);
-        if (hostname==null || port==0) {
-            throw new StorageLoaderException("Elasticsearch config(s) missing");
-        }
         //  Init the RestClientBuilder
         RestClientBuilder restClientBuilder = RestClient.builder(new HttpHost(hostname, port));
         //  If credentials are set, apply credentials to RestClientBuilder
