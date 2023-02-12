@@ -21,3 +21,44 @@ storage:
     port: "9200"
     username: "user"
     password: "pass"
+# Messages
+messages:
+  gui:
+    commons:
+      buttons:
+        next:
+          title: "&cNext page"
+          lore:
+            - "&6Click to see"
+            - "&6next page"
+        previous:
+          title: "&cPrevious page"
+          lore:
+            - "&6Click to see"
+            - "&6previous page"
+        exit:
+          title: "&cClose"
+          lore: []
+    chest-shop:
+      title: "&3Shop <name>"
+      buttons:
+        mode-chest:
+          title: "&eInventory mode"
+          lore:
+            - "&6This mode only trade items"
+            - "&6from your inventory"
+            - "&6Click to switch to"
+            - "&5Shulker mode"
+        mode-shulker:
+          title: "&5Inventory mode"
+          lore:
+            - "&6This mode trade items from"
+            - "&6Inventory, EnderChest and Shulkers"
+            - "&6Click to switch to"
+            - "&eInventory mode"
+      messages:
+        inventory-space: "&cNot enough space in inventory to receive result"
+        no-item: "&cNot enough items"
+        trade-result: "&2You trade <first_amount>x<first_material>, for <result_amount>x<result_material>."
+    admin-shop:
+      title: "&3Editing <name>"

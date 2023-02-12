@@ -3,14 +3,13 @@ package fr.milekat.shops.workers.gui;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
+import fr.milekat.shops.api.events.TradeCompleteEvent;
 import fr.milekat.shops.workers.ShopsManager;
-import fr.milekat.shops.workers.utils.HeadsUtils;
+import fr.milekat.shops.workers.utils.Buttons;
 import fr.milekat.shops.workers.utils.TradeMode;
+import fr.milekat.shops.workers.utils.TradeUtils;
 import fr.mrmicky.fastinv.FastInv;
-import fr.mrmicky.fastinv.ItemBuilder;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.block.ShulkerBox;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -27,36 +26,41 @@ import java.util.Map;
 
 public class ChestShop extends FastInv {
     private final Player player;
-    private int currentPage = 1;
     private final Shop shop;
-    private final Map<Integer, List<Trade>> trades;
+    private final List<Trade> shopTrades;
+    private int currentPage = 1;
+    private final Map<Integer, List<Trade>> pagesTrades;
     private TradeMode tradeMode;
+    private final Map<Integer, Integer> tradesDone = new HashMap<>();
 
     public ChestShop(Player player, @NotNull Shop shop, @NotNull List<Trade> trades) {
         //  9 top line + 9 bottom line + 1 line per trades (Max 4)
-        super(54, ChatColor.DARK_AQUA + "Shop " + shop.getName());
+        super(54, Main.getConfigs()
+                .getMessage("messages.gui.chest-shop.title", "&3Shop <name>")
+                .replaceAll("<name>", shop.getName()));
         this.player = player;
         this.shop = shop;
+        this.shopTrades = trades;
         try {
             this.tradeMode = Main.getStorage().getCacheTradeMode(player.getUniqueId().toString());
         } catch (Exception ignore) {
             this.tradeMode = TradeMode.INVENTORY;
         }
-        Map<Integer, List<Trade>> tradesPages = new HashMap<>();
+        Map<Integer, List<Trade>> pagesTrades = new HashMap<>();
         int pageTradeCount = 1;
         int page = 1;
         List<Trade> tradesLoop = new LinkedList<>();
         for (Trade trade : trades) {
             tradesLoop.add(trade);
             pageTradeCount++;
-            tradesPages.put(page, tradesLoop);
+            pagesTrades.put(page, tradesLoop);
             if (pageTradeCount > ShopsManager.CHEST_TRADES_PER_PAGE) {
                 tradesLoop = new LinkedList<>();
                 pageTradeCount = 1;
                 page++;
             }
         }
-        this.trades = tradesPages;
+        this.pagesTrades = pagesTrades;
         //  Setup base inventory
         basicCanvas();
         //  Show content to player
@@ -64,11 +68,10 @@ public class ChestShop extends FastInv {
     }
 
     private void basicCanvas() {
-        setItems(0, 53, ShopsManager.PANE_WHITE);
-        setItems(getBorders(), ShopsManager.PANE_BLACK);
+        setItems(0, 53, Buttons.PANE_WHITE.get());
+        setItems(getBorders(), Buttons.PANE_BLACK.get());
         //  Setup exit button
-        setItem(getInventory().getSize() - 5, new ItemBuilder(Material.BARRIER)
-                .name(ChatColor.RED + "Close").build());
+        setItem(getInventory().getSize() - 5, Buttons.EXIT.get());
         pageButtons();
     }
 
@@ -76,35 +79,35 @@ public class ChestShop extends FastInv {
         tradeModeButton();
 
         if (this.currentPage > 1 ) {
-            setItem(45, ShopsManager.PAGE_LEFT, event -> {
+            setItem(45, Buttons.PREVIOUS.get(), event -> {
                 if (this.currentPage > 1) {
                     this.currentPage--;
                 }
                 updatePageContent();
             });
         } else {
-            setItem(45, ShopsManager.PANE_BLACK);
+            setItem(45, Buttons.PANE_BLACK.get());
         }
-        if (trades.containsKey(currentPage + 1)) {
-            setItem(53, ShopsManager.PAGE_RIGHT, event -> {
+        if (pagesTrades.containsKey(currentPage + 1)) {
+            setItem(53, Buttons.NEXT.get(), event -> {
                 if (this.currentPage >= 64) return;
                 this.currentPage++;
                 updatePageContent();
             });
         } else {
-            setItem(53, ShopsManager.PANE_BLACK);
+            setItem(53, Buttons.PANE_BLACK.get());
         }
     }
 
     private void tradeModeButton() {
         Main.getStorage().asyncSaveTradeMode(player.getUniqueId().toString(), tradeMode);
         if (tradeMode.equals(TradeMode.INVENTORY)) {
-            setItem(4, new ItemBuilder(Material.CHEST).build(), event -> {
+            setItem(4, Buttons.MODE_CHEST.get(), event -> {
                 tradeMode = TradeMode.SHULKER;
                 tradeModeButton();
             });
         } else if (tradeMode.equals(TradeMode.SHULKER)) {
-            setItem(4, new ItemBuilder(Material.SHULKER_BOX).build(), event -> {
+            setItem(4, Buttons.MODE_SHULKER.get(), event -> {
                 tradeMode = TradeMode.INVENTORY;
                 tradeModeButton();
             });
@@ -113,9 +116,9 @@ public class ChestShop extends FastInv {
 
     private void updatePageContent() {
         basicCanvas();
-        if (trades.containsKey(this.currentPage)) {
+        if (pagesTrades.containsKey(this.currentPage)) {
             int position = 0;
-            for (Trade trade : trades.get(this.currentPage)) {
+            for (Trade trade : pagesTrades.get(this.currentPage)) {
                 displayTrade(position, trade);
                 position++;
             }
@@ -125,11 +128,12 @@ public class ChestShop extends FastInv {
 
     private void displayTrade(int pagePosition, @NotNull Trade trade) {
         setItem(11 + (pagePosition * 9), trade.getFirstItem().clone()); //  TODO: Events
-        setItem(13 + (pagePosition * 9), new ItemBuilder(HeadsUtils.ARROW_LEFT.getItem().clone())
-                .name(" ").build());
+        setItem(13 + (pagePosition * 9), Buttons.HEAD_LEFT.get());
         setItem(15 + (pagePosition * 9), trade.getResultItem().clone(), event -> {
             if (isFull(player, trade.getResultItem())) {
-                player.sendMessage("&cNot enough space in inventory to receive result");
+                Main.message(player, Main.getConfigs()
+                        .getMessage("messages.gui.chest-shop.messages.inventory-space",
+                                "&cNot enough space in inventory to receive result"));
                 return;
             }
             int trades = 0;
@@ -138,115 +142,154 @@ public class ChestShop extends FastInv {
                     boolean tradeDone;
                     do {
                         if (isFull(player, trade.getResultItem())) {
-                            player.sendMessage("&cNot enough space in inventory to receive result");
+                            Main.message(player, Main.getConfigs()
+                                    .getMessage("messages.gui.chest-shop.messages.inventory-space",
+                                            "&cNot enough space in inventory to receive result"));
                             tradeDone = false;
                         } else {
-                            tradeDone = checkPlayerInventory(player, trade.getFirstItem(),
-                                    trade.getFirstItem().getAmount());
+                            tradeDone = checkPlayerInventory(trade);
                         }
                         if (tradeDone) {
                             player.getInventory().addItem(trade.getResultItem());
+                            tradesDoneIncrement(trade);
                             trades++;
                         }
                     } while (tradeDone);
-                } else {
-                    if (checkPlayerInventory(player, trade.getFirstItem(), trade.getFirstItem().getAmount())) {
-                        player.getInventory().addItem(trade.getResultItem());
-                        trades++;
-                    }
+                } else if (checkPlayerInventory(trade)) {
+                    player.getInventory().addItem(trade.getResultItem());
+                    tradesDoneIncrement(trade);
+                    trades++;
                 }
             } else if (tradeMode.equals(TradeMode.SHULKER)) {
                 if (event.getClick().equals(ClickType.SHIFT_LEFT)) {
                     boolean tradeDone;
                     do {
                         if (isFull(player, trade.getResultItem())) {
-                            player.sendMessage("&cNot enough space in inventory to receive result");
+                            Main.message(player, Main.getConfigs()
+                                    .getMessage("messages.gui.chest-shop.messages.inventory-space",
+                                            "&cNot enough space in inventory to receive result"));
                             tradeDone = false;
                         } else {
-                            tradeDone = checkAllPlayerInventories(player, trade.getFirstItem(),
-                                    trade.getFirstItem().getAmount());
+                            tradeDone = checkPlayerAllInventories(trade);
                             if (tradeDone) {
                                 player.getInventory().addItem(trade.getResultItem());
+                                tradesDoneIncrement(trade);
                                 trades++;
                             }
                         }
                     } while (tradeDone);
-                } else {
-                    if (checkAllPlayerInventories(player, trade.getFirstItem(),
-                            trade.getFirstItem().getAmount())) {
-                        player.getInventory().addItem(trade.getResultItem());
-                        trades++;
-                    }
+                } else if (checkPlayerAllInventories(trade)) {
+                    player.getInventory().addItem(trade.getResultItem());
+                    tradesDoneIncrement(trade);
+                    trades++;
                 }
             }
-            if (trades>0) {
-                player.sendMessage("&2You did " + trades + " trade(s), for a total of " +
-                        trade.getResultItem().getAmount() * trades + " " + trade.getResultItem().getType());
-            } else {
-                player.sendMessage("&cNot enough items");
+            if (trades==0) {
+                Main.message(player, Main.getConfigs()
+                        .getMessage("messages.gui.chest-shop.messages.no-item", "&cNot enough items"));
             }
         });
     }
 
     public boolean isFull(@NotNull Player player, @NotNull ItemStack item) {
-        Inventory virtualInventory = Bukkit.createInventory(null, 36, "tmp");
+        Inventory virtualInventory = Bukkit.createInventory(null, 36, player.getUniqueId().toString());
         virtualInventory.setContents(player.getInventory().getStorageContents());
         HashMap<Integer, ItemStack> leftOver = virtualInventory.addItem(item.clone());
         return !leftOver.isEmpty();
     }
 
-    public boolean checkPlayerInventory(@NotNull Player player, @NotNull ItemStack item, int quantity) {
+    public boolean checkPlayerInventory(@NotNull Trade trade) {
+        ItemStack item = trade.getFirstItem().clone();
+        int amount = trade.getFirstItem().getAmount();
+
         ItemStack offHandItem = player.getInventory().getItemInOffHand();
 
         if (offHandItem.isSimilar(item)) {
-            if (offHandItem.getAmount() >= quantity) {
-                int newQuantity = offHandItem.getAmount() - quantity;
-                if (newQuantity > 0) {
-                    offHandItem.setAmount(newQuantity);
-                    player.getInventory().setItemInOffHand(offHandItem);
-                } else {
-                    player.getInventory().setItemInOffHand(null);
+            if (offHandItem.getAmount() >= amount) {
+                TradeCompleteEvent completeEvent = new TradeCompleteEvent(player, shop, trade);
+                if (!completeEvent.isCancelled()) {
+                    int newQuantity = offHandItem.getAmount() - amount;
+                    if (newQuantity > 0) {
+                        offHandItem.setAmount(newQuantity);
+                        player.getInventory().setItemInOffHand(offHandItem);
+                    } else {
+                        player.getInventory().setItemInOffHand(null);
+                    }
+                    return true;
                 }
+            }
+        }
+
+        if (player.getInventory().containsAtLeast(item, amount)) {
+            TradeCompleteEvent completeEvent = new TradeCompleteEvent(player, shop, trade);
+            if (!completeEvent.isCancelled()) {
+                player.getInventory().removeItem(new ItemStack(item.getType(), amount));
                 return true;
             }
         }
 
-        if (player.getInventory().containsAtLeast(item, quantity)) {
-            player.getInventory().removeItem(new ItemStack(item.getType(), quantity));
-            return true;
-        } else {
-            return false;
-        }
+        return false;
     }
 
-    public boolean checkAllPlayerInventories(@NotNull Player player, @NotNull ItemStack item, int quantity) {
+    public boolean checkPlayerAllInventories(@NotNull Trade trade) {
+        ItemStack item = trade.getFirstItem().clone();
+        int amount = trade.getFirstItem().getAmount();
+
         for (ItemStack invItem : player.getInventory().getContents()) {
             if (invItem != null) {
                 if(invItem.getItemMeta() instanceof BlockStateMeta im){
                     if(im.getBlockState() instanceof ShulkerBox shulker){
                         Inventory containerInventory = shulker.getInventory();
-                        if (containerInventory.containsAtLeast(item, quantity)) {
-                            containerInventory.removeItem(new ItemStack(item.getType(), quantity));
-                            im.setBlockState(shulker);
-                            invItem.setItemMeta(im);
-                            return true;
+                        if (containerInventory.containsAtLeast(item, amount)) {
+                            TradeCompleteEvent completeEvent = new TradeCompleteEvent(player, shop, trade);
+                            if (!completeEvent.isCancelled()) {
+                                containerInventory.removeItem(new ItemStack(item.getType(), amount));
+                                im.setBlockState(shulker);
+                                invItem.setItemMeta(im);
+                                return true;
+                            }
                         }
                     }
                 }
             }
         }
+
         Inventory enderChestInventory = player.getEnderChest();
-        if (enderChestInventory.containsAtLeast(item, quantity)) {
-            enderChestInventory.removeItem(new ItemStack(item.getType(), quantity));
-            return true;
+        if (enderChestInventory.containsAtLeast(item, amount)) {
+            TradeCompleteEvent completeEvent = new TradeCompleteEvent(player, shop, trade);
+            if (!completeEvent.isCancelled()) {
+                enderChestInventory.removeItem(new ItemStack(item.getType(), amount));
+                return true;
+            }
         }
-        return checkPlayerInventory(player, item, quantity);
+
+        return checkPlayerInventory(trade);
     }
 
-
+    private void tradesDoneIncrement(@NotNull Trade trade) {
+        this.tradesDone.put(trade.getTradePosition(),
+                this.tradesDone.getOrDefault(trade.getTradePosition(), 0) + 1);
+    }
 
     @Override
     protected void onClose(InventoryCloseEvent event) {
         super.onClose(event);
+        this.tradesDone.forEach((tradePos, count) -> this.shopTrades.stream()
+                .filter(trade -> trade.getTradePosition() == tradePos).findFirst()
+                .ifPresent(trade -> Main.message(player, Main.getConfigs()
+                                .getMessage("messages.gui.chest-shop.messages.trade-result",
+                                        "&2You trade <first_amount>x<first_material>, " +
+                                                "for <result_amount>x<result_material>.")
+                                .replaceAll("<first_amount>",
+                                        String.valueOf(trade.getFirstItem().getAmount() * count))
+                                .replaceAll("<first_material>",
+                                        TradeUtils.getMaterial(String.valueOf(trade.getFirstItem().getType())))
+                                .replaceAll("<result_amount>",
+                                        String.valueOf(trade.getResultItem().getAmount() * count))
+                                .replaceAll("<result_material>",
+                                        TradeUtils.getMaterial(String.valueOf(trade.getResultItem().getType())))
+                        )
+                )
+        );
     }
 }

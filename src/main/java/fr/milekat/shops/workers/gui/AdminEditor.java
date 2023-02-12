@@ -5,6 +5,7 @@ import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.ShopType;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.workers.ShopsManager;
+import fr.milekat.shops.workers.utils.Buttons;
 import fr.mrmicky.fastinv.FastInv;
 import fr.mrmicky.fastinv.ItemBuilder;
 import org.bukkit.ChatColor;
@@ -26,7 +27,9 @@ public class AdminEditor extends FastInv {
     private final Map<Integer, List<Trade>> trades;
 
     public AdminEditor(Player player, @NotNull Shop shop, @NotNull List<Trade> trades) {
-        super(54, ChatColor.DARK_AQUA + "Editing " + shop.getName());
+        super(54, Main.getConfigs()
+                .getMessage("messages.gui.admin-shop.title", "&3Editing <name>")
+                .replaceAll("<name>", shop.getName()));
         this.player = player;
         this.shop = shop;
         Map<Integer, List<Trade>> tradesPages = new HashMap<>();
@@ -45,10 +48,9 @@ public class AdminEditor extends FastInv {
         }
         this.trades = tradesPages;
         //  Setup base inventory
-        setItems(0, 53, ShopsManager.PANE_BLACK);
+        setItems(0, 53, Buttons.PANE_BLACK.get());
         //  Setup exit button
-        setItem(getInventory().getSize() - 5, new ItemBuilder(Material.BARRIER)
-                .name(ChatColor.RED + "Close").build(), event -> event.getWhoClicked().closeInventory());
+        setItem(getInventory().getSize() - 5, Buttons.EXIT.get(), event -> event.getWhoClicked().closeInventory());
         //  Show content to player
         updatePageContent();
     }
@@ -60,7 +62,7 @@ public class AdminEditor extends FastInv {
                 .build(),
                 event -> savePage());
         if (this.currentPage > 1 ) {
-            setItem(45, ShopsManager.PAGE_LEFT, event -> {
+            setItem(45, Buttons.PREVIOUS.get(), event -> {
                 savePage();
                 if (this.currentPage > 1) {
                     this.currentPage--;
@@ -68,19 +70,20 @@ public class AdminEditor extends FastInv {
                 updatePageContent();
             });
         } else {
-            setItem(45, ShopsManager.PANE_BLACK);
+            setItem(45, Buttons.PANE_BLACK.get());
         }
-        if ((nonNullItem(getFirstItemSlot(8)) && nonNullItem(getResultItemSlot(8))) ||
+        if ((nonNullItem(getFirstItemPos(8)) && nonNullItem(getResultItemPos(8))) ||
                 trades.containsKey(currentPage + 1)) {
-            setItem(53, ShopsManager.PAGE_RIGHT, event -> {
+            setItem(53, Buttons.NEXT.get(), event -> {
                 if (this.currentPage >= 64) return;
                 savePage();
                 this.currentPage++;
                 updatePageContent();
             });
         } else {
-            setItem(53, ShopsManager.PANE_BLACK);
+            setItem(53, Buttons.PANE_BLACK.get());
         }
+        setItem(49, Buttons.EXIT.get(), inventoryClickEvent -> player.closeInventory());
     }
 
     private void updatePageContent() {
@@ -110,13 +113,13 @@ public class AdminEditor extends FastInv {
     private void savePage() {
         List<Trade> newTrades = new LinkedList<>();
         IntStream.rangeClosed(0, 8).forEach(index -> {
-            if (nonNullItem(getFirstItemSlot(index)) && nonNullItem(getResultItemSlot(index))) {
+            if (nonNullItem(getFirstItemPos(index)) && nonNullItem(getResultItemPos(index))) {
                 newTrades.add(new Trade(
                         shop.getUuid(),
                         index + (9 * currentPage),
-                        getFirstItemSlot(index),
-                        shop.getType().equals(ShopType.VANILLA) ? getSecondItemSlot(index) : null,
-                        getResultItemSlot(index))
+                        getFirstItemPos(index),
+                        shop.getType().equals(ShopType.VANILLA) ? getSecondItemPos(index) : null,
+                        getResultItemPos(index))
                 );
             }
         });
@@ -127,15 +130,15 @@ public class AdminEditor extends FastInv {
         return item != null && !item.getType().equals(Material.AIR);
     }
 
-    private @NotNull ItemStack getFirstItemSlot(int position) {
+    private @NotNull ItemStack getFirstItemPos(int position) {
         return Objects.requireNonNullElse(this.getInventory().getItem(9 + position),
                 new ItemStack(Material.AIR)).clone();
     }
-    private @NotNull ItemStack getSecondItemSlot(int position) {
+    private @NotNull ItemStack getSecondItemPos(int position) {
         return Objects.requireNonNullElse(this.getInventory().getItem(18 + position),
                 new ItemStack(Material.AIR)).clone();
     }
-    private @NotNull ItemStack getResultItemSlot(int position) {
+    private @NotNull ItemStack getResultItemPos(int position) {
         return Objects.requireNonNullElse(this.getInventory().getItem(36 + position),
                 new ItemStack(Material.AIR)).clone();
     }
