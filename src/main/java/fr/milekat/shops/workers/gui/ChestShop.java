@@ -238,13 +238,13 @@ public class ChestShop extends FastInv {
         for (ItemStack invItem : player.getInventory().getContents()) {
             if (invItem != null) {
                 if(invItem.getItemMeta() instanceof BlockStateMeta im){
-                    if(im.getBlockState() instanceof ShulkerBox shulker){
-                        Inventory containerInventory = shulker.getInventory();
+                    if(im.getBlockState() instanceof ShulkerBox shulkerBox){
+                        Inventory containerInventory = shulkerBox.getInventory();
                         if (containerInventory.containsAtLeast(item, amount)) {
                             TradeCompleteEvent completeEvent = new TradeCompleteEvent(player, shop, trade);
                             if (!completeEvent.isCancelled()) {
                                 containerInventory.removeItem(new ItemStack(item.getType(), amount));
-                                im.setBlockState(shulker);
+                                im.setBlockState(shulkerBox);
                                 invItem.setItemMeta(im);
                                 return true;
                             }
