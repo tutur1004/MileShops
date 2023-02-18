@@ -9,6 +9,8 @@ import fr.milekat.shops.workers.commands.ShopsCmd;
 import fr.milekat.shops.workers.listeners.ShopsListeners;
 import fr.milekat.utils.Configs;
 import fr.mrmicky.fastinv.FastInvManager;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -101,8 +103,18 @@ public class Main extends JavaPlugin {
      * Send a formatted message to sender
      */
     public static void message(@NotNull Player player, @NotNull String message) {
-        player.sendMessage(ChatColor.GOLD + "[CustomShop] " + ChatColor.RESET +
+        player.sendMessage(Main.getConfigs().getMessage("messages.prefix") + ChatColor.RESET +
                 ChatColor.translateAlternateColorCodes('&', message));
+    }
+
+    /**
+     * Send a formatted BaseComponent message to sender
+     */
+    public static void message(@NotNull Player player, @NotNull BaseComponent message) {
+        BaseComponent prefixedMessage = new TextComponent(Main.getConfigs().getMessage("messages.prefix") +
+                ChatColor.RESET);
+        prefixedMessage.addExtra(message.duplicate());
+        player.spigot().sendMessage(prefixedMessage);
     }
 
     /**

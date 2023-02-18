@@ -9,6 +9,10 @@ import fr.milekat.shops.workers.utils.Buttons;
 import fr.milekat.shops.workers.utils.TradeMode;
 import fr.milekat.shops.workers.utils.TradeUtils;
 import fr.mrmicky.fastinv.FastInv;
+import net.md_5.bungee.api.chat.BaseComponent;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.api.chat.hover.content.Text;
 import org.bukkit.Bukkit;
 import org.bukkit.block.ShulkerBox;
 import org.bukkit.entity.Player;
@@ -23,6 +27,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ChestShop extends FastInv {
     private final Player player;
@@ -36,8 +41,8 @@ public class ChestShop extends FastInv {
     public ChestShop(Player player, @NotNull Shop shop, @NotNull List<Trade> trades) {
         //  9 top line + 9 bottom line + 1 line per trades (Max 4)
         super(54, Main.getConfigs()
-                .getMessage("messages.gui.chest-shop.title", "&3Shop <name>")
-                .replaceAll("<name>", shop.getName()));
+                .getMessage("messages.gui.chest-shop.title", "&3Shop <shop_name>")
+                .replaceAll("<shop_name>", shop.getName()));
         this.player = player;
         this.shop = shop;
         this.shopTrades = trades;
@@ -131,9 +136,9 @@ public class ChestShop extends FastInv {
         setItem(13 + (pagePosition * 9), Buttons.HEAD_LEFT.get());
         setItem(15 + (pagePosition * 9), trade.getResultItem().clone(), event -> {
             if (isFull(player, trade.getResultItem())) {
-                Main.message(player, Main.getConfigs()
+                Main.message(player, TradeUtils.tradeFormatting(Main.getConfigs()
                         .getMessage("messages.gui.chest-shop.messages.inventory-space",
-                                "&cNot enough space in inventory to receive result"));
+                                "&cNot enough space in inventory to receive result."), shop, trade, -1));
                 return;
             }
             int trades = 0;
@@ -142,9 +147,10 @@ public class ChestShop extends FastInv {
                     boolean tradeDone;
                     do {
                         if (isFull(player, trade.getResultItem())) {
-                            Main.message(player, Main.getConfigs()
+                            Main.message(player, TradeUtils.tradeFormatting(Main.getConfigs()
                                     .getMessage("messages.gui.chest-shop.messages.inventory-space",
-                                            "&cNot enough space in inventory to receive result"));
+                                            "&cNot enough space in inventory to receive result."),
+                                    shop, trade, -1));
                             tradeDone = false;
                         } else {
                             tradeDone = checkPlayerInventory(trade);
@@ -165,9 +171,10 @@ public class ChestShop extends FastInv {
                     boolean tradeDone;
                     do {
                         if (isFull(player, trade.getResultItem())) {
-                            Main.message(player, Main.getConfigs()
+                            Main.message(player, TradeUtils.tradeFormatting(Main.getConfigs()
                                     .getMessage("messages.gui.chest-shop.messages.inventory-space",
-                                            "&cNot enough space in inventory to receive result"));
+                                            "&cNot enough space in inventory to receive result."),
+                                    shop, trade, -1));
                             tradeDone = false;
                         } else {
                             tradeDone = checkPlayerAllInventories(trade);
@@ -185,8 +192,9 @@ public class ChestShop extends FastInv {
                 }
             }
             if (trades==0) {
-                Main.message(player, Main.getConfigs()
-                        .getMessage("messages.gui.chest-shop.messages.no-item", "&cNot enough items"));
+                Main.message(player, TradeUtils.tradeFormatting(Main.getConfigs().getMessage(
+                        "messages.gui.chest-shop.messages.no-item", "&cNot enough items"),
+                        shop, trade, -1));
             }
         });
     }
@@ -276,20 +284,19 @@ public class ChestShop extends FastInv {
         super.onClose(event);
         this.tradesDone.forEach((tradePos, count) -> this.shopTrades.stream()
                 .filter(trade -> trade.getTradePosition() == tradePos).findFirst()
-                .ifPresent(trade -> Main.message(player, Main.getConfigs()
-                                .getMessage("messages.gui.chest-shop.messages.trade-result",
-                                        "&2You trade <first_amount>x<first_material>, " +
-                                                "for <result_amount>x<result_material>.")
-                                .replaceAll("<first_amount>",
-                                        String.valueOf(trade.getFirstItem().getAmount() * count))
-                                .replaceAll("<first_material>",
-                                        TradeUtils.getMaterial(String.valueOf(trade.getFirstItem().getType())))
-                                .replaceAll("<result_amount>",
-                                        String.valueOf(trade.getResultItem().getAmount() * count))
-                                .replaceAll("<result_material>",
-                                        TradeUtils.getMaterial(String.valueOf(trade.getResultItem().getType())))
-                        )
-                )
+                .ifPresent(trade -> {
+                    BaseComponent message = new TextComponent(TradeUtils.tradeFormatting(Main.getConfigs()
+                            .getMessage("messages.gui.chest-shop.messages.trade-result",
+                                    "&2You trade <first_amount>x<first_material>, " +
+                                                    "for <result_amount>x<result_material>."), shop, trade, count));
+                    message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                            new Text(Main.getConfigs()
+                                    .getMessages("messages.gui.chest-shop.messages.trade-result-hover")
+                                    .stream()
+                                    .map(line -> TradeUtils.tradeFormatting(line, shop, trade, count))
+                                    .collect(Collectors.joining(System.lineSeparator(), "", "")))));
+                    Main.message(player, message);
+                })
         );
     }
 }

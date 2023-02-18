@@ -28,8 +28,8 @@ public class AdminEditor extends FastInv {
 
     public AdminEditor(Player player, @NotNull Shop shop, @NotNull List<Trade> trades) {
         super(54, Main.getConfigs()
-                .getMessage("messages.gui.admin-shop.title", "&3Editing <name>")
-                .replaceAll("<name>", shop.getName()));
+                .getMessage("messages.gui.admin-shop.title", "&3Editing <shop_name>")
+                .replaceAll("<shop_name>", shop.getName()));
         this.player = player;
         this.shop = shop;
         Map<Integer, List<Trade>> tradesPages = new HashMap<>();
