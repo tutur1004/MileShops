@@ -14,10 +14,12 @@ public class ShopsManager {
     public static final int EDITOR_TRADES_PER_PAGE = 9;
 
     public static @Nullable Map.Entry<Shop, List<Trade>> getShop(@NotNull UUID npcUuid) throws StorageExecuteException {
-        Shop shop = Main.getStorage().getCacheShop(npcUuid);
+        Shop shop = Main.getStorage().getCacheShopNpc(npcUuid);
         if (shop==null) return null;
         List<Trade> trades = Main.getStorage().getCacheTrades(shop.getUuid());
-        trades.sort(Comparator.comparingInt(Trade::getTradePosition));
-        return  new AbstractMap.SimpleEntry<>(shop, trades);
+        if (trades.size() > 1) {
+            trades.sort(Comparator.comparingInt(Trade::getTradePosition));
+        }
+        return new AbstractMap.SimpleEntry<>(shop, trades);
     }
 }

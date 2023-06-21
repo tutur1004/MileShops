@@ -2,25 +2,28 @@ package fr.milekat.shops.storage;
 
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
-import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.storage.adapter.elasticsearch.ESStorage;
 import fr.milekat.shops.storage.adapter.sql.SQLStorage;
 import fr.milekat.shops.storage.exeptions.StorageExecuteException;
 import fr.milekat.shops.storage.exeptions.StorageLoaderException;
-import fr.milekat.shops.workers.utils.TradeMode;
+import fr.milekat.shops.storage.utils.PlayerTradeMode;
+import fr.milekat.shops.storage.utils.ShopTrades;
 import fr.milekat.utils.Configs;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 public class Storage {
     public static final long SHOP_DELAY = TimeUnit.MILLISECONDS.convert(5L, TimeUnit.MINUTES);
     public static Map<Shop, Date> SHOP_CACHE = new HashMap<>();
     public static final long TRADE_DELAY = TimeUnit.MILLISECONDS.convert(1L, TimeUnit.MINUTES);
-    public static Map<Trade, Date> TRADE_CACHE = new HashMap<>();
+    public static Map<ShopTrades, Date> TRADE_CACHE = new HashMap<>();
     public static final long TRADE_MODE_DELAY = TimeUnit.MILLISECONDS.convert(5L, TimeUnit.MINUTES);
-    public static Map<Map.Entry<String, TradeMode>, Date> TRADE_MODE_CACHE = new HashMap<>();
+    public static Map<PlayerTradeMode, Date> TRADE_MODE_CACHE = new HashMap<>();
     private final StorageImplementation executor;
 
     public Storage(@NotNull Configs config) throws StorageLoaderException {
@@ -52,35 +55,5 @@ public class Storage {
 
     public StorageImplementation getStorageImplementation() {
         return this.executor;
-    }
-
-    /**
-     * Add a shop to the cache shop map
-     */
-    public static void addCache(@NotNull Map<Shop, Date> cache, @NotNull Shop shop) {
-        List<Shop> instances = new ArrayList<>(cache.keySet());
-        if (instances.stream().anyMatch(shop1 -> shop1.getUuid().equals(shop.getUuid()))) {
-            Map<Shop, Date> tempCache = new HashMap<>(cache);
-            cache.keySet().stream().filter(shop1 -> shop1.getUuid().equals(shop.getUuid())).forEach(tempCache::remove);
-            tempCache.put(shop, new Date());
-            cache = new HashMap<>(tempCache);
-        } else {
-            cache.put(shop, new Date());
-        }
-        Storage.SHOP_CACHE = cache;
-    }
-
-    public static void addCache(@NotNull Map<Map.Entry<String, TradeMode>, Date> cache,
-                                @NotNull String uuid, @NotNull TradeMode tradeMode) {
-        List<Map.Entry<String, TradeMode>> instances = new ArrayList<>(cache.keySet());
-        if (instances.stream().anyMatch(loop -> loop.getKey().equals(uuid))) {
-            Map<Map.Entry<String, TradeMode>, Date> tempCache = new HashMap<>(cache);
-            cache.keySet().stream().filter(loop -> loop.getKey().equals(uuid)).forEach(tempCache::remove);
-            tempCache.put(new AbstractMap.SimpleEntry<>(uuid, tradeMode), new Date());
-            cache = new HashMap<>(tempCache);
-        } else {
-            cache.put(new AbstractMap.SimpleEntry<>(uuid, tradeMode), new Date());
-        }
-        Storage.TRADE_MODE_CACHE = cache;
     }
 }

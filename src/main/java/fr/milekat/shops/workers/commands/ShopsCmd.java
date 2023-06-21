@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ShopsCmd implements CommandExecutor {
     @Override
@@ -33,19 +34,21 @@ public class ShopsCmd implements CommandExecutor {
                     Main.info("Reloading shops...");
                     Main.message(sender, "&6Reloading shops...");
                     try {
-                        List<Shop> shops = Main.getStorage().getAllShops();
+                        List<Shop> shops = Main.getStorage().getCacheAllShops();
+                        AtomicInteger loaded = new AtomicInteger();
                         shops.forEach(shop -> {
                             try {
-                                Main.getStorage().getTrades(shop.getUuid());
+                                Main.getStorage().getCacheTrades(shop.getUuid());
                                 shop.getNpc().forceUpdate();
+                                loaded.getAndIncrement();
                             } catch (StorageExecuteException exception) {
                                 Main.message(sender, "&cError while trying to reload trades for shop " +
                                         shop.getName());
                                 Main.warning("Error while trying to reload trades for shop " + shop.getName());
                             }
-                            Main.info(shops.size() + " shops reloaded !");
-                            Main.message(sender, "&2" + shops.size() + " shops reloaded !");
                         });
+                        Main.info(loaded + " shops reloaded !");
+                        Main.message(sender, "&2" + loaded + " shops reloaded !");
                     } catch (StorageExecuteException e) {
                         Main.warning(e.getMessage());
                         Main.stack(e.getStackTrace());
@@ -83,10 +86,10 @@ public class ShopsCmd implements CommandExecutor {
                         npc = NPCLib.getInstance().generateGlobalNPC(Main.getInstance(),
                                 UUID.randomUUID().toString(), ((Player) sender).getLocation());
                         Shop shop = new Shop(args[2], npc, ShopType.valueOf(args[3].toUpperCase(Locale.ROOT)));
-                        Main.getStorage().asyncSaveShop(shop, sender);
+                        Main.getStorage().asyncSaveShop(shop, sender, false);
                     } catch (IllegalArgumentException exception) {
                         if (npc!=null) {
-                            npc.destroy();
+                            Main.bukkitSync(npc::destroy);
                         }
                         Main.message(sender, "&cUnknown NPC type !");
                         Main.info("Creation cancelled, unknown NPC type " + args[3]);

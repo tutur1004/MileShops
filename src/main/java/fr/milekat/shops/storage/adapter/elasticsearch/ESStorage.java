@@ -1,17 +1,22 @@
 package fr.milekat.shops.storage.adapter.elasticsearch;
 
-import co.elastic.clients.elasticsearch.core.*;
+import co.elastic.clients.elasticsearch.core.BulkRequest;
+import co.elastic.clients.elasticsearch.core.DeleteByQueryRequest;
+import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.indices.ExistsRequest;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
+import fr.milekat.shops.storage.CacheManager;
 import fr.milekat.shops.storage.Storage;
 import fr.milekat.shops.storage.StorageImplementation;
 import fr.milekat.shops.storage.exeptions.StorageExecuteException;
 import fr.milekat.shops.storage.exeptions.StorageLoaderException;
-import fr.milekat.shops.workers.utils.PlayerTradeMode;
+import fr.milekat.shops.storage.utils.PlayerTradeMode;
+import fr.milekat.shops.storage.utils.ShopTrades;
 import fr.milekat.shops.workers.utils.TradeMode;
 import fr.milekat.utils.Configs;
 import org.bukkit.command.CommandSender;
@@ -21,7 +26,6 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 public class ESStorage implements StorageImplementation {
     private final String PREFIX;
@@ -84,78 +88,89 @@ public class ESStorage implements StorageImplementation {
         ES Queries execution
      */
     @Override
-    public void asyncSaveShop(@NotNull Shop shop, CommandSender sender) {
-        prepareShopAsync(shop.getUuid()).whenComplete(((response, exception) -> {
+    public void asyncSaveShop(@NotNull Shop shop, CommandSender sender, boolean createIfNotExist) {
+        prepareShopAsync("name", shop.getName()).whenComplete((response, exception) -> {
             if (exception!=null) {
                 Main.message(sender, "&cError while trying to save shop " + shop.getName());
-                Main.warning("Error while trying to fetch shop with uuid " + shop.getUuid());
-                Main.stack(exception.getStackTrace());
+                Main.warning("Error while trying to fetch shop with uuid " + shop.getName());
+                exception.printStackTrace();
+                Main.bukkitSync(shop.getNpc()::destroy);
             }
-            Optional<Hit<Shop>> shopHit = response.hits().hits().stream().findFirst();
-            //  Ensure shop name not exist
-            // TODO : Test this check
-            DB.getAsyncClient().count(new CountRequest.Builder()
-                    .index(PREFIX + "shops")
-                    .query(q -> q.bool(b -> b
-                            .mustNot(mn -> mn.term(t -> t.field("uuid").value(shop.getUuid().toString())))
-                            .must(m -> m.term(t -> t.field("name").value(shop.getName())))))
-                    .build()
-            ).whenComplete((countResponse, countException) -> {
-                if (countException != null) {
-                    Main.message(sender, "&cError while trying to save shop " + shop.getName());
-                    Main.warning("Error while trying to check if shop name exist: " + shop.getName());
-                    Main.stack(countException.getStackTrace());
-                }
-                if (countResponse.count() != 0) {
-                    Main.message(sender, "&cShop name already exist " + shop.getName());
-                    Main.warning("Can't save " + shop.getName());
+            if (response.hits().total() != null && response.hits().total().value() > 0) {
+                if (!createIfNotExist) {
+                    Main.message(sender, "&cShop with name '" + shop.getName() + "' already exist.");
+                    Main.bukkitSync(shop.getNpc()::destroy);
                     return;
                 }
-                //  Name is not used
-                if (shopHit.isEmpty()) {
-                    DB.getAsyncClient().index(i -> i
-                                    .index(PREFIX + "shops")
-                                    .document(shop)
-                    ).whenComplete(((indexResponse, throwable) -> {
-                        if (throwable!=null) {
-                            Main.message(sender, "&cError while trying to save shop " + shop.getName());
-                            Main.warning("Error while trying to index shop with uuid " + shop.getUuid());
-                            Main.stack(throwable.getStackTrace());
-                        } else {
-                            Main.info("New shop created with name " + shop.getName());
-                            Main.message(sender, "&2Shop created !");
-                        }
-                    }));
-                } else {
-                        String id = shopHit.get().id();
-                        DB.getAsyncClient().update(u -> u
-                                        .index(PREFIX + "shops")
-                                        .id(id)
-                                        .doc(shop)
-                                        .docAsUpsert(true),
-                                Shop.class
-                        ).whenComplete(((updateResponse, updateException) -> {
-                            if (updateException != null) {
-                                Main.message(sender, "&cError while trying to save shop" + shop.getName());
-                                Main.warning("Error while trying to save shop with uuid " + shop.getUuid());
-                                Main.stack(updateException.getStackTrace());
-                            } else {
-                                Main.message(sender, "&2Shop saved !");
-                            }
-                        }));
+                //  Update existing shop
+                Main.debug("[ES-aSync] asyncSaveShop - update shop " + shop.getUuid() + ".");
+                DB.getAsyncClient().update(u -> u
+                                .index(PREFIX + "shops")
+                                .id(response.hits().hits().get(0).id())
+                                .doc(shop)
+                                .docAsUpsert(true),
+                        Shop.class
+                ).whenComplete((updateResponse, updateException) -> {
+                    if (updateException != null) {
+                        Main.message(sender, "&cError while trying to update shop " + shop.getName());
+                        Main.warning("Error while trying to update shop with uuid " + shop.getUuid());
+                        Main.stack(updateException.getStackTrace());
+                        Main.bukkitSync(shop.getNpc()::destroy);
+                    } else {
+                        Main.info("Shop '" + shop.getName() + "' has been updated");
+                        Main.message(sender, "&2Shop updated !");
                     }
                 });
-        }));
+            } else {
+                //  Save new shop
+                Main.debug("[ES-aSync] asyncSaveShop - index new shop " + shop.getUuid() + ".");
+                DB.getAsyncClient().index(i -> i
+                        .index(PREFIX + "shops")
+                        .document(shop)
+                ).whenComplete((indexResponse, throwable) -> {
+                    if (throwable!=null) {
+                        Main.message(sender, "&cError while trying to create shop " + shop.getName());
+                        Main.warning("Error while trying to index shop with uuid " + shop.getUuid());
+                        Main.stack(throwable.getStackTrace());
+                        Main.bukkitSync(shop.getNpc()::destroy);
+                    } else {
+                        Main.info("New shop created with name " + shop.getName());
+                        Main.message(sender, "&2Shop created !");
+                    }
+                });
+            }
+        });
     }
 
-    private CompletableFuture<SearchResponse<Shop>> prepareShopAsync(@NotNull UUID uuid) {
+    @SuppressWarnings("SameParameterValue")
+    private CompletableFuture<SearchResponse<Shop>> prepareShopAsync(@NotNull String field, @NotNull String value) {
+        Main.debug("[ES-aSync] prepareShopAsync - search shop with field '" + field + "' and value '" + value + "'.");
         return DB.getAsyncClient().search(
                new SearchRequest.Builder()
                        .index(PREFIX + "shops")
-                       .query(q -> q.match(m -> m.field("uuid").query(String.valueOf(uuid))))
+                       .query(q -> q.match(m -> m.field(field).query(value)))
                        .size(1)
                        .build(),
-               Shop.class);
+               Shop.class
+        );
+    }
+
+    private @Nullable Shop getShop(@NotNull String field, @NotNull String value) throws IOException {
+        Main.debug("[ES-Sync] getShop - search shop with field '" + field + "' and value '" + value + "'.");
+        SearchResponse<Shop> response = DB.getClient().search(
+                new SearchRequest.Builder()
+                        .index(PREFIX + "shops")
+                        .query(q -> q.match(m -> m.field(field).query(value)))
+                        .size(1)
+                        .build(),
+                Shop.class
+        );
+        Optional<Hit<Shop>> shop = response.hits().hits().stream().findFirst();
+        if (shop.isPresent() && shop.get().source() != null) {
+            CacheManager.addCache(Storage.SHOP_CACHE, shop.get().source());
+            return shop.get().source();
+        }
+        return null;
     }
 
     @Override
@@ -163,7 +178,7 @@ public class ESStorage implements StorageImplementation {
         try {
             return getShop("uuid", uuid.toString());
         } catch (IOException e) {
-            throw new StorageExecuteException(e, "Error while trying to find shop with uuid " + uuid);
+            throw new StorageExecuteException(e, "Error while trying to find shop with playerUuid " + uuid);
         }
     }
 
@@ -176,63 +191,27 @@ public class ESStorage implements StorageImplementation {
         }
     }
 
-    private @Nullable Shop getShop(@NotNull String field, @NotNull String value) throws IOException {
-        SearchResponse<Shop> response =  DB.getClient().search(
-                new SearchRequest.Builder()
-                        .index(PREFIX + "shops")
-                        .query(q -> q.match(m -> m.field(field).query(value)))
-                        .size(1)
-                        .build(),
-                Shop.class);
-        Optional<Hit<Shop>> shop = response.hits().hits().stream().findFirst();
-        if (shop.isPresent() && shop.get().source() != null) {
-            Storage.addCache(Storage.SHOP_CACHE, shop.get().source());
-            return shop.get().source();
-        }
-        return null;
-    }
-
     @Override
-    public Shop getCacheShop(@NotNull UUID shopUuid) throws StorageExecuteException {
-        Optional<Map.Entry<Shop, Date>> optionalShop = Storage.SHOP_CACHE.entrySet()
-                .stream()
-                .filter(entry -> entry.getKey().getUuid().equals(shopUuid))
-                .filter(entry -> entry.getValue().getTime() + Storage.SHOP_DELAY > new Date().getTime())
-                .findFirst();
-        if (optionalShop.isPresent()) {
-            return optionalShop.get().getKey();
-        } else  {
-            return getShop(shopUuid);
-        }
-    }
-
-    @Override
-    public Shop getCacheShop(@NotNull String shopName) throws StorageExecuteException {
-        Optional<Map.Entry<Shop, Date>> optionalShop = Storage.SHOP_CACHE.entrySet()
-                .stream()
-                .filter(entry -> entry.getKey().getName().equals(shopName))
-                .filter(entry -> entry.getValue().getTime() + Storage.SHOP_DELAY > new Date().getTime())
-                .findFirst();
-        if (optionalShop.isPresent()) {
-            return optionalShop.get().getKey();
-        } else  {
-            return getShop(shopName);
+    public Shop getShopNpc(@NotNull UUID npcUuid) throws StorageExecuteException {
+        try {
+            return getShop("npc.uuid", npcUuid.toString());
+        } catch (IOException e) {
+            throw new StorageExecuteException(e, "Error while trying to find shop with npc.uuid " + npcUuid);
         }
     }
 
     @Override
     public List<Shop> getAllShops() throws StorageExecuteException {
         try {
-            SearchResponse<Shop> response =  DB.getClient().search(
+            Main.debug("[ES-Sync] getAllShops - Fetch all shops.");
+            SearchResponse<Shop> response = DB.getClient().search(
                     new SearchRequest.Builder()
                             .index(PREFIX + "shops")
                             .size(1024)
                             .build(),
                     Shop.class);
             List<Shop> shops = new ArrayList<>();
-            response.hits().hits().forEach(hit -> {
-                shops.add(hit.source());
-            });
+            response.hits().hits().forEach(hit -> shops.add(hit.source()));
             Storage.SHOP_CACHE = shops.stream().collect(HashMap::new,
                     ((map, shop) -> map.put(shop, new Date())), Map::putAll);
             return shops;
@@ -242,19 +221,10 @@ public class ESStorage implements StorageImplementation {
     }
 
     @Override
-    public List<Shop> getCacheAllShops() throws StorageExecuteException {
-        if (Storage.SHOP_CACHE.size() == 0 || Storage.SHOP_CACHE.values().stream()
-                .anyMatch(date -> date.getTime() + Storage.SHOP_DELAY < new Date().getTime())) {
-            return getAllShops();
-        } else {
-            return new ArrayList<>(Storage.SHOP_CACHE.keySet());
-        }
-    }
-
-    @Override
     public void asyncSaveShopTrades(@NotNull Shop shop, @NotNull List<Trade> trades, CommandSender sender) {
         List<BulkOperation> bulkDocs = new ArrayList<>();
         trades.forEach(trade -> bulkDocs.add(new BulkOperation.Builder().create(c -> c.document(trade)).build()));
+        Main.debug("[ES-aSync] asyncSaveShopTrades - delete all trades for shop '" + shop.getUuid() + "'.");
         DB.getAsyncClient().deleteByQuery(new DeleteByQueryRequest.Builder()
                 .index(PREFIX + "trades")
                 .query(q -> q.match(m -> m.field("shopUuid").query(String.valueOf(shop.getUuid()))))
@@ -264,30 +234,28 @@ public class ESStorage implements StorageImplementation {
                         Main.message(sender, "&cError while trying to update trades");
                         return;
                     }
+                    Main.debug("[ES-aSync] asyncSaveShopTrades - index all trades for shop '" + shop.getUuid() + "'.");
                     DB.getAsyncClient().bulk(new BulkRequest.Builder()
-                    .index(PREFIX + "trades")
-                    .operations(bulkDocs)
-                    .build()).whenComplete(((bulkResponse, bulkException) -> {
-                        if (bulkException!=null) {
-                            Main.warning("Error while trying to save trades for shop with uuid " + shop.getUuid());
-                            Main.message(sender, "&cError while trying to update trades");
-                            return;
-                        }
-                        Main.message(sender, "&2Trades saved, &6Updating trades..");
-                        List<Trade> cacheTrade = Storage.TRADE_CACHE.keySet().stream().toList();
-                        cacheTrade.stream()
-                                .filter(trade -> trade.getShopUuid().equals(shop.getUuid()))
-                                .forEach(trade -> Storage.TRADE_CACHE.remove(trade));
-                        trades.forEach(trade -> Storage.TRADE_CACHE.put(trade, new Date()));
-                        Main.message(sender, "&2Trades updated !");
-                        Main.info("Trades from shop " + shop.getName() + " updated");
-                    }));
-        });
+                            .index(PREFIX + "trades")
+                            .operations(bulkDocs)
+                            .build()).whenComplete((bulkResponse, bulkException) -> {
+                                if (bulkException!=null) {
+                                    Main.warning("Error while trying to save trades for shop with uuid " + shop.getUuid());
+                                    Main.message(sender, "&cError while trying to update trades");
+                                    return;
+                                }
+                                Main.message(sender, "&2Trades saved, &6Updating trades..");
+                                CacheManager.addCache(Storage.TRADE_CACHE, new ShopTrades(shop.getUuid(), trades));
+                                Main.message(sender, "&2Trades updated !");
+                                Main.info("Trades from shop " + shop.getName() + " updated");
+                            });
+                });
     }
 
     @Override
     public List<Trade> getTrades(@NotNull UUID shopUuid) throws StorageExecuteException {
         try {
+            Main.debug("[ES-Sync] getTrades - Get all trades of shop '" + shopUuid + "'.");
             SearchResponse<Trade> response =  DB.getClient().search(
                     new SearchRequest.Builder()
                             .index(PREFIX + "trades")
@@ -297,11 +265,8 @@ public class ESStorage implements StorageImplementation {
                     Trade.class);
             List<Trade> trades = new ArrayList<>();
             response.hits().hits().forEach(hit -> trades.add(hit.source()));
-            List<Trade> cacheTrade = Storage.TRADE_CACHE.keySet().stream().toList();
-            cacheTrade.stream()
-                    .filter(trade -> trade.getShopUuid().equals(shopUuid))
-                    .forEach(trade -> Storage.TRADE_CACHE.remove(trade));
-            trades.forEach(trade -> Storage.TRADE_CACHE.put(trade, new Date()));
+            CacheManager.addCache(Storage.TRADE_CACHE, new ShopTrades(shopUuid, trades));
+            Main.debug("Found '" + trades.size() + "' trades for shop '" + shopUuid + "'.");
             return trades;
         } catch (IOException e) {
             throw new StorageExecuteException(e, "Error while trying to find trades for shop uuid " + shopUuid);
@@ -310,68 +275,55 @@ public class ESStorage implements StorageImplementation {
 
     @Override
     public List<Trade> getTrades(@NotNull String shopName) throws StorageExecuteException {
-        UUID shopUuid = this.getShop(shopName).getUuid();
-        return this.getTrades(shopUuid);
+        UUID shopUuid = getShop(shopName).getUuid();
+        return getTrades(shopUuid);
     }
 
     @Override
-    public List<Trade> getCacheTrades(@NotNull UUID shopUuid) throws StorageExecuteException {
-        if (Storage.TRADE_CACHE.size() == 0 ||
-                Storage.TRADE_CACHE.entrySet().stream().filter(entry -> entry.getKey().getShopUuid().equals(shopUuid))
-                        .anyMatch(entry -> entry.getValue().getTime() + Storage.TRADE_DELAY < new Date().getTime())) {
-            return getTrades(shopUuid);
-        } else {
-            return Storage.TRADE_CACHE.keySet().stream()
-                    .filter(trade -> trade.getShopUuid().equals(shopUuid))
-                    .collect(Collectors.toList());
-        }
-    }
-
-    @Override
-    public List<Trade> getCacheTrades(@NotNull String shopName) throws StorageExecuteException {
-        UUID shopUuid = getCacheShop(shopName).getUuid();
-        return this.getCacheTrades(shopUuid);
-    }
-
-    @Override
-    public void asyncSaveTradeMode(@NotNull String uuid, @NotNull TradeMode mode) {
+    public void asyncSaveTradeMode(@NotNull UUID playerUuid, @NotNull TradeMode mode) {
+        PlayerTradeMode playerMode = new PlayerTradeMode(playerUuid, mode);
+        Main.debug("[ES-aSync] asyncSaveTradeMode - search users-mode");
         DB.getAsyncClient().search(new SearchRequest.Builder()
                         .index(PREFIX + "users-mode")
-                        .query(q -> q.match(m -> m.field("uuid").query(uuid)))
+                        .query(q -> q.match(m -> m.field("playerUuid").query(playerUuid.toString())))
                         .size(1)
                         .build(),
                 PlayerTradeMode.class
         ).whenComplete(((searchResponse, searchException) -> {
             if (searchException!=null) {
-                Main.warning("Error while searching TradeMode for " + uuid);
+                Main.warning("Error while searching TradeMode for " + playerUuid);
                 Main.stack(searchException.getStackTrace());
             }
             int results = searchResponse.hits().hits().size();
             if (results==0) {
+                Main.debug("[ES-aSync] asyncSaveTradeMode - index users-mode");
                 DB.getAsyncClient().index(c -> c
                         .index(PREFIX + "users-mode")
-                        .document(new PlayerTradeMode(uuid, mode))
+                        .document(playerMode)
                 ).whenComplete((createResponse, createException) ->
-                        Storage.addCache(Storage.TRADE_MODE_CACHE, uuid, mode));
+                        CacheManager.addCache(Storage.TRADE_MODE_CACHE, playerMode));
             } else {
+                Main.debug("[ES-aSync] asyncSaveTradeMode - update users-mode");
                 DB.getAsyncClient().update(u -> u
                                 .index(PREFIX + "users-mode")
                                 .id(searchResponse.hits().hits().get(0).id())
-                                .doc(new PlayerTradeMode(uuid, mode))
+                                .doc(playerMode)
                                 .docAsUpsert(true),
                         PlayerTradeMode.class
                 ).whenComplete((updateResponse, updateException) ->
-                        Storage.addCache(Storage.TRADE_MODE_CACHE, uuid, mode));
+                        CacheManager.addCache(Storage.TRADE_MODE_CACHE, playerMode));
             }
         }));
     }
 
-    public TradeMode getTradeMode(@NotNull String playerUuid) throws StorageExecuteException {
+    @Override
+    public TradeMode getTradeMode(@NotNull UUID playerUuid) throws StorageExecuteException {
         try {
-            SearchResponse<PlayerTradeMode> response =  DB.getClient().search(
+            Main.debug("[ES-Sync] getTradeMode - search users-mode of '" + playerUuid + "'.");
+            SearchResponse<PlayerTradeMode> response = DB.getClient().search(
                     new SearchRequest.Builder()
                             .index(PREFIX + "users-mode")
-                            .query(q -> q.match(m -> m.field("uuid").query(playerUuid)))
+                            .query(q -> q.match(m -> m.field("playerUuid").query(playerUuid.toString())))
                             .size(1)
                             .build(),
                     PlayerTradeMode.class);
@@ -385,38 +337,19 @@ public class ESStorage implements StorageImplementation {
             if (tradeMode == null) {
                 tradeMode = TradeMode.INVENTORY;
             }
-            Storage.addCache(Storage.TRADE_MODE_CACHE, playerUuid, tradeMode);
+            CacheManager.addCache(Storage.TRADE_MODE_CACHE, new PlayerTradeMode(playerUuid, tradeMode));
             return tradeMode;
         } catch (IOException e) {
             throw new StorageExecuteException(e, "Error while trying to fetch trade mode of player " + playerUuid);
         }
     }
-
-    @Override
-    public TradeMode getCacheTradeMode(@NotNull String playerUuid) throws StorageExecuteException {
-        if (Storage.TRADE_MODE_CACHE.size() == 0 || Storage.TRADE_MODE_CACHE.entrySet().stream()
-                .filter(entry -> {
-                    if (entry.getKey()==null) return false;
-                    String entryUuid = entry.getKey().getKey();
-                    if (entryUuid==null) return false;
-                    return entryUuid.equals(playerUuid);
-                })
-                .anyMatch(entry -> entry.getValue().getTime() + Storage.TRADE_MODE_DELAY < new Date().getTime())) {
-            return getTradeMode(playerUuid);
-        } else {
-            Optional<Map.Entry<String, TradeMode>> optionalEntry = Storage.TRADE_MODE_CACHE.keySet().stream()
-                    .filter(entry -> entry.getKey().equals(playerUuid))
-                    .findFirst();
-            if (optionalEntry.isPresent()) {
-                return optionalEntry.get().getValue();
-            } else {
-                return getTradeMode(playerUuid);
-            }
-        }
-    }
-
     @Override
     public int getTradeUses(@NotNull UUID player, @NotNull UUID tradeUuid) {
         return 0;
+    }
+
+    @Override
+    public void logTrade(@NotNull UUID player, @Nullable List<String> playerTags, @NotNull Trade trade) {
+
     }
 }

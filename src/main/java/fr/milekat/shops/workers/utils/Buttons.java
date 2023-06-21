@@ -9,8 +9,7 @@ public enum Buttons {
     //  TODO: Default lore ?
     //  Basics
     NEXT(new ItemBuilder(Material.ARROW)
-            .name(Main.getConfigs().getMessage("messages.gui.commons.buttons.next.title",
-                    "Next page"))
+            .name(Main.getConfigs().getMessage("messages.gui.commons.buttons.next.title", "Next page"))
             .addLore(Main.getConfigs().getMessages("messages.gui.commons.buttons.next.lore"))
             .build()),
     PREVIOUS(new ItemBuilder(Material.ARROW)
@@ -19,8 +18,7 @@ public enum Buttons {
             .addLore(Main.getConfigs().getMessages("messages.gui.commons.buttons.previous.lore"))
             .build()),
     EXIT(new ItemBuilder(Material.BARRIER)
-            .name(Main.getConfigs().getMessage("messages.gui.commons.buttons.exit.title",
-                    "Close"))
+            .name(Main.getConfigs().getMessage("messages.gui.commons.buttons.exit.title", "Close"))
             .addLore(Main.getConfigs().getMessages("messages.gui.commons.buttons.exit.lore"))
             .build()),
 

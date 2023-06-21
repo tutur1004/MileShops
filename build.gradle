@@ -38,7 +38,7 @@ dependencies {
         exclude(group: '*')
     }
     implementation group: 'fr.mrmicky', name: 'FastInv', version: '3.0.3'
-    compileOnly group: 'dev.sergiferry', name: 'playernpc', version: '2023.2'
+    compileOnly group: 'dev.sergiferry', name: 'playernpc', version: '2023.4'
     compileOnly group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.15.2'
     compileOnly group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.15.2'
     compileOnly group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.15.2'

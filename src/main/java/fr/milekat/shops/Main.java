@@ -11,6 +11,7 @@ import fr.milekat.utils.Configs;
 import fr.mrmicky.fastinv.FastInvManager;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -128,6 +129,14 @@ public class Main extends JavaPlugin {
                 ChatColor.RESET);
         prefixedMessage.addExtra(message.duplicate());
         player.spigot().sendMessage(prefixedMessage);
+    }
+
+    /**
+     * Execute a Runnable synchronously
+     * @param runnable to execute
+     */
+    public static void bukkitSync(Runnable runnable) {
+        Bukkit.getServer().getScheduler().scheduleSyncDelayedTask(Main.getInstance(), runnable);
     }
 
     /**

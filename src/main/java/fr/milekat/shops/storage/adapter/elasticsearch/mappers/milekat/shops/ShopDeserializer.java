@@ -12,6 +12,16 @@ import fr.milekat.shops.api.classes.ShopType;
 import java.io.IOException;
 import java.util.UUID;
 
+/**
+ * {
+ *     "shop": {
+ *         "playerUuid": UUID,
+ *         "name": String,
+ *         "npc": NPC.Global,
+ *         "type": ShopType
+ *     }
+ * }
+ */
 public class ShopDeserializer extends StdDeserializer<Shop> {
     private final ObjectMapper mapper;
 
@@ -21,7 +31,7 @@ public class ShopDeserializer extends StdDeserializer<Shop> {
     }
 
     @Override
-    public Shop deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+    public Shop deserialize(JsonParser p, DeserializationContext context) throws IOException {
         JsonNode node = mapper.readTree(p);
         if (node.isEmpty() || !node.isContainerNode()) return null;
 

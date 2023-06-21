@@ -5,6 +5,7 @@ import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.ShopType;
 import fr.milekat.shops.api.classes.Trade;
+import fr.milekat.shops.storage.Storage;
 import fr.milekat.shops.storage.exeptions.StorageExecuteException;
 import fr.milekat.shops.workers.ShopsManager;
 import fr.milekat.shops.workers.gui.AdminEditor;
@@ -24,15 +25,10 @@ public class ShopsListeners implements Listener {
     @EventHandler
     public void loadShops(PluginEnableEvent event) throws StorageExecuteException {
         Main.info("Loading shops...");
-        List<Shop> shops = Main.getStorage().getAllShops();
-        shops.forEach(shop -> {
-            try {
-                Main.getStorage().getTrades(shop.getUuid());
-                shop.getNpc().forceUpdate();
-            } catch (StorageExecuteException exception) {
-                Main.warning("Error while trying to load trades for shop " + shop.getName());
-            }
-        });
+        List<Shop> shops = Main.getStorage().getCacheAllShops();
+        shops.forEach(shop -> shop.getNpc().forceUpdate());
+        Storage.TRADE_CACHE.clear();
+        Storage.TRADE_MODE_CACHE.clear();
         Main.info(shops.size() + " shops loaded !");
     }
 
@@ -42,8 +38,11 @@ public class ShopsListeners implements Listener {
         if (event.isCancelled()) return;
         Player player = event.getPlayer();
         NPC npc = event.getNPC().getGlobal();
-        Map.Entry<Shop, List<Trade>> shop = ShopsManager.getShop(UUID.fromString(npc.getSimpleCode()));
+        Map.Entry<Shop, List<Trade>> shop = ShopsManager.getShop(UUID.fromString(npc.getSimpleID()));
         if (shop==null) return;
+        if (shop.getValue().size() < 1) {
+            return;
+        }
         if (shop.getKey().getType().equals(ShopType.VANILLA)) {
             //  TODO: Vanilla shop display
         } else if (shop.getKey().getType().equals(ShopType.INVENTORY)) {
@@ -58,7 +57,7 @@ public class ShopsListeners implements Listener {
         if (!player.hasPermission("custom-shops.admin.edit")) return;
         if (!player.isSneaking()) return;
         NPC npc = event.getNPC().getGlobal();
-        Map.Entry<Shop, List<Trade>> shop = ShopsManager.getShop(UUID.fromString(npc.getSimpleCode()));
+        Map.Entry<Shop, List<Trade>> shop = ShopsManager.getShop(UUID.fromString(npc.getSimpleID()));
         if (shop==null) return;
         AdminEditor adminEditor = new AdminEditor(player, shop.getKey(), shop.getValue());
         adminEditor.open(player);

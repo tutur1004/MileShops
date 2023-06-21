@@ -15,6 +15,7 @@ import java.io.IOException;
 /**
  * {
  *     "npc": {
+ *         "uuid": UUID,
  *         "location": Location,
  *         "tracking": NEAREST_PLAYER,
  *         "text": ["String","Array"],
@@ -48,7 +49,7 @@ public class NPCSerializer extends StdSerializer<NPC.Global> {
         gen.writeStartObject();
         gen.setCodec(mapper);
 
-        gen.writeStringField("uuid", value.getSimpleCode());
+        gen.writeStringField("uuid", value.getSimpleID());
 
         gen.writeFieldName("location");
         gen.writeObject(mapper.valueToTree(value.getLocation()).get("location"));
@@ -73,17 +74,17 @@ public class NPCSerializer extends StdSerializer<NPC.Global> {
         if (!value.getEquipment(NPC.Slot.OFFHAND).isSimilar(new ItemStack(Material.AIR))) {
             equipNode.set("offHand", mapper.valueToTree(value.getEquipment(NPC.Slot.OFFHAND)).get("itemStack"));
         }
-        if (!value.getEquipment(NPC.Slot.HELMET).isSimilar(new ItemStack(Material.AIR))) {
-            equipNode.set("helmet", mapper.valueToTree(value.getEquipment(NPC.Slot.HELMET)).get("itemStack"));
+        if (!value.getEquipment(NPC.Slot.HEAD).isSimilar(new ItemStack(Material.AIR))) {
+            equipNode.set("helmet", mapper.valueToTree(value.getEquipment(NPC.Slot.HEAD)).get("itemStack"));
         }
-        if (!value.getEquipment(NPC.Slot.CHESTPLATE).isSimilar(new ItemStack(Material.AIR))) {
-            equipNode.set("chest", mapper.valueToTree(value.getEquipment(NPC.Slot.CHESTPLATE)).get("itemStack"));
+        if (!value.getEquipment(NPC.Slot.CHEST).isSimilar(new ItemStack(Material.AIR))) {
+            equipNode.set("chest", mapper.valueToTree(value.getEquipment(NPC.Slot.CHEST)).get("itemStack"));
         }
-        if (!value.getEquipment(NPC.Slot.LEGGINGS).isSimilar(new ItemStack(Material.AIR))) {
-            equipNode.set("leggings", mapper.valueToTree(value.getEquipment(NPC.Slot.LEGGINGS)).get("itemStack"));
+        if (!value.getEquipment(NPC.Slot.LEGS).isSimilar(new ItemStack(Material.AIR))) {
+            equipNode.set("leggings", mapper.valueToTree(value.getEquipment(NPC.Slot.LEGS)).get("itemStack"));
         }
-        if (!value.getEquipment(NPC.Slot.BOOTS).isSimilar(new ItemStack(Material.AIR))) {
-            equipNode.set("boots", mapper.valueToTree(value.getEquipment(NPC.Slot.BOOTS)).get("itemStack"));
+        if (!value.getEquipment(NPC.Slot.FEET).isSimilar(new ItemStack(Material.AIR))) {
+            equipNode.set("boots", mapper.valueToTree(value.getEquipment(NPC.Slot.FEET)).get("itemStack"));
         }
         if (equipNode.size() > 0) {
             gen.writeFieldName("equip");

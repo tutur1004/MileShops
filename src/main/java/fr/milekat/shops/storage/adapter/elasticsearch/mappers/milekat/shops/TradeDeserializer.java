@@ -11,6 +11,17 @@ import org.bukkit.inventory.ItemStack;
 import java.io.IOException;
 import java.util.UUID;
 
+/**
+ * {
+ *     "trade": {
+ *         "shopUuid": UUID,
+ *         "position": Location,
+ *         "firstItem": ItemStack,
+ *         "resultItem": ItemStack,
+ *         "secondItem": ItemStack
+ *     }
+ * }
+ */
 public class TradeDeserializer  extends StdDeserializer<Trade> {
     private final ObjectMapper mapper;
 
@@ -20,7 +31,7 @@ public class TradeDeserializer  extends StdDeserializer<Trade> {
     }
 
     @Override
-    public Trade deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+    public Trade deserialize(JsonParser p, DeserializationContext context) throws IOException {
         JsonNode node = mapper.readTree(p);
         if (node.isEmpty() || !node.isContainerNode()) return null;
         UUID shopUuid = UUID.fromString(node.get("shopUuid").asText());

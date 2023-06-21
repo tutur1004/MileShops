@@ -31,7 +31,7 @@ public class BlockDeserializer extends StdDeserializer<Block> {
 
     @Nullable
     @Override
-    public Block deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+    public Block deserialize(JsonParser p, DeserializationContext context) throws IOException {
         JsonNode node = mapper.readTree(p);
         if (node.isEmpty() || !node.isContainerNode()) return null;
         Location location = mapper.treeToValue(node, Location.class);

@@ -35,7 +35,7 @@ public class InventoryDeserializer extends StdDeserializer<Inventory> {
     }
 
     @Override
-    public Inventory deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+    public Inventory deserialize(JsonParser p, DeserializationContext context) throws IOException {
         JsonNode node = mapper.readTree(p);
         if (node.isEmpty() || !node.isContainerNode()) return null;
         Inventory inventory = Bukkit.createInventory(null, InventoryType.valueOf(node.get("type").textValue()));

@@ -47,7 +47,7 @@ public class ChestShop extends FastInv {
         this.shop = shop;
         this.shopTrades = trades;
         try {
-            this.tradeMode = Main.getStorage().getCacheTradeMode(player.getUniqueId().toString());
+            this.tradeMode = Main.getStorage().getCacheTradeMode(player.getUniqueId());
         } catch (Exception ignore) {
             this.tradeMode = TradeMode.INVENTORY;
         }
@@ -76,7 +76,7 @@ public class ChestShop extends FastInv {
         setItems(0, 53, Buttons.PANE_WHITE.get());
         setItems(getBorders(), Buttons.PANE_BLACK.get());
         //  Setup exit button
-        setItem(getInventory().getSize() - 5, Buttons.EXIT.get());
+        setItem(getInventory().getSize() - 5, Buttons.EXIT.get(), e -> e.getWhoClicked().closeInventory());
         pageButtons();
     }
 
@@ -105,15 +105,16 @@ public class ChestShop extends FastInv {
     }
 
     private void tradeModeButton() {
-        Main.getStorage().asyncSaveTradeMode(player.getUniqueId().toString(), tradeMode);
         if (tradeMode.equals(TradeMode.INVENTORY)) {
             setItem(4, Buttons.MODE_CHEST.get(), event -> {
                 tradeMode = TradeMode.SHULKER;
+                Main.getStorage().asyncSaveTradeMode(player.getUniqueId(), tradeMode);
                 tradeModeButton();
             });
         } else if (tradeMode.equals(TradeMode.SHULKER)) {
             setItem(4, Buttons.MODE_SHULKER.get(), event -> {
                 tradeMode = TradeMode.INVENTORY;
+                Main.getStorage().asyncSaveTradeMode(player.getUniqueId(), tradeMode);
                 tradeModeButton();
             });
         }
@@ -132,7 +133,7 @@ public class ChestShop extends FastInv {
     }
 
     private void displayTrade(int pagePosition, @NotNull Trade trade) {
-        setItem(11 + (pagePosition * 9), trade.getFirstItem().clone()); //  TODO: Events
+        setItem(11 + (pagePosition * 9), trade.getFirstItem().clone());
         setItem(13 + (pagePosition * 9), Buttons.HEAD_LEFT.get());
         setItem(15 + (pagePosition * 9), trade.getResultItem().clone(), event -> {
             if (isFull(player, trade.getResultItem())) {

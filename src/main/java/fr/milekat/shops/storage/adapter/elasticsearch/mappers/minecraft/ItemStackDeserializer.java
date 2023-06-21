@@ -21,7 +21,7 @@ public class ItemStackDeserializer extends StdDeserializer<ItemStack> {
     }
 
     @Override
-    public ItemStack deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+    public ItemStack deserialize(JsonParser p, DeserializationContext context) throws IOException {
         try {
             JsonNode node = mapper.readTree(p);
             if (node.isEmpty()) return null;

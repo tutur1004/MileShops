@@ -11,6 +11,7 @@ import fr.milekat.utils.Configs;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,7 +30,7 @@ public class SQLStorage implements StorageImplementation {
     private final SQLDataBaseConnection DB;
     private final String DatabaseName;
     private final String PREFIX = Main.getConfigs().getString("storage.sql.prefix");
-    private final List<String> TABLES = Arrays.asList("TBD");
+    private final List<String> TABLES = List.of("TBD");
 
     /*
         SQL Queries definition
@@ -137,7 +138,7 @@ public class SQLStorage implements StorageImplementation {
         SQL Queries execution
      */
     @Override
-    public void asyncSaveShop(@NotNull Shop shop, CommandSender sender) {
+    public void asyncSaveShop(@NotNull Shop shop, CommandSender sender, boolean createIfNotExist) {
 
     }
 
@@ -152,22 +153,12 @@ public class SQLStorage implements StorageImplementation {
     }
 
     @Override
-    public Shop getCacheShop(@NotNull UUID shopUuid) throws StorageExecuteException {
-        return null;
-    }
-
-    @Override
-    public Shop getCacheShop(@NotNull String shopName) throws StorageExecuteException {
+    public Shop getShopNpc(@NotNull UUID shopNpcUuid) throws StorageExecuteException {
         return null;
     }
 
     @Override
     public List<Shop> getAllShops() {
-        return null;
-    }
-
-    @Override
-    public List<Shop> getCacheAllShops() throws StorageExecuteException {
         return null;
     }
 
@@ -187,28 +178,23 @@ public class SQLStorage implements StorageImplementation {
     }
 
     @Override
-    public List<Trade> getCacheTrades(@NotNull UUID shopUuid) throws StorageExecuteException {
-        return getTrades(shopUuid);
-    }
-
-    @Override
-    public List<Trade> getCacheTrades(@NotNull String shopName) throws StorageExecuteException {
-        return null;
-    }
-
-    @Override
-    public void asyncSaveTradeMode(@NotNull String player, @NotNull TradeMode mode) {
+    public void asyncSaveTradeMode(@NotNull UUID playerUuid, @NotNull TradeMode mode) {
 
     }
 
     @Override
-    public TradeMode getCacheTradeMode(@NotNull String player) throws StorageExecuteException {
+    public TradeMode getTradeMode(@NotNull UUID playerUuid) throws StorageExecuteException {
         return null;
     }
 
     @Override
     public int getTradeUses(@NotNull UUID player, @NotNull UUID tradeUuid) {
         return 0;
+    }
+
+    @Override
+    public void logTrade(@NotNull UUID player, @Nullable List<String> playerTags, @NotNull Trade trade) {
+
     }
 
     /*

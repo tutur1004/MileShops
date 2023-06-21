@@ -21,7 +21,7 @@ public class LocationDeserializer extends StdDeserializer<Location> {
     }
 
     @Override
-    public Location deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+    public Location deserialize(JsonParser p, DeserializationContext context) throws IOException {
         try {
             JsonNode node = mapper.readTree(p);
             if (node.isEmpty()) return null;

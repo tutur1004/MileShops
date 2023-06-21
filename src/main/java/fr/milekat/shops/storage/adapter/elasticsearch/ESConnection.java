@@ -7,7 +7,6 @@ import co.elastic.clients.transport.ElasticsearchTransport;
 import co.elastic.clients.transport.rest_client.RestClientTransport;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.milekat.shops.Main;
-import fr.milekat.shops.storage.exeptions.StorageLoaderException;
 import fr.milekat.utils.Configs;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
@@ -25,12 +24,12 @@ public class ESConnection {
     private final ElasticsearchTransport transport;
     public final JacksonJsonpMapper jsonpMapper;
 
-    public ESConnection(@NotNull Configs config) throws StorageLoaderException {
+    public ESConnection(@NotNull Configs config) {
         //  Fetch connections vars from config.yml file
         String hostname = config.getString("storage.elasticsearch.hostname");
         int port = config.getInt("storage.elasticsearch.port", 9200);
-        String username = config.getString("storage.elasticsearch.username", null);
-        String password = config.getString("storage.elasticsearch.password", null);
+        String username = config.getString("storage.elasticsearch.username", "null");
+        String password = config.getString("storage.elasticsearch.password", "null");
         //  Check hostname/port
         Main.debug("Hostname:" + hostname);
         Main.debug("Port:" + port);
@@ -38,7 +37,7 @@ public class ESConnection {
         //  Init the RestClientBuilder
         RestClientBuilder restClientBuilder = RestClient.builder(new HttpHost(hostname, port));
         //  If credentials are set, apply credentials to RestClientBuilder
-        if (username!=null && password!=null) {
+        if (!username.equals("null") && !password.equals("null")) {
             final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
             credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
             restClientBuilder.setHttpClientConfigCallback(httpClientBuilder ->
