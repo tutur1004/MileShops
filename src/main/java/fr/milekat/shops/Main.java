@@ -17,7 +17,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.UUID;
 
 public class Main extends JavaPlugin {
     private static JavaPlugin plugin;
@@ -28,7 +31,17 @@ public class Main extends JavaPlugin {
     @Override
     public void onEnable() {
         plugin = this;
-        config = new Configs(this.getConfig());
+        File configFile;
+        try {
+            configFile = File.createTempFile(UUID.randomUUID().toString(), UUID.randomUUID().toString());
+            this.getConfig().save(configFile);
+        } catch (IOException exception) {
+            this.getLogger().warning("Error while trying to load config");
+            exception.printStackTrace();
+            this.onDisable();
+            return;
+        }
+        config = new Configs(configFile);
         DEBUG = config.getBoolean("debug");
         debug("Debug enable");
         //  Init internal lib
