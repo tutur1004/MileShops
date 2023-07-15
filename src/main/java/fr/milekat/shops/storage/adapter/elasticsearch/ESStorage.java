@@ -5,6 +5,7 @@ import co.elastic.clients.elasticsearch.core.DeleteByQueryRequest;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
+import co.elastic.clients.elasticsearch.core.bulk.CreateOperation;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.indices.ExistsRequest;
 import fr.milekat.shops.Main;
@@ -19,6 +20,8 @@ import fr.milekat.shops.storage.utils.PlayerTradeMode;
 import fr.milekat.shops.storage.utils.ShopTrades;
 import fr.milekat.shops.workers.utils.TradeMode;
 import fr.milekat.utils.Configs;
+import fr.milekat.utils.DateMileKat;
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -30,6 +33,7 @@ import java.util.concurrent.CompletableFuture;
 public class ESStorage implements StorageImplementation {
     private final String PREFIX;
     private final ESConnection DB;
+    private final List<BulkOperation> logToProcess = new ArrayList<>();
 
     /*
         Main DB
@@ -39,6 +43,7 @@ public class ESStorage implements StorageImplementation {
         try {
             DB = new ESConnection(config);
             Main.debug(DB.getClient().cluster().health().toString());
+            logPool();
         } catch (IOException e) {
             throw new StorageLoaderException("Error while trying to load ElasticSearch cluster");
         }
@@ -281,6 +286,7 @@ public class ESStorage implements StorageImplementation {
 
     @Override
     public void asyncSaveTradeMode(@NotNull UUID playerUuid, @NotNull TradeMode mode) {
+        // TODO: 22/06/2023 Duplicated values here ?
         PlayerTradeMode playerMode = new PlayerTradeMode(playerUuid, mode);
         Main.debug("[ES-aSync] asyncSaveTradeMode - search users-mode");
         DB.getAsyncClient().search(new SearchRequest.Builder()
@@ -349,7 +355,42 @@ public class ESStorage implements StorageImplementation {
     }
 
     @Override
-    public void logTrade(@NotNull UUID player, @Nullable List<String> playerTags, @NotNull Trade trade) {
+    public void logTrade(@NotNull UUID player, @Nullable Map<String, Object> tags, @NotNull Trade trade) {
+        Map<String, Object> log = new HashMap<>();
+        log.put("uuid", player);
+        log.put("tags", tags);
+        log.put("trade", trade);
+        log.put("@timestamp", DateMileKat.getDateEs());
+        logToProcess.add(
+                new BulkOperation.Builder().create(
+                        new CreateOperation.Builder<>()
+                                .index(PREFIX + "history")
+                                .document(log)
+                                .build()
+                )
+                .build()
+        );
+    }
 
+    private void logPool() {
+        Bukkit.getScheduler().runTaskTimerAsynchronously(Main.getInstance(), ()-> {
+            List<BulkOperation> processing = new ArrayList<>(logToProcess);
+            logToProcess.clear();
+            if (processing.size() > 0) {
+                DB.getAsyncClient().bulk(
+                        new BulkRequest.Builder()
+                                .operations(processing)
+                                .build()
+                ).whenComplete((bulkResponse, bulkException) -> {
+                    if (bulkException!=null) {
+                        logToProcess.addAll(processing);
+                        Main.warning("Error while trying to save Trade Logs.");
+                        Main.stack(bulkException.getStackTrace());
+                    } else {
+                        Main.debug("'" + processing.size() + "' log trades saved.");
+                    }
+                });
+            }
+        }, 50, 100);
     }
 }

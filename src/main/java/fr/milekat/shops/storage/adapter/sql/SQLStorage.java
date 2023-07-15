@@ -19,8 +19,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -193,7 +193,7 @@ public class SQLStorage implements StorageImplementation {
     }
 
     @Override
-    public void logTrade(@NotNull UUID player, @Nullable List<String> playerTags, @NotNull Trade trade) {
+    public void logTrade(@NotNull UUID player, @Nullable Map<String, Object> tags, @NotNull Trade trade) {
 
     }
 

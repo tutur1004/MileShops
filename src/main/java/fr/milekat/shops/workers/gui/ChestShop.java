@@ -28,6 +28,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class ChestShop extends FastInv {
     private final Player player;
@@ -286,10 +287,13 @@ public class ChestShop extends FastInv {
         this.tradesDone.forEach((tradePos, count) -> this.shopTrades.stream()
                 .filter(trade -> trade.getTradePosition() == tradePos).findFirst()
                 .ifPresent(trade -> {
+                    IntStream.range(0, count).forEach(osef -> {
+                        Bukkit.getPluginManager().callEvent(new TradeCompleteEvent(player, shop, trade));
+                    });
                     BaseComponent message = new TextComponent(TradeUtils.tradeFormatting(Main.getConfigs()
                             .getMessage("messages.gui.chest-shop.messages.trade-result",
                                     "&2You trade <first_amount>x<first_material>, " +
-                                                    "for <result_amount>x<result_material>."), shop, trade, count));
+                                            "for <result_amount>x<result_material>."), shop, trade, count));
                     message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
                             new Text(Main.getConfigs()
                                     .getMessages("messages.gui.chest-shop.messages.trade-result-hover")

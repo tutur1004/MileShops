@@ -6,6 +6,7 @@ import fr.milekat.shops.storage.Storage;
 import fr.milekat.shops.storage.StorageImplementation;
 import fr.milekat.shops.storage.exeptions.StorageLoaderException;
 import fr.milekat.shops.workers.commands.ShopsCmd;
+import fr.milekat.shops.workers.listeners.LogTrade;
 import fr.milekat.shops.workers.listeners.ShopsListeners;
 import fr.milekat.utils.Configs;
 import fr.mrmicky.fastinv.FastInvManager;
@@ -64,6 +65,7 @@ public class Main extends JavaPlugin {
         CustomShopsAPI.API_READY = true;
         //  Load plugin workers
         plugin.getServer().getPluginManager().registerEvents(new ShopsListeners(), this);
+        plugin.getServer().getPluginManager().registerEvents(new LogTrade(), this);
         plugin.getCommand("shop").setExecutor(new ShopsCmd());
     }
 
