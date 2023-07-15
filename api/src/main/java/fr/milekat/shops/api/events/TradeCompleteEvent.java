@@ -7,6 +7,9 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
+/**
+ * Bukkit Event triggered when a {@link Player} complete a {@link Trade}
+ */
 public class TradeCompleteEvent  extends Event implements Cancellable {
     private static final HandlerList HANDLERS_LIST = new HandlerList();
     private boolean CANCELLED;

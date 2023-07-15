@@ -1,8 +1,9 @@
 package fr.milekat.shops.api.classes;
 
 import dev.sergiferry.playernpc.api.NPC;
-import fr.milekat.shops.Main;
-import fr.milekat.shops.storage.exeptions.StorageExecuteException;
+import fr.milekat.shops.api.CustomShopsAPI;
+import fr.milekat.shops.api.exeptions.CustomShopsApiUnavailable;
+import fr.milekat.shops.api.exeptions.StorageException;
 
 import java.util.List;
 import java.util.UUID;
@@ -55,7 +56,7 @@ public class Shop {
         this.type = type;
     }
 
-    public List<Trade> getTrades() throws StorageExecuteException {
-        return Main.getStorage().getCacheTrades(uuid);
+    public List<Trade> getTrades() throws CustomShopsApiUnavailable, StorageException {
+        return CustomShopsAPI.getAPI().getShopTrades(this.uuid);
     }
 }

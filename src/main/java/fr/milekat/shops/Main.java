@@ -1,10 +1,10 @@
 package fr.milekat.shops;
 
 import dev.sergiferry.playernpc.api.NPCLib;
+import fr.milekat.shops.api.CustomShopsAPI;
 import fr.milekat.shops.storage.Storage;
 import fr.milekat.shops.storage.StorageImplementation;
 import fr.milekat.shops.storage.exeptions.StorageLoaderException;
-import fr.milekat.shops.workers.Test;
 import fr.milekat.shops.workers.commands.ShopsCmd;
 import fr.milekat.shops.workers.listeners.ShopsListeners;
 import fr.milekat.utils.Configs;
@@ -32,6 +32,7 @@ public class Main extends JavaPlugin {
     @Override
     public void onEnable() {
         plugin = this;
+        //  Load configs
         File configFile;
         try {
             configFile = File.createTempFile(UUID.randomUUID().toString(), UUID.randomUUID().toString());
@@ -58,7 +59,10 @@ public class Main extends JavaPlugin {
             if (DEBUG) exception.printStackTrace();
             this.onDisable();
         }
-        plugin.getServer().getPluginManager().registerEvents(new Test(), this);
+        //  Load API
+        CustomShopsAPI.LOADED_API = new API();
+        CustomShopsAPI.API_READY = true;
+        //  Load plugin workers
         plugin.getServer().getPluginManager().registerEvents(new ShopsListeners(), this);
         plugin.getCommand("shop").setExecutor(new ShopsCmd());
     }
