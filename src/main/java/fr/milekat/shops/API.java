@@ -7,6 +7,7 @@ import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.exeptions.StorageException;
 import fr.milekat.shops.storage.exeptions.StorageExecuteException;
 import fr.milekat.shops.workers.ShopsManager;
+import fr.milekat.shops.workers.listeners.LogTrade;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -57,12 +58,17 @@ public class API implements CustomShopsIAPI {
     }
 
     @Override
-    public @Nullable List<String> getPlayerTags(@NotNull UUID uuid) {
-        return null;
+    public @Nullable Map<String, Object> getPlayerTags(@NotNull UUID uuid) {
+        return LogTrade.playerTags.getOrDefault(uuid, null);
     }
 
     @Override
-    public void setPlayerTags(@NotNull UUID uuid, @NotNull List<String> tags) {
+    public void removePlayerTags(@NotNull UUID uuid) {
+        LogTrade.playerTags.remove(uuid);
+    }
 
+    @Override
+    public void setPlayerTags(@NotNull UUID uuid, @NotNull Map<String, Object> tags) {
+        LogTrade.playerTags.put(uuid, tags);
     }
 }

@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @SuppressWarnings({"unused", "UnusedReturnValue"})
@@ -24,6 +25,7 @@ public interface CustomShopsIAPI {
     List<Trade> getShopTrades(@NotNull NPC.Global npc) throws StorageException;
 
     @Nullable
-    List<String> getPlayerTags(@NotNull UUID uuid);
-    void setPlayerTags(@NotNull UUID uuid, @NotNull List<String> tags);
+    Map<String, Object> getPlayerTags(@NotNull UUID uuid);
+    void removePlayerTags(@NotNull UUID uuid);
+    void setPlayerTags(@NotNull UUID uuid, @NotNull Map<String, Object> tags);
 }
