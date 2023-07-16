@@ -2,11 +2,20 @@ package fr.milekat.shops.api.exeptions;
 
 import fr.milekat.shops.api.CustomShopsAPI;
 
+/**
+ * Exception thrown when there is an issue during a storage execution.
+ */
 public class StorageException extends Exception {
+    /**
+     * Error message
+     */
     private final String message;
 
     /**
-     * Issue during a storage execution
+     * Constructs a new StorageException with the specified cause and message.
+     *
+     * @param exception The underlying exception that caused the storage issue.
+     * @param message   The error message associated with the storage issue.
      */
     public StorageException(Throwable exception, String message) {
         super(exception);
@@ -21,7 +30,9 @@ public class StorageException extends Exception {
     }
 
     /**
-     * Get error message (If exist)
+     * Retrieves the error message associated with the storage issue, if it exists.
+     *
+     * @return The error message, or null if no message is available.
      */
     public String getMessage() {
         return message;
