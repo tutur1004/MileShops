@@ -10,6 +10,7 @@ import fr.milekat.shops.storage.exeptions.StorageExecuteException;
 import fr.milekat.shops.workers.ShopsManager;
 import fr.milekat.shops.workers.gui.AdminEditor;
 import fr.milekat.shops.workers.gui.ChestShop;
+import fr.milekat.shops.workers.utils.NPCUtils;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -26,7 +27,7 @@ public class ShopsListeners implements Listener {
     public void loadShops(PluginEnableEvent event) throws StorageExecuteException {
         Main.info("Loading shops...");
         List<Shop> shops = Main.getStorage().getCacheAllShops();
-        shops.forEach(shop -> shop.getNpc().forceUpdate());
+        shops.forEach(shop -> NPCUtils.forceUpdate(shop.getNpc()));
         Storage.TRADE_CACHE.clear();
         Storage.TRADE_MODE_CACHE.clear();
         Main.info(shops.size() + " shops loaded !");

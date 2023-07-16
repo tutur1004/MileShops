@@ -46,7 +46,7 @@ public interface CacheManager {
         Main.debug("Get cache shop of npc '" + npcUuid + "'.");
         Optional<Map.Entry<Shop, Date>> optionalShop = Storage.SHOP_CACHE.entrySet()
                 .stream()
-                .filter(entry -> entry.getKey().getNpc().getSimpleID().equals(npcUuid.toString()))
+                .filter(entry -> entry.getKey().getNpc().equals(npcUuid))
                 .filter(entry -> entry.getValue().getTime() + Storage.SHOP_DELAY > new Date().getTime())
                 .findFirst();
         if (optionalShop.isPresent()) {

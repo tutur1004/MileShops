@@ -8,7 +8,9 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class LogTrade implements Listener {
     public static final Map<UUID, Map<String, Object>> playerTags = new HashMap<>();

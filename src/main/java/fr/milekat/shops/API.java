@@ -1,6 +1,5 @@
 package fr.milekat.shops;
 
-import dev.sergiferry.playernpc.api.NPC;
 import fr.milekat.shops.api.CustomShopsIAPI;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
@@ -46,9 +45,9 @@ public class API implements CustomShopsIAPI {
     }
 
     @Override
-    public @NotNull List<Trade> getShopTrades(@NotNull NPC.Global npc) throws StorageException {
+    public @NotNull List<Trade> getNpcShopTrades(@NotNull UUID uuid) throws StorageException {
         try {
-            Map.Entry<Shop, List<Trade>> shop = ShopsManager.getShop(UUID.fromString(npc.getSimpleID()));
+            Map.Entry<Shop, List<Trade>> shop = ShopsManager.getShop(uuid);
             return Objects.requireNonNull(shop).getValue();
         } catch (StorageExecuteException exception) {
             throw new StorageException(exception, exception.getMessage());

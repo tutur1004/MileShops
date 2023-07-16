@@ -9,6 +9,7 @@ import fr.milekat.shops.api.exeptions.CustomShopsApiUnavailable;
 import fr.milekat.shops.api.exeptions.StorageException;
 import fr.milekat.shops.storage.exeptions.StorageExecuteException;
 import fr.milekat.shops.workers.gui.ChestShop;
+import fr.milekat.shops.workers.utils.NPCUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -41,9 +42,9 @@ public class ShopsCmd implements CommandExecutor {
                         shops.forEach(shop -> {
                             try {
                                 Main.getStorage().getCacheTrades(shop.getUuid());
-                                shop.getNpc().forceUpdate();
+                                NPCUtils.forceUpdate(shop.getNpc());
                                 loaded.getAndIncrement();
-                            } catch (StorageExecuteException exception) {
+                            } catch (StorageExecuteException | NullPointerException exception) {
                                 Main.message(sender, "&cError while trying to reload trades for shop " +
                                         shop.getName());
                                 Main.warning("Error while trying to reload trades for shop " + shop.getName());
@@ -88,7 +89,8 @@ public class ShopsCmd implements CommandExecutor {
                     try {
                         npc = NPCLib.getInstance().generateGlobalNPC(Main.getInstance(),
                                 UUID.randomUUID().toString(), ((Player) sender).getLocation());
-                        Shop shop = new Shop(args[2], npc, ShopType.valueOf(args[3].toUpperCase(Locale.ROOT)));
+                        Shop shop = new Shop(args[2], UUID.fromString(npc.getSimpleID()),
+                                ShopType.valueOf(args[3].toUpperCase(Locale.ROOT)));
                         Main.getStorage().asyncSaveShop(shop, sender, false);
                     } catch (IllegalArgumentException exception) {
                         if (npc!=null) {

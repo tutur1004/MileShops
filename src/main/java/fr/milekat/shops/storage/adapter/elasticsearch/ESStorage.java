@@ -18,6 +18,7 @@ import fr.milekat.shops.storage.exeptions.StorageExecuteException;
 import fr.milekat.shops.storage.exeptions.StorageLoaderException;
 import fr.milekat.shops.storage.utils.PlayerTradeMode;
 import fr.milekat.shops.storage.utils.ShopTrades;
+import fr.milekat.shops.workers.utils.NPCUtils;
 import fr.milekat.shops.workers.utils.TradeMode;
 import fr.milekat.utils.Configs;
 import fr.milekat.utils.DateMileKat;
@@ -99,12 +100,12 @@ public class ESStorage implements StorageImplementation {
                 Main.message(sender, "&cError while trying to save shop " + shop.getName());
                 Main.warning("Error while trying to fetch shop with uuid " + shop.getName());
                 exception.printStackTrace();
-                Main.bukkitSync(shop.getNpc()::destroy);
+                NPCUtils.syncDestroy(shop.getNpc());
             }
             if (response.hits().total() != null && response.hits().total().value() > 0) {
                 if (!createIfNotExist) {
                     Main.message(sender, "&cShop with name '" + shop.getName() + "' already exist.");
-                    Main.bukkitSync(shop.getNpc()::destroy);
+                    NPCUtils.syncDestroy(shop.getNpc());
                     return;
                 }
                 //  Update existing shop
@@ -120,7 +121,7 @@ public class ESStorage implements StorageImplementation {
                         Main.message(sender, "&cError while trying to update shop " + shop.getName());
                         Main.warning("Error while trying to update shop with uuid " + shop.getUuid());
                         Main.stack(updateException.getStackTrace());
-                        Main.bukkitSync(shop.getNpc()::destroy);
+                        NPCUtils.syncDestroy(shop.getNpc());
                     } else {
                         Main.info("Shop '" + shop.getName() + "' has been updated");
                         Main.message(sender, "&2Shop updated !");
@@ -137,7 +138,7 @@ public class ESStorage implements StorageImplementation {
                         Main.message(sender, "&cError while trying to create shop " + shop.getName());
                         Main.warning("Error while trying to index shop with uuid " + shop.getUuid());
                         Main.stack(throwable.getStackTrace());
-                        Main.bukkitSync(shop.getNpc()::destroy);
+                        NPCUtils.syncDestroy(shop.getNpc());
                     } else {
                         Main.info("New shop created with name " + shop.getName());
                         Main.message(sender, "&2Shop created !");

@@ -1,6 +1,5 @@
 package fr.milekat.shops.api.classes;
 
-import dev.sergiferry.playernpc.api.NPC;
 import fr.milekat.shops.api.CustomShopsAPI;
 import fr.milekat.shops.api.exeptions.CustomShopsApiUnavailable;
 import fr.milekat.shops.api.exeptions.StorageException;
@@ -11,17 +10,17 @@ import java.util.UUID;
 public class Shop {
     private final UUID uuid;
     private String name;
-    private NPC.Global npc;
+    private UUID npc;
     private ShopType type;
 
-    public Shop(String name, NPC.Global npc, ShopType type) {
+    public Shop(String name, UUID npc, ShopType type) {
         this.uuid = UUID.randomUUID();
         this.name = name;
         this.npc = npc;
         this.type = type;
     }
 
-    public Shop(UUID uuid, String name, NPC.Global npc, ShopType type) {
+    public Shop(UUID uuid, String name, UUID npc, ShopType type) {
         this.uuid = uuid;
         this.name = name;
         this.npc = npc;
@@ -40,11 +39,11 @@ public class Shop {
         this.name = name;
     }
 
-    public NPC.Global getNpc() {
+    public UUID getNpc() {
         return npc;
     }
 
-    public void setNpc(NPC.Global npc) {
+    public void setNpc(UUID npc) {
         this.npc = npc;
     }
 

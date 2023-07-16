@@ -40,6 +40,6 @@ public class ShopDeserializer extends StdDeserializer<Shop> {
         NPC.Global npc = mapper.treeToValue(node.get("npc"), NPC.Global.class);
         ShopType shopType = ShopType.valueOf(node.get("type").asText());
 
-        return new Shop(shopUuid, shopName, npc, shopType);
+        return new Shop(shopUuid, shopName, UUID.fromString(npc.getSimpleID()), shopType);
     }
 }
