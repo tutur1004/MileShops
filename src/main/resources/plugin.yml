@@ -1,7 +1,7 @@
 name: CustomShops
 author: MileKat
 main: fr.milekat.shops.Main
-version: 0.1
+version: 1.0.0
 api-version: '1.20'
 description: "API/Plugin to create custom shops"
 depend:

@@ -27,11 +27,7 @@ public class ShopsCmd implements CommandExecutor {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
                              @NotNull String label, @NotNull String @NotNull [] args) {
-        if (args.length==0) {
-
-        } else if (args.length==1) {
-
-        } else if (args.length==2) {
+        if (args.length==2) {
             if (args[0].equalsIgnoreCase("admin") && sender.hasPermission("shop.admin")) {
                 if (args[1].equalsIgnoreCase("reload")) {
                     Main.info("Reloading shops...");
@@ -107,7 +103,7 @@ public class ShopsCmd implements CommandExecutor {
                         Main.stack(exception.getStackTrace());
                     }
                 } else if (args[1].equalsIgnoreCase("update")) {
-
+                    // TODO: 16/07/2023 Update command
                 }
             }
         }

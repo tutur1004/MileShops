@@ -287,7 +287,7 @@ public class ChestShop extends FastInv {
         this.tradesDone.forEach((tradePos, count) -> this.shopTrades.stream()
                 .filter(trade -> trade.getTradePosition() == tradePos).findFirst()
                 .ifPresent(trade -> {
-                    IntStream.range(0, count).forEach(osef -> {
+                    IntStream.range(0, count).forEach(ignored -> {
                         Bukkit.getPluginManager().callEvent(new TradeCompleteEvent(player, shop, trade));
                     });
                     BaseComponent message = new TextComponent(TradeUtils.tradeFormatting(Main.getConfigs()

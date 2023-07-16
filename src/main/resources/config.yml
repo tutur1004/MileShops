@@ -9,7 +9,7 @@ storage:
   #   (sql)     |=>  MariaDB (Recommended)
   #   (sql)     |=>  Postgres
   #   (NoSQL)   |=>  ElasticSearch
-  type: mysql
+  type: ElasticSearch
   sql:
     prefix: "shop_"
     hostname: "localhost"

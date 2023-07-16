@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'fr.milekat'
-version = '1.0.0-SNAPSHOT'
+version = '1.0.0'
 
 allprojects {
     apply plugin: 'java'
@@ -16,6 +16,7 @@ allprojects {
         maven { url = "https://libraries.minecraft.net/" }
         maven { url = "https://jitpack.io" }
         maven { url = "https://repo.ranull.com/maven/external/" }
+        maven { url = "https://maven.pkg.github.com/tutur1004/MilekatUtils" }
     }
 
     dependencies {
@@ -47,7 +48,7 @@ dependencies {
     implementation project('api')
 
     //  Utils
-    implementation(group: 'com.github.tutur1004', name: 'MilekatUtils', version: '976645efee') {
+    implementation(group: 'fr.milekat', name: 'milekat-utils', version: '1.0.2') {
         exclude(group: '*')
     }
     implementation group: 'fr.mrmicky', name: 'FastInv', version: '3.0.3'
