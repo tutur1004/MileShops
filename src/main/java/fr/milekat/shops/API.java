@@ -1,10 +1,10 @@
 package fr.milekat.shops;
 
-import fr.milekat.shops.api.CustomShopsIAPI;
+import fr.milekat.shops.api.MilekatShopsIAPI;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
-import fr.milekat.shops.api.exeptions.StorageException;
-import fr.milekat.shops.storage.exeptions.StorageExecuteException;
+import fr.milekat.shops.api.exceptions.StorageException;
+import fr.milekat.shops.storage.exceptions.StorageExecuteException;
 import fr.milekat.shops.workers.ShopsManager;
 import fr.milekat.shops.workers.listeners.LogTrade;
 import org.jetbrains.annotations.NotNull;
@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-public class API implements CustomShopsIAPI {
+public class API implements MilekatShopsIAPI {
     @Override
     public boolean isDebug() {
         return Main.DEBUG;

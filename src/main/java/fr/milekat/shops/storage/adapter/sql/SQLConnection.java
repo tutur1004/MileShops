@@ -4,7 +4,7 @@ import fr.milekat.shops.storage.adapter.sql.hikari.HikariPool;
 import fr.milekat.shops.storage.adapter.sql.hikari.MariaDBPool;
 import fr.milekat.shops.storage.adapter.sql.hikari.MySQLPool;
 import fr.milekat.shops.storage.adapter.sql.hikari.PostgresPool;
-import fr.milekat.shops.storage.exeptions.StorageLoaderException;
+import fr.milekat.shops.storage.exceptions.StorageLoaderException;
 import fr.milekat.utils.Configs;
 import org.jetbrains.annotations.NotNull;
 

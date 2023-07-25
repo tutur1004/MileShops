@@ -4,7 +4,7 @@ import dev.sergiferry.playernpc.api.NPC;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
-import fr.milekat.shops.storage.exeptions.StorageExecuteException;
+import fr.milekat.shops.storage.exceptions.StorageExecuteException;
 import fr.milekat.shops.storage.utils.PlayerTradeMode;
 import fr.milekat.shops.storage.utils.ShopTrades;
 import fr.milekat.shops.workers.utils.TradeMode;

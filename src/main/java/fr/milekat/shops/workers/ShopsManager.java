@@ -3,7 +3,7 @@ package fr.milekat.shops.workers;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
-import fr.milekat.shops.storage.exeptions.StorageExecuteException;
+import fr.milekat.shops.storage.exceptions.StorageExecuteException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

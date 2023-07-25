@@ -2,7 +2,7 @@ package fr.milekat.shops.storage;
 
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
-import fr.milekat.shops.storage.exeptions.StorageExecuteException;
+import fr.milekat.shops.storage.exceptions.StorageExecuteException;
 import fr.milekat.shops.workers.utils.TradeMode;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;

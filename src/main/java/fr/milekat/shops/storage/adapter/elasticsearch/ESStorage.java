@@ -14,8 +14,8 @@ import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.storage.CacheManager;
 import fr.milekat.shops.storage.Storage;
 import fr.milekat.shops.storage.StorageImplementation;
-import fr.milekat.shops.storage.exeptions.StorageExecuteException;
-import fr.milekat.shops.storage.exeptions.StorageLoaderException;
+import fr.milekat.shops.storage.exceptions.StorageExecuteException;
+import fr.milekat.shops.storage.exceptions.StorageLoaderException;
 import fr.milekat.shops.storage.utils.PlayerTradeMode;
 import fr.milekat.shops.storage.utils.ShopTrades;
 import fr.milekat.shops.workers.utils.NPCUtils;
@@ -368,8 +368,7 @@ public class ESStorage implements StorageImplementation {
                                 .index(PREFIX + "history")
                                 .document(log)
                                 .build()
-                )
-                .build()
+                ).build()
         );
     }
 
