@@ -2,7 +2,7 @@ package fr.milekat.shops.api;
 
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
-import fr.milekat.shops.api.exeptions.StorageException;
+import fr.milekat.shops.api.exceptions.StorageException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,7 +14,7 @@ import java.util.UUID;
  * The CustomShopsIAPI interface provides access to the CustomShops API functionality.
  */
 @SuppressWarnings({"unused", "UnusedReturnValue"})
-public interface CustomShopsIAPI {
+public interface MilekatShopsIAPI {
     /**
      * Checks if the API is running in debug mode.
      *

@@ -3,11 +3,11 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
-group = 'fr.milekat'
-version = '1.0.0'
-
 allprojects {
     apply plugin: 'java'
+
+    group = 'fr.milekat'
+    version = '1.1.0'
 
     repositories {
         mavenCentral()
@@ -30,6 +30,17 @@ allprojects {
         //  Utils
         compileOnly group: 'dev.sergiferry', name: 'playernpc', version: '2023.4'
     }
+
+    processResources {
+        filesMatching('plugin.yml') {
+            expand 'pluginVersion': project.version
+        }
+    }
+
+    ext {
+        githubOwner = 'tutur1004'
+        repository = 'MilekatShops'
+    }
 }
 
 jar {
@@ -45,7 +56,7 @@ shadowJar {
 }
 
 dependencies {
-    implementation project('api')
+    implementation project('shops-api')
 
     //  Utils
     implementation(group: 'fr.milekat', name: 'milekat-utils', version: '1.0.2') {

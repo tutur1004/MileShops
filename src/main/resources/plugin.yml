@@ -1,9 +1,10 @@
-name: CustomShops
+name: MilekatShops
 author: MileKat
 main: fr.milekat.shops.Main
-version: 1.0.0
+version: ${pluginVersion}
 api-version: '1.20'
-description: "API/Plugin to create custom shops"
+description: "API/Plugin to create trading shops"
+website: https://github.com/tutur1004/MilekatShops
 depend:
   - PlayerNPC
 libraries:
@@ -20,6 +21,6 @@ libraries:
 commands:
   shop:
     description: "Open the main gui"
+    permission: "milekat.shops.admin"
+    permission-message: "You can't perform this command"
     usage: /shop
-    aliases:
-      - s

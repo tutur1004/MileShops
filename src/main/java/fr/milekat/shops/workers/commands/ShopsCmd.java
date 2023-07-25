@@ -5,9 +5,9 @@ import dev.sergiferry.playernpc.api.NPCLib;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.ShopType;
-import fr.milekat.shops.api.exeptions.CustomShopsApiUnavailable;
-import fr.milekat.shops.api.exeptions.StorageException;
-import fr.milekat.shops.storage.exeptions.StorageExecuteException;
+import fr.milekat.shops.api.exceptions.ApiUnavailable;
+import fr.milekat.shops.api.exceptions.StorageException;
+import fr.milekat.shops.storage.exceptions.StorageExecuteException;
 import fr.milekat.shops.workers.gui.ChestShop;
 import fr.milekat.shops.workers.utils.NPCUtils;
 import org.bukkit.ChatColor;
@@ -70,7 +70,7 @@ public class ShopsCmd implements CommandExecutor {
                     if (shop.getType().equals(ShopType.INVENTORY)) {
                         try {
                             new ChestShop((Player) sender, shop, shop.getTrades());
-                        } catch (CustomShopsApiUnavailable exception) {
+                        } catch (ApiUnavailable exception) {
                             Main.warning("Can't load shop trades from the Trade API.");
                         } catch (StorageException exception) {
                             Main.warning("Storage error while trying to fetch trades from shop.");

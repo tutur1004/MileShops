@@ -3,14 +3,6 @@ plugins {
     id 'maven-publish'
 }
 
-group = 'fr.milekat'
-version = '1.0.0'
-
-ext {
-    githubOwner = 'tutur1004'
-    repository = 'CustomShops'
-}
-
 java {
     withJavadocJar()
     withSourcesJar()
@@ -29,7 +21,7 @@ publishing {
     }
     publications {
         gpr(MavenPublication) {
-            artifactId = 'custom-shops-api';
+            artifactId = project.name;
             from(components.java);
         }
     }

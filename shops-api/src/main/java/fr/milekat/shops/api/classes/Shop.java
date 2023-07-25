@@ -1,8 +1,8 @@
 package fr.milekat.shops.api.classes;
 
-import fr.milekat.shops.api.CustomShopsAPI;
-import fr.milekat.shops.api.exeptions.CustomShopsApiUnavailable;
-import fr.milekat.shops.api.exeptions.StorageException;
+import fr.milekat.shops.api.MilekatShopsAPI;
+import fr.milekat.shops.api.exceptions.ApiUnavailable;
+import fr.milekat.shops.api.exceptions.StorageException;
 
 import java.util.List;
 import java.util.UUID;
@@ -112,10 +112,10 @@ public class Shop {
      * Retrieves a list of trades associated with the shop.
      *
      * @return The list of trades associated with the shop.
-     * @throws CustomShopsApiUnavailable if the CustomShops API is unavailable.
+     * @throws ApiUnavailable if the CustomShops API is unavailable.
      * @throws StorageException          if there is an error accessing the storage.
      */
-    public List<Trade> getTrades() throws CustomShopsApiUnavailable, StorageException {
-        return CustomShopsAPI.getAPI().getShopTrades(this.uuid);
+    public List<Trade> getTrades() throws ApiUnavailable, StorageException {
+        return MilekatShopsAPI.getAPI().getShopTrades(this.uuid);
     }
 }

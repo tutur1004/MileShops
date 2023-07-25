@@ -1,6 +1,6 @@
-package fr.milekat.shops.api.exeptions;
+package fr.milekat.shops.api.exceptions;
 
-import fr.milekat.shops.api.CustomShopsAPI;
+import fr.milekat.shops.api.MilekatShopsAPI;
 
 /**
  * Exception thrown when there is an issue during a storage execution.
@@ -21,10 +21,10 @@ public class StorageException extends Exception {
         super(exception);
         this.message = message;
         try {
-            if (CustomShopsAPI.getAPI().isDebug()) {
+            if (MilekatShopsAPI.getAPI().isDebug()) {
                 exception.printStackTrace();
             }
-        } catch (CustomShopsApiUnavailable ignore) {
+        } catch (ApiUnavailable ignore) {
             //  Not possible since you can't except a Storage Exception from the API... if the API is not loaded...
         }
     }

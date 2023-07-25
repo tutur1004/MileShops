@@ -1,4 +1,4 @@
-package fr.milekat.shops.storage.exeptions;
+package fr.milekat.shops.storage.exceptions;
 
 import fr.milekat.shops.Main;
 

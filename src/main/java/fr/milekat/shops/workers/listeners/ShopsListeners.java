@@ -6,7 +6,7 @@ import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.ShopType;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.storage.Storage;
-import fr.milekat.shops.storage.exeptions.StorageExecuteException;
+import fr.milekat.shops.storage.exceptions.StorageExecuteException;
 import fr.milekat.shops.workers.ShopsManager;
 import fr.milekat.shops.workers.gui.AdminEditor;
 import fr.milekat.shops.workers.gui.ChestShop;
