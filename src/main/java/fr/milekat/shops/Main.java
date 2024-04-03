@@ -43,12 +43,12 @@ public class Main extends JavaPlugin {
             this.getConfig().save(configFile);
         } catch (IOException exception) {
             this.getLogger().warning("Error while trying to load config");
-            exception.printStackTrace();
+            stack(exception.getStackTrace());
             this.onDisable();
             return;
         }
         config = new Configs(configFile);
-        DEBUG = config.getBoolean("debug");
+        DEBUG = config.getBoolean("debug", false);
         debug("Debug enable");
         //  Init internal lib
         NPCLib.getInstance().registerPlugin(plugin);
@@ -60,7 +60,7 @@ public class Main extends JavaPlugin {
         } catch (StorageLoaderException exception) {
             warning("Storage load failed, disabling plugin..");
             warning("Error: " + exception.getLocalizedMessage());
-            if (DEBUG) exception.printStackTrace();
+            if (DEBUG) stack(exception.getStackTrace());
             this.onDisable();
         }
         //  Load API

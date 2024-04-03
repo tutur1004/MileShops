@@ -46,7 +46,7 @@ public class ChestShop extends FastInv {
                 .replaceAll("<shop_name>", shop.getName()));
         this.player = player;
         this.shop = shop;
-        this.shopTrades = trades;
+        this.shopTrades = new LinkedList<>(trades);
         try {
             this.tradeMode = Main.getStorage().getCacheTradeMode(player.getUniqueId());
         } catch (Exception ignore) {
@@ -158,13 +158,13 @@ public class ChestShop extends FastInv {
                             tradeDone = checkPlayerInventory(trade);
                         }
                         if (tradeDone) {
-                            player.getInventory().addItem(trade.getResultItem());
+                            player.getInventory().addItem(trade.getResultItem().clone());
                             tradesDoneIncrement(trade);
                             trades++;
                         }
                     } while (tradeDone);
                 } else if (checkPlayerInventory(trade)) {
-                    player.getInventory().addItem(trade.getResultItem());
+                    player.getInventory().addItem(trade.getResultItem().clone());
                     tradesDoneIncrement(trade);
                     trades++;
                 }
@@ -181,14 +181,14 @@ public class ChestShop extends FastInv {
                         } else {
                             tradeDone = checkPlayerAllInventories(trade);
                             if (tradeDone) {
-                                player.getInventory().addItem(trade.getResultItem());
+                                player.getInventory().addItem(trade.getResultItem().clone());
                                 tradesDoneIncrement(trade);
                                 trades++;
                             }
                         }
                     } while (tradeDone);
                 } else if (checkPlayerAllInventories(trade)) {
-                    player.getInventory().addItem(trade.getResultItem());
+                    player.getInventory().addItem(trade.getResultItem().clone());
                     tradesDoneIncrement(trade);
                     trades++;
                 }
@@ -210,7 +210,7 @@ public class ChestShop extends FastInv {
 
     public boolean checkPlayerInventory(@NotNull Trade trade) {
         ItemStack item = trade.getFirstItem().clone();
-        int amount = trade.getFirstItem().getAmount();
+        int amount = item.getAmount();
 
         ItemStack offHandItem = player.getInventory().getItemInOffHand();
 
@@ -243,7 +243,7 @@ public class ChestShop extends FastInv {
 
     public boolean checkPlayerAllInventories(@NotNull Trade trade) {
         ItemStack item = trade.getFirstItem().clone();
-        int amount = trade.getFirstItem().getAmount();
+        int amount = item.getAmount();
 
         for (ItemStack invItem : player.getInventory().getContents()) {
             if (invItem != null) {
@@ -287,9 +287,8 @@ public class ChestShop extends FastInv {
         this.tradesDone.forEach((tradePos, count) -> this.shopTrades.stream()
                 .filter(trade -> trade.getTradePosition() == tradePos).findFirst()
                 .ifPresent(trade -> {
-                    IntStream.range(0, count).forEach(ignored -> {
-                        Bukkit.getPluginManager().callEvent(new TradeCompleteEvent(player, shop, trade));
-                    });
+                    IntStream.range(0, count).forEach(ignored ->
+                            Bukkit.getPluginManager().callEvent(new TradeCompleteEvent(player, shop, trade)));
                     BaseComponent message = new TextComponent(TradeUtils.tradeFormatting(Main.getConfigs()
                             .getMessage("messages.gui.chest-shop.messages.trade-result",
                                     "&2You trade <first_amount>x<first_material>, " +
