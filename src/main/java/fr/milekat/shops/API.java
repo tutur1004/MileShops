@@ -1,6 +1,6 @@
 package fr.milekat.shops;
 
-import fr.milekat.shops.api.MilekatShopsIAPI;
+import fr.milekat.shops.api.MileShopsIAPI;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.exceptions.StorageException;
@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-public class API implements MilekatShopsIAPI {
+public class API implements MileShopsIAPI {
     @Override
     public boolean isDebug() {
         return Main.DEBUG;

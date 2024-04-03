@@ -39,7 +39,7 @@ allprojects {
 
     ext {
         githubOwner = 'tutur1004'
-        repository = 'MilekatShops'
+        repository = 'MileShops'
     }
 }
 

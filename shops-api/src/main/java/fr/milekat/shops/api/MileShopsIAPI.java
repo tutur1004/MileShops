@@ -14,7 +14,7 @@ import java.util.UUID;
  * The CustomShopsIAPI interface provides access to the CustomShops API functionality.
  */
 @SuppressWarnings({"unused", "UnusedReturnValue"})
-public interface MilekatShopsIAPI {
+public interface MileShopsIAPI {
     /**
      * Checks if the API is running in debug mode.
      *

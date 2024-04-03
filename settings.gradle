@@ -1,2 +1,2 @@
-rootProject.name = 'MilekatShops'
+rootProject.name = 'MileShops'
 include 'shops-api'

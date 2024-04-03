@@ -3,6 +3,7 @@ package fr.milekat.shops;
 import dev.sergiferry.playernpc.api.NPC;
 import dev.sergiferry.playernpc.api.NPCLib;
 import fr.milekat.shops.api.MilekatShopsAPI;
+import fr.milekat.shops.api.MileShopsAPI;
 import fr.milekat.shops.storage.Storage;
 import fr.milekat.shops.storage.StorageImplementation;
 import fr.milekat.shops.storage.exceptions.StorageLoaderException;
@@ -63,8 +64,8 @@ public class Main extends JavaPlugin {
             this.onDisable();
         }
         //  Load API
-        MilekatShopsAPI.LOADED_API = new API();
-        MilekatShopsAPI.API_READY = true;
+        MileShopsAPI.LOADED_API = new API();
+        MileShopsAPI.API_READY = true;
         //  Load plugin workers
         plugin.getServer().getPluginManager().registerEvents(new ShopsListeners(), this);
         plugin.getServer().getPluginManager().registerEvents(new LogTrade(), this);

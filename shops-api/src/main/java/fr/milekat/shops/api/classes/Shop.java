@@ -1,6 +1,6 @@
 package fr.milekat.shops.api.classes;
 
-import fr.milekat.shops.api.MilekatShopsAPI;
+import fr.milekat.shops.api.MileShopsAPI;
 import fr.milekat.shops.api.exceptions.ApiUnavailable;
 import fr.milekat.shops.api.exceptions.StorageException;
 
@@ -116,6 +116,6 @@ public class Shop {
      * @throws StorageException          if there is an error accessing the storage.
      */
     public List<Trade> getTrades() throws ApiUnavailable, StorageException {
-        return MilekatShopsAPI.getAPI().getShopTrades(this.uuid);
+        return MileShopsAPI.getAPI().getShopTrades(this.uuid);
     }
 }
