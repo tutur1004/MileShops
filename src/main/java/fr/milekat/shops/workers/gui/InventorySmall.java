@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class ChestShop extends FastInv {
+public class InventorySmall extends FastInv {
     private final Player player;
     private final Shop shop;
     private final List<Trade> shopTrades;
@@ -39,7 +39,7 @@ public class ChestShop extends FastInv {
     private TradeMode tradeMode;
     private final Map<Integer, Integer> tradesDone = new HashMap<>();
 
-    public ChestShop(Player player, @NotNull Shop shop, @NotNull List<Trade> trades) {
+    public InventorySmall(Player player, @NotNull Shop shop, @NotNull List<Trade> trades) {
         //  9 top line + 9 bottom line + 1 line per trades (Max 4)
         super(54, Main.getConfigs()
                 .getMessage("messages.gui.chest-shop.title", "&3Shop <shop_name>")
@@ -60,7 +60,7 @@ public class ChestShop extends FastInv {
             tradesLoop.add(trade);
             pageTradeCount++;
             pagesTrades.put(page, tradesLoop);
-            if (pageTradeCount > ShopsManager.CHEST_TRADES_PER_PAGE) {
+            if (pageTradeCount > ShopsManager.INVENTORY_SMALL_TRADES_PER_PAGE) {
                 tradesLoop = new LinkedList<>();
                 pageTradeCount = 1;
                 page++;
@@ -134,9 +134,10 @@ public class ChestShop extends FastInv {
     }
 
     private void displayTrade(int pagePosition, @NotNull Trade trade) {
-        setItem(11 + (pagePosition * 9), trade.getFirstItem().clone());
-        setItem(13 + (pagePosition * 9), Buttons.HEAD_LEFT.get());
-        setItem(15 + (pagePosition * 9), trade.getResultItem().clone(), event -> {
+        int slotOffset = pagePosition * 9;
+        setItem(11 + slotOffset, trade.getFirstItem().clone());
+        setItem(13 + slotOffset, Buttons.HEAD_LEFT.get());
+        setItem(15 + slotOffset, trade.getResultItem().clone(), event -> {
             if (isFull(player, trade.getResultItem())) {
                 Main.message(player, TradeUtils.tradeFormatting(Main.getConfigs()
                         .getMessage("messages.gui.chest-shop.messages.inventory-space",

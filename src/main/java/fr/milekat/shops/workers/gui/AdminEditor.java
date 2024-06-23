@@ -149,7 +149,7 @@ public class AdminEditor extends FastInv {
             int slot = event.getSlot();
             if (shop.getType().equals(ShopType.VANILLA)) {
                 if (slot <= 8 || (slot >= 27 && slot <= 35) || (slot >= 45 && slot <= 53)) return;
-            } else if (shop.getType().equals(ShopType.INVENTORY)) {
+            } else {
                 if (slot <= 8 || (slot >= 18 && slot <= 35) || (slot >= 45 && slot <= 53)) return;
             }
         }
@@ -167,7 +167,7 @@ public class AdminEditor extends FastInv {
                 .stream()
                 .sorted(Comparator.comparingInt(Trade::getTradePosition))
                 .forEach(tradeList::add));
-        if (tradeList.size()==0) {
+        if (tradeList.isEmpty()) {
             Main.message(event.getPlayer(), "&cNo valid trades, disabling shop");
             return;
         }

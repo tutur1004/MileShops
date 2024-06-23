@@ -52,7 +52,7 @@ public enum HeadsUtils {
             profileField.setAccessible(true);
             profileField.set(meta, profile);
         } catch (IllegalAccessException | NoSuchFieldException exception) {
-            Main.warning("There was a severe internal reflection " +
+            Main.getMileLogger().warning("There was a severe internal reflection " +
                     "error when attempting to set the skin of a player skull via base64!");
             exception.printStackTrace();
         }

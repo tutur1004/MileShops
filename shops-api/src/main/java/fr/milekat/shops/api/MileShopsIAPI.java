@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * The CustomShopsIAPI interface provides access to the CustomShops API functionality.
+ * The CustomShopsIAPI interface provides access to the CustomShops API.
  */
 @SuppressWarnings({"unused", "UnusedReturnValue"})
 public interface MileShopsIAPI {

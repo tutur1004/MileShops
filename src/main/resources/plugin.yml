@@ -6,21 +6,28 @@ api-version: '1.20'
 description: "API/Plugin to create trading shops"
 website: https://github.com/tutur1004/MileShops
 depend:
-  - PlayerNPC
+  - MileNpc
 libraries:
   # Utils
   - com.fasterxml.jackson.core:jackson-databind:2.15.2
-  - com.fasterxml.jackson.core:jackson-annotations:2.15.2
   - com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2
   # Storage
-  - com.zaxxer:HikariCP:4.0.3
-  - mysql:mysql-connector-java:8.0.33
-  - org.mariadb.jdbc:mariadb-java-client:3.1.2
-  - org.postgresql:postgresql:42.5.4
-  - co.elastic.clients:elasticsearch-java:8.7.1
+  - co.elastic.clients:elasticsearch-java:8.13.0
 commands:
   shop:
     description: "Command to manage shops"
     permission: "shops.command"
     permission-message: "You can't perform this command"
-    usage: /shop
+permissions:
+  shops.create:
+    description: "Permission to create shops"
+    default: op
+  shops.edit:
+    description: "Permission to edit shops"
+    default: op
+  shop.reload:
+    description: "Permission to reload the plugin and the shops"
+    default: op
+  shop.remove:
+    description: "Permission to remove shops"
+    default: op

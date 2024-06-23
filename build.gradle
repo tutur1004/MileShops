@@ -7,7 +7,7 @@ allprojects {
     apply plugin: 'java'
 
     group = 'fr.milekat'
-    version = '1.1.0'
+    version = '1.2.0-SNAPSHOT'
 
     repositories {
         mavenCentral()
@@ -16,7 +16,21 @@ allprojects {
         maven { url = "https://libraries.minecraft.net/" }
         maven { url = "https://jitpack.io" }
         maven { url = "https://repo.ranull.com/maven/external/" }
-        maven { url = "https://maven.pkg.github.com/tutur1004/MilekatUtils" }
+        maven {
+            url = uri("https://maven.pkg.github.com/tutur1004/MilekatUtils")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+                password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+            }
+        }
+        maven {
+            url = uri("https://maven.pkg.github.com/tutur1004/MileNpc")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+                password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+            }
+        }
+        maven { url = "https://repo.fancyplugins.de/releases" }
     }
 
     dependencies {
@@ -24,11 +38,11 @@ allprojects {
         compileOnly group: 'org.jetbrains', name: 'annotations', version: '24.0.1'
 
         //  Minecraft
-        compileOnly group: 'org.spigotmc', name: 'spigot-api', version: '1.20.1-R0.1-SNAPSHOT'
-        compileOnly group: 'com.mojang', name: 'authlib', version: '1.5.26'
+        compileOnly group: 'org.spigotmc', name: 'spigot-api', version: '1.20.6-R0.1-SNAPSHOT'
+        compileOnly group: 'com.mojang', name: 'authlib', version: '1.6.25'
 
-        //  Utils
-        compileOnly group: 'dev.sergiferry', name: 'playernpc', version: '2023.4'
+        //  Milekat
+        compileOnly group: 'fr.milekat', name: 'npc-api', version: '1.0.0-SNAPSHOT'
     }
 
     processResources {
@@ -70,5 +84,5 @@ dependencies {
     compileOnly group: 'mysql', name: 'mysql-connector-java', version: '8.0.33'
     compileOnly group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '3.1.2'
     compileOnly group: 'org.postgresql', name: 'postgresql', version: '42.5.4'
-    compileOnly group: 'co.elastic.clients', name: 'elasticsearch-java', version: '8.7.1'
+    compileOnly group: 'co.elastic.clients', name: 'elasticsearch-java', version: '8.13.0'
 }

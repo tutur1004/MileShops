@@ -1,5 +1,6 @@
 package fr.milekat.shops.api.classes;
 
+import fr.milekat.milenpc.api.classes.NPC;
 import fr.milekat.shops.api.MileShopsAPI;
 import fr.milekat.shops.api.exceptions.ApiUnavailable;
 import fr.milekat.shops.api.exceptions.StorageException;
@@ -10,25 +11,12 @@ import java.util.UUID;
 /**
  * Represents a shop in the CustomShops system.
  */
+@SuppressWarnings("unused")
 public class Shop {
     private final UUID uuid;
     private String name;
-    private UUID npc;
+    private NPC npc;
     private ShopType type;
-
-    /**
-     * Constructs a new Shop instance with the specified name, NPC UUID, and shop type.
-     *
-     * @param name The name of the shop.
-     * @param npc  The UUID of the NPC associated with the shop.
-     * @param type The type of the shop.
-     */
-    public Shop(String name, UUID npc, ShopType type) {
-        this.uuid = UUID.randomUUID();
-        this.name = name;
-        this.npc = npc;
-        this.type = type;
-    }
 
     /**
      * Constructs a new Shop instance with the specified UUID, name, NPC UUID, and shop type.
@@ -38,7 +26,7 @@ public class Shop {
      * @param npc  The UUID of the NPC associated with the shop.
      * @param type The type of the shop.
      */
-    public Shop(UUID uuid, String name, UUID npc, ShopType type) {
+    public Shop(UUID uuid, String name, NPC npc, ShopType type) {
         this.uuid = uuid;
         this.name = name;
         this.npc = npc;
@@ -77,7 +65,7 @@ public class Shop {
      *
      * @return The UUID of the NPC associated with the shop.
      */
-    public UUID getNpc() {
+    public NPC getNpc() {
         return npc;
     }
 
@@ -86,7 +74,7 @@ public class Shop {
      *
      * @param npc The new UUID of the NPC associated with the shop.
      */
-    public void setNpc(UUID npc) {
+    public void setNpc(NPC npc) {
         this.npc = npc;
     }
 
@@ -112,8 +100,8 @@ public class Shop {
      * Retrieves a list of trades associated with the shop.
      *
      * @return The list of trades associated with the shop.
-     * @throws ApiUnavailable if the CustomShops API is unavailable.
-     * @throws StorageException          if there is an error accessing the storage.
+     * @throws ApiUnavailable       if the CustomShops API is unavailable.
+     * @throws StorageException     if there is an error accessing the storage.
      */
     public List<Trade> getTrades() throws ApiUnavailable, StorageException {
         return MileShopsAPI.getAPI().getShopTrades(this.uuid);

@@ -7,7 +7,7 @@ import org.bukkit.Material;
 import org.jetbrains.annotations.NotNull;
 
 public class TradeUtils {
-    public static String getMaterial(@NotNull Material material) {
+    public static @NotNull String getMaterial(@NotNull Material material) {
         return Main.getConfigs().getString("materials-font." + material, material.toString());
     }
 
