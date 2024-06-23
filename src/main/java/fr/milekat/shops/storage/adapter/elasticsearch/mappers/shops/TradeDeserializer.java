@@ -1,4 +1,4 @@
-package fr.milekat.shops.storage.adapter.elasticsearch.mappers.milekat.shops;
+package fr.milekat.shops.storage.adapter.elasticsearch.mappers.shops;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -46,3 +46,4 @@ public class TradeDeserializer  extends StdDeserializer<Trade> {
         }
     }
 }
+

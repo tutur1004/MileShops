@@ -1,14 +1,27 @@
-package fr.milekat.shops.storage.adapter.elasticsearch.mappers.milekat.shops;
+package fr.milekat.shops.storage.adapter.elasticsearch.mappers.shops;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import fr.milekat.milenpc.api.classes.NPC;
 import fr.milekat.shops.api.classes.Shop;
+import fr.milekat.shops.api.classes.ShopType;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.UUID;
 
+/**
+ * {
+ *     "shop": {
+ *         "uuid": {@link UUID},
+ *         "name": {@link String},
+ *         "npc": {@link NPC},
+ *         "type": {@link ShopType}
+ *     }
+ * }
+ */
 public class ShopSerializer extends StdSerializer<Shop> {
     private final ObjectMapper mapper;
 
@@ -25,10 +38,11 @@ public class ShopSerializer extends StdSerializer<Shop> {
 
         gen.writeStringField("uuid", String.valueOf(value.getUuid()));
         gen.writeStringField("name", value.getName());
-        gen.writeFieldName("npc");
-        gen.writeObject(value.getNpc());
+        if (value.getNpc() != null) {
+            gen.writeObjectField("npc", value.getNpc());
+        }
         gen.writeStringField("type", String.valueOf(value.getType()));
-
         gen.writeEndObject();
     }
 }
+

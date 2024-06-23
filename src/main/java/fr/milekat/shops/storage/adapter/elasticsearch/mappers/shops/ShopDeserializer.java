@@ -1,11 +1,11 @@
-package fr.milekat.shops.storage.adapter.elasticsearch.mappers.milekat.shops;
+package fr.milekat.shops.storage.adapter.elasticsearch.mappers.shops;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import dev.sergiferry.playernpc.api.NPC;
+import fr.milekat.milenpc.api.classes.NPC;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.ShopType;
 
@@ -15,10 +15,10 @@ import java.util.UUID;
 /**
  * {
  *     "shop": {
- *         "playerUuid": UUID,
- *         "name": String,
- *         "npc": NPC.Global,
- *         "type": ShopType
+ *         "uuid": {@link UUID},
+ *         "name": {@link String},
+ *         "npc": {@link NPC},
+ *         "type": {@link ShopType}
  *     }
  * }
  */
@@ -37,9 +37,11 @@ public class ShopDeserializer extends StdDeserializer<Shop> {
 
         UUID shopUuid = UUID.fromString(node.get("uuid").asText());
         String shopName = node.get("name").asText();
-        NPC.Global npc = mapper.treeToValue(node.get("npc"), NPC.Global.class);
+        NPC npc = mapper.treeToValue(node.get("npc"), NPC.class);
+        if (npc == null) return null;
         ShopType shopType = ShopType.valueOf(node.get("type").asText());
 
-        return new Shop(shopUuid, shopName, UUID.fromString(npc.getSimpleID()), shopType);
+        return new Shop(shopUuid, shopName, npc, shopType);
     }
 }
+

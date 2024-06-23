@@ -2,8 +2,8 @@ package fr.milekat.shops.storage;
 
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
-import fr.milekat.shops.storage.exceptions.StorageExecuteException;
 import fr.milekat.shops.workers.utils.TradeMode;
+import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -18,13 +18,8 @@ public interface StorageImplementation extends CacheManager {
      * Check if all storages are loaded
      * @return true if all storages are loaded
      */
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     boolean checkStorages() throws StorageExecuteException;
-
-    /**
-     * Get the implemented (Used) storage type
-     * @return storage type
-     */
-    String getImplementationName();
 
     /**
      * Disconnect from Storage provider
@@ -38,9 +33,10 @@ public interface StorageImplementation extends CacheManager {
 
     Shop getShop(@NotNull UUID shopUuid) throws StorageExecuteException;
     Shop getShop(@NotNull String shopName) throws StorageExecuteException;
-    Shop getShopNpc(@NotNull UUID shopNpcUuid) throws StorageExecuteException;
 
-    List<Shop> getAllShops() throws StorageExecuteException;
+    @NotNull List<Shop> getAllShops() throws StorageExecuteException;
+
+    void asyncDeleteShop(@NotNull Shop shop, CommandSender sender);
 
     /*
         Trades
@@ -65,7 +61,7 @@ public interface StorageImplementation extends CacheManager {
         Trade History
      */
 
-    int getTradeUses(@NotNull UUID player, @NotNull UUID tradeUuid);
+    int getTradeUses(@NotNull Map<String, Object> tags, @NotNull UUID tradeUuid);
 
     void logTrade(@NotNull UUID player, @Nullable Map<String, Object> tags, @NotNull Trade trade);
 }

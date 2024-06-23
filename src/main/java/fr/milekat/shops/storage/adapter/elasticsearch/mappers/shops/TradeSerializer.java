@@ -1,4 +1,4 @@
-package fr.milekat.shops.storage.adapter.elasticsearch.mappers.milekat.shops;
+package fr.milekat.shops.storage.adapter.elasticsearch.mappers.shops;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,3 +35,4 @@ public class TradeSerializer  extends StdSerializer<Trade> {
         gen.writeEndObject();
     }
 }
+
