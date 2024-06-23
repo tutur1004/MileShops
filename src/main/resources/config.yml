@@ -1,7 +1,9 @@
 # Debug mode
 debug: false
+
 # If false, you will have to set players tags alone
 default_tags: true
+
 # Storage system
 storage:
   #   Available storage type (Please fill related connection section)
@@ -23,9 +25,15 @@ storage:
     port: "9200"
     username: "user"
     password: "pass"
+  cache:
+    # Enable or disable cache (Recommended)
+    enabled: true
+    # Cache time in seconds (Recommended 300s = 5min)
+    time: 300
+
 # Messages
 messages:
-  prefix: "&6[CustomShop] "
+  prefix: "&6[MileShops] "
   gui:
     commons:
       buttons:

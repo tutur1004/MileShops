@@ -1,10 +1,10 @@
-name: MilekatShops
+name: MileShops
 author: MileKat
 main: fr.milekat.shops.Main
 version: ${pluginVersion}
 api-version: '1.20'
 description: "API/Plugin to create trading shops"
-website: https://github.com/tutur1004/MilekatShops
+website: https://github.com/tutur1004/MileShops
 depend:
   - PlayerNPC
 libraries:
@@ -20,7 +20,7 @@ libraries:
   - co.elastic.clients:elasticsearch-java:8.7.1
 commands:
   shop:
-    description: "Open the main gui"
-    permission: "milekat.shops.admin"
+    description: "Command to manage shops"
+    permission: "shops.command"
     permission-message: "You can't perform this command"
     usage: /shop
