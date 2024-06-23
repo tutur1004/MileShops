@@ -176,7 +176,7 @@ public class SQLStorage implements StorageImplementation {
     }
 
     @Override
-    public void logTrade(@NotNull UUID player, @Nullable Map<String, Object> tags, @NotNull Trade trade) {
+    public void logTrade(@Nullable Map<String, Object> tags, @NotNull Trade trade) {
 
     }
 

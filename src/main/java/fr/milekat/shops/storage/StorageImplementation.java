@@ -63,5 +63,5 @@ public interface StorageImplementation extends CacheManager {
 
     int getTradeUses(@NotNull Map<String, Object> tags, @NotNull UUID tradeUuid);
 
-    void logTrade(@NotNull UUID player, @Nullable Map<String, Object> tags, @NotNull Trade trade);
+    void logTrade(@Nullable Map<String, Object> tags, @NotNull Trade trade);
 }

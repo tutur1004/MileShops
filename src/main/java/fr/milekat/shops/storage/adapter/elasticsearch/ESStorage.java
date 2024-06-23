@@ -419,9 +419,8 @@ public class ESStorage implements StorageImplementation {
     }
 
     @Override
-    public void logTrade(@NotNull UUID player, @Nullable Map<String, Object> tags, @NotNull Trade trade) {
+    public void logTrade(@Nullable Map<String, Object> tags, @NotNull Trade trade) {
         Map<String, Object> log = new HashMap<>();
-        log.put("uuid", player);
         log.put("tags", tags);
         log.put("trade", trade);
         log.put("@timestamp", DateMileKat.getDateEs());

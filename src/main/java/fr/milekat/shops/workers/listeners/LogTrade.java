@@ -3,6 +3,7 @@ package fr.milekat.shops.workers.listeners;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.events.TradeCompleteEvent;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -30,11 +31,11 @@ public class LogTrade implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler (priority = EventPriority.MONITOR)
     public void logTrade(@NotNull TradeCompleteEvent event) {
+        if (event.isCancelled()) return;
         if (playerTags.containsKey(event.getPlayer().getUniqueId())) {
             Main.getStorage().logTrade(
-                    event.getPlayer().getUniqueId(),
                     playerTags.get(event.getPlayer().getUniqueId()),
                     event.getTrade()
             );
