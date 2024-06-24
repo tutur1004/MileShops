@@ -8,9 +8,7 @@ import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.ShopType;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.workers.ShopsManager;
-import fr.milekat.shops.workers.gui.AdminEditor;
-import fr.milekat.shops.workers.gui.InventoryLarge;
-import fr.milekat.shops.workers.gui.InventorySmall;
+import fr.milekat.shops.workers.gui.*;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -46,8 +44,9 @@ public class ShopsListeners implements Listener {
             if (shop.getKey().getType().equals(ShopType.VANILLA)) {
                 //  TODO: Vanilla shop display
             } else if (shop.getKey().getType().equals(ShopType.INVENTORY_SMALL)) {
-                InventorySmall inventorySmall = new InventorySmall(player, shop.getKey(), shop.getValue());
-                inventorySmall.open(player);
+//                InventorySmall inventorySmall = new InventorySmall(player, shop.getKey(), shop.getValue());
+//                inventorySmall.open(player);
+                new InventoryShop(InventoryShopShape.BASIC_FOUR, shop.getKey(), player);
             } else if (shop.getKey().getType().equals(ShopType.INVENTORY_LARGE)) {
                 InventoryLarge inventoryLarge = new InventoryLarge(player, shop.getKey(), shop.getValue(), true);
                 inventoryLarge.open(player);
