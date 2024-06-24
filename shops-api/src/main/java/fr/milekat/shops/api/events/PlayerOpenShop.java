@@ -1,7 +1,6 @@
 package fr.milekat.shops.api.events;
 
 import fr.milekat.shops.api.classes.Shop;
-import fr.milekat.shops.api.classes.Trade;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
@@ -9,29 +8,26 @@ import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Represents a Bukkit event triggered when a {@link Player} completes a {@link Trade}.
+ * Represents a Bukkit event triggered when a {@link Player} opens a shop.
  */
 @SuppressWarnings("unused")
-public class TradeCompleteEvent extends Event implements Cancellable {
+public class PlayerOpenShop extends Event implements Cancellable {
     private static final HandlerList HANDLERS_LIST = new HandlerList();
     private boolean cancelled;
 
     private final Player player;
     private final Shop shop;
-    private final Trade trade;
 
     /**
-     * Constructs a new TradeCompleteEvent with the specified player, shop, and trade.
+     * Constructs a new PlayerOpenShop event with the specified player and shop.
      *
-     * @param player The player who completed the trade.
-     * @param shop   The shop where the trade took place.
-     * @param trade  The completed trade.
+     * @param player    The player who opened the shop.
+     * @param shop      The shop where the trade took place.
      */
-    public TradeCompleteEvent(Player player, Shop shop, Trade trade) {
+    public PlayerOpenShop(Player player, Shop shop) {
         super();
         this.player = player;
         this.shop = shop;
-        this.trade = trade;
     }
 
     /**
@@ -44,21 +40,12 @@ public class TradeCompleteEvent extends Event implements Cancellable {
     }
 
     /**
-     * Retrieves the player who completed the trade.
+     * Retrieves the player who opened the shop.
      *
      * @return The player.
      */
     public Player getPlayer() {
         return player;
-    }
-
-    /**
-     * Retrieves the completed trade.
-     *
-     * @return The trade.
-     */
-    public Trade getTrade() {
-        return trade;
     }
 
     /**

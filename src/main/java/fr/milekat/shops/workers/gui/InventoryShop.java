@@ -3,27 +3,25 @@ package fr.milekat.shops.workers.gui;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
+import fr.milekat.shops.api.events.PlayerOpenShop;
 import fr.milekat.shops.workers.utils.Buttons;
 import fr.milekat.shops.workers.utils.TradeMode;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import fr.mrmicky.fastinv.FastInv;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
 
 @SuppressWarnings("unused")
 public class InventoryShop extends FastInv {
     //  Shop shape parameters
-    private final List<Integer> firstItemSlots;
-    private final List<Integer> secondItemSlots;
-    private final List<Integer> resultItemSlots;
-    private final List<Integer> tradesArrowSlots;
+    private final List<TradeSlots> tradeSlots;
     private final int tradePerPages;
     private final int previousPageSlot;
     private final int nextPageSlot;
@@ -31,36 +29,24 @@ public class InventoryShop extends FastInv {
     private final int closeSlot;
     private final boolean fillBackground;
 
-    //  Shop & player variables
-    private final Shop shop;
     private final Player player;
     private TradeMode tradeMode;
     private int currentPage = 1;
     private final Map<Integer, List<Trade>> pagesTrades;
 
-    public InventoryShop(@NotNull ShopShape shopShape, @NotNull Shop shop, @NotNull Player player)
+    public InventoryShop(@NotNull InventoryShopShape inventoryShopShape, @NotNull Shop shop, @NotNull Player player)
             throws StorageExecuteException {
         //  Shop shape parameters
-        super(shopShape.getInventoryFunction(shop.getName()));
-        this.firstItemSlots = shopShape.getFirstItemSlots();
-        this.secondItemSlots = shopShape.getSecondItemSlots();
-        this.resultItemSlots = shopShape.getResultItemSlots();
-        this.tradesArrowSlots = shopShape.getTradesArrowSlots();
-        this.tradePerPages = firstItemSlots.size();
-        this.previousPageSlot = shopShape.getPreviousPageSlot();
-        this.nextPageSlot = shopShape.getNextPageSlot();
-        this.inventoryModeSlot = shopShape.getInventoryModeSlot();
-        this.closeSlot = shopShape.getCloseSlot();
-        this.fillBackground = shopShape.isFillBackground();
-
-        if (this.firstItemSlots.size() != this.resultItemSlots.size()) {
-            Main.getMileLogger().log(Level.SEVERE,
-                    "The number of first and result item slots must be the same.");
-            throw new IllegalStateException("The number of first and result item slots must be the same.");
-        }
+        super(inventoryShopShape.getInventoryFunction(shop.getName()));
+        this.tradeSlots = inventoryShopShape.getTradeSlots();
+        this.tradePerPages = tradeSlots.size();
+        this.previousPageSlot = inventoryShopShape.getPreviousPageSlot();
+        this.nextPageSlot = inventoryShopShape.getNextPageSlot();
+        this.inventoryModeSlot = inventoryShopShape.getInventoryModeSlot();
+        this.closeSlot = inventoryShopShape.getCloseSlot();
+        this.fillBackground = inventoryShopShape.isFillBackground();
 
         //  Shop & player variables
-        this.shop = shop;
         this.player = player;
         try {
             this.tradeMode = Main.getStorage().getCacheTradeMode(player.getUniqueId());
@@ -71,15 +57,15 @@ public class InventoryShop extends FastInv {
         List<Trade> trades = Main.getStorage().getCacheTrades(shop.getUuid());
         this.pagesTrades = sortTradesPerPages(trades);
 
-        if (this.firstItemSlots.size() != this.secondItemSlots.size() &&
-                trades.stream().anyMatch(trade -> trade.getSecondItem() != null)) {
-            Main.getMileLogger().log(Level.SEVERE,
-                    "The number of first and second item slots must be the same.");
-            throw new IllegalStateException("The number of first and second item slots must be the same.");
-        }
-
         //  Create the inventory
         updatePageContent();
+
+        //  Open the inventory to the player
+        PlayerOpenShop event = new PlayerOpenShop(player, shop);
+        Main.getInstance().getServer().getPluginManager().callEvent(event);
+        if (!event.isCancelled()) {
+            open(player);
+        }
     }
 
     private @NotNull Map<Integer, List<Trade>> sortTradesPerPages(@NotNull List<Trade> trades) {
@@ -112,11 +98,12 @@ public class InventoryShop extends FastInv {
     private void updatePageContent() {
         if (this.fillBackground) fillBackground();
         if (this.inventoryModeSlot != 0) updateTradeModeButton();
+        if (this.closeSlot != 0) setItem(this.closeSlot, Buttons.EXIT.get(), event -> player.closeInventory());
         if (this.previousPageSlot != 0 || this.nextPageSlot != 0) updatePageButtons();
         if (pagesTrades.containsKey(this.currentPage)) {
             int pagePosition = 0;
             for (Trade trade : pagesTrades.get(this.currentPage)) {
-                displayTrade(pagePosition, trade);
+                displayTrade(tradeSlots.get(pagePosition), trade);
                 pagePosition++;
             }
         }
@@ -161,17 +148,15 @@ public class InventoryShop extends FastInv {
         }
     }
 
-    private void displayTrade(int pagePosition, @NotNull Trade trade) {
-        //  Display arrow if needed
-        if (tradesArrowSlots.size() > pagePosition) {
-            setItem(tradesArrowSlots.get(pagePosition), Buttons.HEAD_LEFT.get());
-        }
+    private void displayTrade(@NotNull TradeSlots tradeSlots, @NotNull Trade trade) {
+        //  Display additional trade items (Arrow, etc...)
+        tradeSlots.additionalTradeItems().forEach(this::setItem);
         //  Display trade items
-        setItem(firstItemSlots.get(pagePosition), trade.getFirstItem().clone());
-        if (trade.getSecondItem() != null) {
-            setItem(secondItemSlots.get(pagePosition), trade.getSecondItem().clone());
+        setItem(tradeSlots.firstItemSlot(), trade.getFirstItem().clone());
+        if (trade.getSecondItem() != null && tradeSlots.secondItemSlot() != null) {
+            setItem(tradeSlots.resultItemSlot(), trade.getSecondItem().clone());
         }
-        setItem(resultItemSlots.get(pagePosition), trade.getResultItem().clone(),
+        setItem(tradeSlots.resultItemSlot(), trade.getResultItem().clone(),
                 event -> requestTrade(trade, event.getClick()));
     }
 
@@ -182,5 +167,10 @@ public class InventoryShop extends FastInv {
     private boolean processTrade(@NotNull Trade trade) {
         //  TODO: Process a single trade (Mean proceed a trade and return true if success)
         return false;
+    }
+
+    @Override
+    protected void onClose(InventoryCloseEvent event) {
+        super.onClose(event);
     }
 }
