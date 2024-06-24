@@ -3,8 +3,14 @@ package fr.milekat.shops.workers.utils;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.HashMap;
 
 public class TradeUtils {
     public static @NotNull String getMaterial(@NotNull Material material) {
@@ -25,5 +31,17 @@ public class TradeUtils {
                 .replaceAll("<result_amount>", String.valueOf(trade.getResultItem().getAmount()))
                 .replaceAll("<result_total_amount>", String.valueOf(trade.getResultItem().getAmount() * count))
                 .replaceAll("<result_material>", TradeUtils.getMaterial(trade.getResultItem().getType()));
+    }
+
+    /**
+     * Method to check if the player inventory can contain the item
+     *
+     * @return true if the player inventory can contain the item
+     */
+    public static boolean canHold(@NotNull Player player, @NotNull ItemStack item) {
+        Inventory virtualInventory = Bukkit.createInventory(null, 36, player.getUniqueId().toString());
+        virtualInventory.setContents(player.getInventory().getStorageContents());
+        HashMap<Integer, ItemStack> leftOver = virtualInventory.addItem(item.clone());
+        return leftOver.isEmpty();
     }
 }

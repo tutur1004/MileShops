@@ -2,19 +2,22 @@ package fr.milekat.shops.api.classes;
 
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Map;
 import java.util.UUID;
 
 /**
  * Represents a trade in a shop.
  */
+@SuppressWarnings("unused")
 public class Trade {
     private final UUID shopUuid;
     private int tradePosition;
     private ItemStack firstItem;
     private ItemStack secondItem;
     private ItemStack resultItem;
+    private int maxTradeUse;
+    private Map<String, Object> maxTradeTags;
     private boolean enabled; // TODO implement
-    private int maxTradeUse; // TODO Add group feature ?
 
     /**
      * Constructs a new Trade instance with the specified parameters.
@@ -32,6 +35,7 @@ public class Trade {
         this.secondItem = secondItem;
         this.resultItem = resultItem;
         enabled = true;
+        //  TODO trades uses
         this.maxTradeUse = 0;
     }
 
@@ -132,6 +136,24 @@ public class Trade {
      */
     public void setMaxTradeUse(int maxTradeUse) {
         this.maxTradeUse = maxTradeUse;
+    }
+
+    /**
+     * Retrieves the tags associated with the maximum trade uses.
+     *
+     * @return The tags associated with the maximum trade uses.
+     */
+    public Map<String, Object> getMaxTradeTags() {
+        return maxTradeTags;
+    }
+
+    /**
+     * Sets the tags associated with the maximum trade uses.
+     *
+     * @param maxTradeTags The new tags associated with the maximum trade uses.
+     */
+    public void setMaxTradeTags(Map<String, Object> maxTradeTags) {
+        this.maxTradeTags = maxTradeTags;
     }
 
     /**
