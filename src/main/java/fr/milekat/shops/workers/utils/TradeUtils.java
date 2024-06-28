@@ -36,9 +36,14 @@ public class TradeUtils {
     }
 
     /**
-     * Method to check if the player inventory can hold the result item if traded items are removed
+     * Method to calculate the maximum amount of trades that can be done
      *
-     * @return the {@link Inventory} that can hold the item, or null if the player inventory can't contain the item
+     * @param player            the player who will do the trades (used to get the player's inventory and ender chest)
+     * @param requiredItems     the list of items required for the trade
+     * @param resultItem        the item that will be given to the player
+     * @param unlimitedTrades   if it needs to check for unlimited trades
+     * @param shulkerMode       if it needs to check for shulker boxes
+     * @return                  the maximum amount of trades that can be done
      */
     public static int maxDoAbleTrades(@NotNull Player player,
                                       @NotNull List<ItemStack> requiredItems,
@@ -57,17 +62,10 @@ public class TradeUtils {
         List<Inventory> virtualInventories = new ArrayList<>();
         for (Inventory inventory : inventories) {
             int size = (inventory.getSize() == 41) ? 36 : inventory.getSize();
-            Main.message(player, "Creating virtual inventory of size " + size);
             Inventory virtualInventory = Bukkit.createInventory(null, size, UUID.randomUUID().toString());
             virtualInventory.setContents(inventory.getStorageContents());
             virtualInventories.add(virtualInventory);
         }
-
-        Main.message(player, "Number of inventories to check: " + inventories.size());
-
-        //  Output variables
-        int minRequiredHold = 0;
-        int resultHoldAble = 0;
 
         //  Check how many items can be removed for each required item (In required stacks)
         List<Integer> requiredHeld = new LinkedList<>();
@@ -80,14 +78,14 @@ public class TradeUtils {
             ItemStack requiredItemLoop = requiredItems.get(i).clone();
             //  TODO: Here add tag support
             if (requiredItemLoop.getType() == Material.AIR || requiredItemLoop.getAmount() < 1) continue;
-            requiredItemLoop.setAmount(1);
 
             //  Iterate over all the inventories
-            for (Inventory virtualInventory : virtualInventories) {
+            for (Inventory loopInv : virtualInventories) {
+                Inventory virtualInventory = Bukkit.createInventory(null, loopInv.getSize(),
+                        UUID.randomUUID().toString());
+                virtualInventory.setContents(loopInv.getContents());
                 while (true) {
-                    Main.message(player, "Checking if loop var is higher than required amount");
                     if (itemHeld >= requiredItems.get(i).getAmount()) {
-                        Main.message(player, "Loop var is higher than required amount");
                         if (!unlimitedTrades) {
                             requiredHeld.set(i, 1);
                             break;
@@ -97,37 +95,31 @@ public class TradeUtils {
                     }
 
                     //  Ensure the item is present in this inventory
-                    Main.message(player, "Checking if the inventory contains the required item");
                     if (!virtualInventory.contains(requiredItemLoop.getType())) break;
 
-                    //  Remove the item from the inventory
-                    Main.message(player, "Removing the required item from the inventory");
-                    HashMap<Integer, ItemStack> leftOver = virtualInventory.removeItem(requiredItemLoop);
-
-                    if (leftOver.isEmpty()) {
-                        itemHeld++;
-                    } else {
-                        Main.message(player, "Inventory doesn't have enough of the required item");
-                        break;
-                    }
+                    //  Remove the item from the inventory and increment the itemHeld
+                    int removed = getStackRemoved(virtualInventory, requiredItemLoop);
+                    itemHeld += removed;
+                    if (removed != requiredItemLoop.getAmount()) break;
                 }
             }
+        }
 
-            //  Get the minimum amount of items held
-            //  TODO: Be careful, it can remove more than trade-able items, result space should be impacted
-            minRequiredHold = requiredHeld.stream().min(Integer::compareTo).orElse(0);
-            Main.message(player, "Minimum required hold: " + minRequiredHold);
+        //  Output variables
+        //  TODO: Be careful, it can remove more than trade-able items, result space should be impacted
+        int minRequiredHold = requiredHeld.stream().min(Integer::compareTo).orElse(0);
+        minRequiredHold -= requiredItems.stream().mapToInt(ItemStack::getAmount).max().orElse(resultItem.getMaxStackSize());
+        int resultHoldAble = 0;
 
-            for (int j = 0; j < minRequiredHold; j++) {
-                for (Inventory virtualInventory : virtualInventories) {
-                    Map<Integer, ItemStack> leftOver = virtualInventory.addItem(resultItem.clone());
-                    if (leftOver.isEmpty()) {
-                        resultHoldAble++;
-                    } else {
-                        Main.message(player, "Inventory doesn't have enough space for the result item");
-                        break;
-                    }
+        for (int j = 0; j < minRequiredHold; j++) {
+            for (Inventory virtualInventory : virtualInventories) {
+                for (int k = 0; k < minRequiredHold; k++) {
+                    requiredItems.forEach(item -> getStackRemoved(virtualInventory, item));
                 }
+                Map<Integer, ItemStack> leftOver = virtualInventory.addItem(resultItem.clone());
+                if (leftOver.isEmpty()) {
+                    resultHoldAble++;
+                } else break;
             }
         }
 
@@ -135,11 +127,22 @@ public class TradeUtils {
         return Math.min(minRequiredHold, resultHoldAble);
     }
 
+    /**
+     * Method to execute a trade
+     *
+     * @param player        the player who will do the trade
+     * @param requiredItems the list of items required for the trade
+     * @param resultItem    the item that will be given to the player
+     * @param trades        the amount of trades to do
+     * @param shulkerMode   if it needs to include player's shulker boxes
+     */
     public static void executeTrade(@NotNull Player player,
-                                    @NotNull List<ItemStack> tradedItems,
+                                    @NotNull List<ItemStack> requiredItems,
                                     @NotNull ItemStack resultItem,
                                     int trades,
                                     boolean shulkerMode) {
+        //  TODO: Fully rework this part
+        Main.message(player, "Number of trades: " + trades);
         //  List of all inventories to proceed
         List<Inventory> inventories = new ArrayList<>();
         inventories.add(player.getInventory());
@@ -148,95 +151,113 @@ public class TradeUtils {
             inventories.addAll(getShulkersFromInventory(player.getInventory()));
             inventories.addAll(getShulkersFromInventory(player.getEnderChest()));
         }
-        //  List of items to remove from the inventories
-        Map<ItemStack, Integer> toRemove = new HashMap<>();
-        tradedItems.forEach(loopItem -> {
-            ItemStack itemStack = loopItem.clone();
-            itemStack.setAmount(1);
-            toRemove.put(itemStack, loopItem.getAmount() * trades);
-        });
-        //  Remove the traded items from the inventories
-        for (Inventory inventory : inventories) {
-            new HashMap<>(toRemove).forEach((item, amount) -> {
-                int reamingAmount = amount;
-                while (true) {
-                    ItemStack itemToRemove = item.clone();
-                    itemToRemove.setAmount(Math.min(reamingAmount, item.getMaxStackSize()));
-                    HashMap<Integer, ItemStack> notRemove = inventory.removeItem(item);
-                    if (notRemove.isEmpty()) {
-                        reamingAmount -= itemToRemove.getAmount();
-                        if (reamingAmount == 0) break;
-                    } else {
-                        reamingAmount -= (itemToRemove.getAmount() - notRemove.get(0).getAmount());
-                        break;
-                    }
-                }
-                if (reamingAmount == 0) toRemove.remove(item);
-                else toRemove.put(item, reamingAmount);
-            });
 
-            if (toRemove.isEmpty()) break;
-        }
+        //  List all items to remove and add by stacks (Performances improvement)
+        List<ItemStack> requestItemsToRemove = new ArrayList<>();
+        requiredItems.forEach(item -> requestItemsToRemove.addAll(getAllByStacks(item, trades)));
+        List<ItemStack> resultItemsToAdd = getAllByStacks(resultItem, trades);
 
-        //  Add the result item
-        int resultToAdd = resultItem.getAmount() * trades;
-        for (Inventory inventory : inventories) {
-            while (true) {
-                if (resultToAdd <= 0) return;
-                ItemStack resultItemClone = resultItem.clone();
-                resultItemClone.setAmount(Math.min(resultToAdd, resultItem.getMaxStackSize()));
-                HashMap<Integer, ItemStack> leftOver = inventory.addItem(resultItemClone);
+        //  Add and remove the items from the inventories
+        inventories.forEach(inventory -> {
+            //  Remove the traded items
+            for (ItemStack item : new ArrayList<>(requestItemsToRemove)) {
+                HashMap<Integer, ItemStack> leftOver = inventory.removeItem(item);
                 if (leftOver.isEmpty()) {
-                    resultToAdd -= resultItemClone.getAmount();
+                    requestItemsToRemove.remove(item);
+                } else if (inventory.contains(item.getType())) {
+                    //  TODO: Remove as many items as is still possible to remove from the inventory -- TEST
+                    int removed = item.getAmount();
+                    ItemStack lastFewSpace = item.clone();
+                    lastFewSpace.setAmount(1);
+                    while (true) {
+                        leftOver = inventory.removeItem(lastFewSpace);
+                        if (leftOver.isEmpty()) {
+                            removed--;
+                            if (removed <= 0) {
+                                requestItemsToRemove.remove(item);
+                                break;
+                            }
+                        } else {
+                            requestItemsToRemove.remove(item);
+                            ItemStack remainingItems = item.clone();
+                            remainingItems.setAmount(removed);
+                            requestItemsToRemove.add(remainingItems);
+                            break;
+                        }
+                    }
+                } else break;
+            }
+            //  Add the result items
+            for (ItemStack item : new ArrayList<>(resultItemsToAdd)) {
+                HashMap<Integer, ItemStack> leftOver = inventory.addItem(item);
+                if (leftOver.isEmpty()) {
+                    resultItemsToAdd.remove(item);
                 } else {
-                    resultToAdd -= resultItemClone.getAmount() - leftOver.get(0).getAmount();
+                    //  TODO: Add as many items as is still possible to fill the inventory -- TEST
+                    int toAdd = item.getAmount();
+                    ItemStack lastFewSpace = item.clone();
+                    lastFewSpace.setAmount(1);
+                    while (true) {
+                        leftOver = inventory.addItem(lastFewSpace);
+                        if (leftOver.isEmpty()) {
+                            toAdd--;
+                            if (toAdd <= 0) {
+                                resultItemsToAdd.remove(item);
+                                break;
+                            }
+                        } else {
+                            resultItemsToAdd.remove(item);
+                            ItemStack remainingItems = item.clone();
+                            remainingItems.setAmount(toAdd);
+                            resultItemsToAdd.add(remainingItems);
+                            break;
+                        }
+                    }
                     break;
                 }
             }
+        });
+    }
+
+    public static int getStackRemoved(@NotNull Inventory inventory, @NotNull ItemStack itemToRemove) {
+        ItemStack item = itemToRemove.clone();
+        HashMap<Integer, ItemStack> leftOver = inventory.removeItem(item);
+        if (leftOver.isEmpty()) {
+            return item.getAmount();
+        } else {
+            item.setAmount(1);
+            int removed = 0;
+            while (true) {
+                leftOver = inventory.removeItem(item);
+                if (leftOver.isEmpty()) {
+                    removed++;
+                } else {
+                    break;
+                }
+            }
+            return removed;
         }
     }
 
-    /**
-     * Method to check if the inventory can hold the result item if traded items are removed
-     *
-     * @return the {@link Inventory} that can hold the item, or null if the player inventory can't contain the item
-     */
-//    public static int maxDoAbleTrades(Player player,
-//                               @NotNull Inventory inventory,
-//                               @NotNull List<ItemStack> tradedItems,
-//                               @NotNull ItemStack resultItem) {
-//        //  Get the real size of the inventory
-//        int size = (inventory.getSize() == 41) ? 36 : inventory.getSize();
-//        //  Get the highest value from getMaxStackSize() of traded items
-//        int maxStackSize = tradedItems.stream().mapToInt(ItemStack::getMaxStackSize).max().orElse(64);
-//        int maxTheoreticalTrades = size * maxStackSize;
-//        int maxDoAbleTrades = 0;
-//
-//        Inventory virtualInventory = Bukkit.createInventory(null, size, UUID.randomUUID().toString());
-//        virtualInventory.setContents(inventory.getStorageContents());
-//
-//
-//
-//        Main.message(player, "Creating virtual inventory or size " + size);
-//        Inventory virtualInventory = Bukkit.createInventory(null, size,
-//                UUID.randomUUID().toString());
-//        Main.message(player, "Setting virtual inventory contents");
-//        virtualInventory.setContents(inventory.getStorageContents());
-//        Main.message(player, "Checking if the inventory has the required items");
-//        boolean hasItems = tradedItems.stream().allMatch(item -> virtualInventory.removeItem(item).isEmpty());
-//        if (hasItems) {
-//            Main.message(player, "Checking if the inventory has space for the result item");
-//            HashMap<Integer, ItemStack> leftOver = virtualInventory.addItem(resultItem.clone());
-//            if (leftOver.isEmpty()) {
-//                Main.message(player, "Inventory has space for the result item");
-//                return inventory;
-//            }
-//            Main.message(player, "Inventory doesn't have space for the result item");
-//        }
-//        Main.message(player, "Inventory doesn't have the required items " +
-//                "(or doesn't have space for the result item)");
-//        return null;
-//    }
+    public static @NotNull List<ItemStack> getAllByStacks(@NotNull ItemStack item, int trades) {
+        List<ItemStack> output = new ArrayList<>();
+        int totalAmount = item.getAmount() * trades;
+        while (true) {
+            if (totalAmount <= 0) break;
+            if (totalAmount >= item.getMaxStackSize()) {
+                ItemStack itemToAdd = item.clone();
+                itemToAdd.setAmount(item.getMaxStackSize());
+                output.add(itemToAdd);
+                totalAmount -= item.getMaxStackSize();
+            } else {
+                ItemStack itemToAdd = item.clone();
+                itemToAdd.setAmount(totalAmount);
+                output.add(itemToAdd);
+                break;
+            }
+        }
+        return output;
+    }
 
     public static @NotNull List<Inventory> getShulkersFromInventory(@NotNull Inventory inventory) {
         List<Inventory> shulkers = new ArrayList<>();
