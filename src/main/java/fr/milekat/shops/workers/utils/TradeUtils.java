@@ -43,6 +43,7 @@ public class TradeUtils {
     public static int maxDoAbleTrades(@NotNull Player player,
                                       @NotNull List<ItemStack> requiredItems,
                                       @NotNull ItemStack resultItem,
+                                      boolean unlimitedTrades,
                                       boolean shulkerMode) {
         //  List of all inventories to check
         List<Inventory> inventories = new ArrayList<>();
@@ -87,6 +88,10 @@ public class TradeUtils {
                     Main.message(player, "Checking if loop var is higher than required amount");
                     if (itemHeld >= requiredItems.get(i).getAmount()) {
                         Main.message(player, "Loop var is higher than required amount");
+                        if (!unlimitedTrades) {
+                            requiredHeld.set(i, 1);
+                            break;
+                        }
                         requiredHeld.set(i, requiredHeld.get(i) + 1);
                         itemHeld = 0;
                     }

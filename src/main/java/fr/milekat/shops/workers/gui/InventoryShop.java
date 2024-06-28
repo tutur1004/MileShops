@@ -189,33 +189,21 @@ public class InventoryShop extends FastInv {
             tradeItems.add(trade.getSecondItem().clone());
         }
 
-        //  Check if the player can execute the trade
+        //  Calculate the max doable trades
         int maxDoAbleTrades = TradeUtils.maxDoAbleTrades(this.player, tradeItems,
-                trade.getResultItem().clone(), tradeMode.equals(TradeMode.SHULKER));
-        Main.message(player, "maxDoAbleTrades: " + maxDoAbleTrades);
+                trade.getResultItem().clone(), fullInventories, tradeMode.equals(TradeMode.SHULKER));
+        //  If no trades can be done, return 0
         if (maxDoAbleTrades == 0) return 0;
 
         //  Execute the trade
         TradeUtils.executeTrade(this.player, tradeItems, trade.getResultItem().clone(), maxDoAbleTrades,
                 tradeMode.equals(TradeMode.SHULKER));
 
-//        Main.message(player, "new TradeCompleteEvent");
-//        //  Execute the trade
+        //  Call the TradeCompleteEvent
         for (int i = 0; i < maxDoAbleTrades; i++) {
             TradeCompleteEvent event = new TradeCompleteEvent(player, shop, trade);
             Main.getInstance().getServer().getPluginManager().callEvent(event);
         }
-//        TradeCompleteEvent event = new TradeCompleteEvent(player, shop, trade);
-//        Main.message(player, "TradeCompleteEvent calling");
-//        Main.getInstance().getServer().getPluginManager().callEvent(event);
-//        Main.message(player, "TradeCompleteEvent called");
-//        if (event.isCancelled()) return false;
-//        Main.message(player, "TradeCompleteEvent not cancelled");
-//        tradeItems.forEach(tradeEligibleInventory::removeItem);
-//        Main.message(player, "Trade items removed from inventory");
-//        tradeEligibleInventory.addItem(trade.getResultItem().clone());
-//        Main.message(player, "Result item added to inventory");
-//        return true;
         return maxDoAbleTrades;
     }
 
