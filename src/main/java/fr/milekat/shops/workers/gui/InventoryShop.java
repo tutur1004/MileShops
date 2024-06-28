@@ -17,7 +17,6 @@ import net.md_5.bungee.api.chat.hover.content.Text;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
@@ -174,46 +173,50 @@ public class InventoryShop extends FastInv {
     }
 
     private void requestTrade(@NotNull Trade trade, @NotNull ClickType click) {
-        if (!click.isShiftClick()) {
-            if (processTrade(trade)) {
-                tradeCompleted.put(trade, tradeCompleted.getOrDefault(trade, 0) + 1);
-            } else {
-                Main.message(player, "&cYou don't have the required items to trade or your inventory is full.");
-            }
+        int processedTrades = processedTrades(trade, click.isShiftClick());
+        if (processedTrades > 0) {
+            tradeCompleted.put(trade, tradeCompleted.getOrDefault(trade, 0) + processedTrades);
         } else {
-            while (processTrade(trade)) {
-                tradeCompleted.put(trade, tradeCompleted.getOrDefault(trade, 0) + 1);
-            }
+            Main.message(player, "&cYou don't have the required items to trade or your inventory is full.");
         }
     }
 
-    private boolean processTrade(@NotNull Trade trade) {
+    private int processedTrades(@NotNull Trade trade, boolean fullInventories) {
         //  Set the trade items
         List<ItemStack> tradeItems = new LinkedList<>();
         tradeItems.add(trade.getFirstItem().clone());
         if (trade.getSecondItem() != null) {
             tradeItems.add(trade.getSecondItem().clone());
         }
-        Main.message(player, "Trade items: " + tradeItems.size());
-        //  Check if the player can execute the trade
-        Inventory tradeEligibleInventory = TradeUtils.canTrade(this.player, tradeItems,
-                trade.getResultItem().clone(), tradeMode.equals(TradeMode.SHULKER));
-        Main.message(player, "Trade eligible inventory: " + (tradeEligibleInventory != null));
-        if (tradeEligibleInventory == null) return false;
 
-        Main.message(player, "new TradeCompleteEvent");
+        //  Check if the player can execute the trade
+        int maxDoAbleTrades = TradeUtils.maxDoAbleTrades(this.player, tradeItems,
+                trade.getResultItem().clone(), tradeMode.equals(TradeMode.SHULKER));
+        Main.message(player, "maxDoAbleTrades: " + maxDoAbleTrades);
+        if (maxDoAbleTrades == 0) return 0;
+
         //  Execute the trade
-        TradeCompleteEvent event = new TradeCompleteEvent(player, shop, trade);
-        Main.message(player, "TradeCompleteEvent calling");
-        Main.getInstance().getServer().getPluginManager().callEvent(event);
-        Main.message(player, "TradeCompleteEvent called");
-        if (event.isCancelled()) return false;
-        Main.message(player, "TradeCompleteEvent not cancelled");
-        tradeItems.forEach(tradeEligibleInventory::removeItem);
-        Main.message(player, "Trade items removed from inventory");
-        tradeEligibleInventory.addItem(trade.getResultItem().clone());
-        Main.message(player, "Result item added to inventory");
-        return true;
+        TradeUtils.executeTrade(this.player, tradeItems, trade.getResultItem().clone(), maxDoAbleTrades,
+                tradeMode.equals(TradeMode.SHULKER));
+
+//        Main.message(player, "new TradeCompleteEvent");
+//        //  Execute the trade
+        for (int i = 0; i < maxDoAbleTrades; i++) {
+            TradeCompleteEvent event = new TradeCompleteEvent(player, shop, trade);
+            Main.getInstance().getServer().getPluginManager().callEvent(event);
+        }
+//        TradeCompleteEvent event = new TradeCompleteEvent(player, shop, trade);
+//        Main.message(player, "TradeCompleteEvent calling");
+//        Main.getInstance().getServer().getPluginManager().callEvent(event);
+//        Main.message(player, "TradeCompleteEvent called");
+//        if (event.isCancelled()) return false;
+//        Main.message(player, "TradeCompleteEvent not cancelled");
+//        tradeItems.forEach(tradeEligibleInventory::removeItem);
+//        Main.message(player, "Trade items removed from inventory");
+//        tradeEligibleInventory.addItem(trade.getResultItem().clone());
+//        Main.message(player, "Result item added to inventory");
+//        return true;
+        return maxDoAbleTrades;
     }
 
     @Override
