@@ -3,6 +3,7 @@ package fr.milekat.shops.workers.utils;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
+import fr.milekat.shops.workers.gui.InventoryStorage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.ShulkerBox;
@@ -51,8 +52,8 @@ public class TradeUtils {
                                       boolean unlimitedTrades,
                                       boolean shulkerMode) {
         //  List of all inventories to check
-        List<Inventory> inventories = new ArrayList<>();
-        inventories.add(player.getInventory());
+        List<InventoryStorage> inventories = new ArrayList<>();
+        inventories.add(new InventoryStorage(player.getInventory()));
         if (shulkerMode) {
             //  Add shulkers from player inventory and ender chest to the list
             inventories.addAll(getShulkersFromInventory(player.getInventory()));
@@ -60,71 +61,30 @@ public class TradeUtils {
         }
 
         List<Inventory> virtualInventories = new ArrayList<>();
-        for (Inventory inventory : inventories) {
-            int size = (inventory.getSize() == 41) ? 36 : inventory.getSize();
+        for (InventoryStorage inventory : inventories) {
+            int size = (inventory.inventory().getSize() == 41) ? 36 : inventory.inventory().getSize();
             Inventory virtualInventory = Bukkit.createInventory(null, size, UUID.randomUUID().toString());
-            virtualInventory.setContents(inventory.getStorageContents());
+            virtualInventory.setContents(inventory.inventory().getStorageContents());
             virtualInventories.add(virtualInventory);
         }
 
-        //  Check how many items can be removed for each required item (In required stacks)
-        List<Integer> requiredHeld = new LinkedList<>();
-        //  Iterate over the required items
-        for (int i = 0; i < requiredItems.size(); i++) {
-            //  Load the required item
-            requiredHeld.add(i, 0);
-            int itemHeld = 0;
-            if (requiredItems.get(i) == null) continue;
-            ItemStack requiredItemLoop = requiredItems.get(i).clone();
-            //  TODO: Here add tag support
-            if (requiredItemLoop.getType() == Material.AIR || requiredItemLoop.getAmount() < 1) continue;
-
-            //  Iterate over all the inventories
-            for (Inventory loopInv : virtualInventories) {
-                Inventory virtualInventory = Bukkit.createInventory(null, loopInv.getSize(),
-                        UUID.randomUUID().toString());
-                virtualInventory.setContents(loopInv.getContents());
-                while (true) {
-                    if (itemHeld >= requiredItems.get(i).getAmount()) {
-                        if (!unlimitedTrades) {
-                            requiredHeld.set(i, 1);
-                            break;
-                        }
-                        requiredHeld.set(i, requiredHeld.get(i) + 1);
-                        itemHeld = 0;
-                    }
-
-                    //  Ensure the item is present in this inventory
-                    if (!virtualInventory.contains(requiredItemLoop.getType())) break;
-
-                    //  Remove the item from the inventory and increment the itemHeld
-                    int removed = getStackRemoved(virtualInventory, requiredItemLoop);
-                    itemHeld += removed;
-                    if (removed != requiredItemLoop.getAmount()) break;
+        //  Check how many items can be removed and added per inventories
+        int doAbleTrade = 0;
+        for (Inventory virtualInv : virtualInventories) {
+            while (true) {
+                if (requiredItems.stream().anyMatch(item -> getStackRemoved(virtualInv, item) != item.getAmount())) {
+                    break;
                 }
-            }
-        }
-
-        //  Output variables
-        //  TODO: Be careful, it can remove more than trade-able items, result space should be impacted
-        int minRequiredHold = requiredHeld.stream().min(Integer::compareTo).orElse(0);
-        minRequiredHold -= requiredItems.stream().mapToInt(ItemStack::getAmount).max().orElse(resultItem.getMaxStackSize());
-        int resultHoldAble = 0;
-
-        for (int j = 0; j < minRequiredHold; j++) {
-            for (Inventory virtualInventory : virtualInventories) {
-                for (int k = 0; k < minRequiredHold; k++) {
-                    requiredItems.forEach(item -> getStackRemoved(virtualInventory, item));
-                }
-                Map<Integer, ItemStack> leftOver = virtualInventory.addItem(resultItem.clone());
+                Map<Integer, ItemStack> leftOver = virtualInv.addItem(resultItem.clone());
                 if (leftOver.isEmpty()) {
-                    resultHoldAble++;
-                } else break;
+                    doAbleTrade++;
+                } else {
+                    break;
+                }
+                if (!unlimitedTrades) break;
             }
         }
-
-        //  Return the minimum between the required item and the result items
-        return Math.min(minRequiredHold, resultHoldAble);
+        return doAbleTrade;
     }
 
     /**
@@ -141,16 +101,16 @@ public class TradeUtils {
                                     @NotNull ItemStack resultItem,
                                     int trades,
                                     boolean shulkerMode) {
-        //  TODO: Fully rework this part
-        Main.message(player, "Number of trades: " + trades);
         //  List of all inventories to proceed
-        List<Inventory> inventories = new ArrayList<>();
-        inventories.add(player.getInventory());
+        List<InventoryStorage> inventories = new ArrayList<>();
+        inventories.add(new InventoryStorage(player.getInventory()));
         if (shulkerMode) {
             //  Add shulkers from player inventory and ender chest to the list
             inventories.addAll(getShulkersFromInventory(player.getInventory()));
             inventories.addAll(getShulkersFromInventory(player.getEnderChest()));
         }
+
+        Main.message(player, "&c" + inventories.size() + " inventories to proceed");
 
         //  List all items to remove and add by stacks (Performances improvement)
         List<ItemStack> requestItemsToRemove = new ArrayList<>();
@@ -158,10 +118,11 @@ public class TradeUtils {
         List<ItemStack> resultItemsToAdd = getAllByStacks(resultItem, trades);
 
         //  Add and remove the items from the inventories
-        inventories.forEach(inventory -> {
+        inventories.forEach(storage -> {
+            Inventory inventory = storage.inventory();
             //  Remove the traded items
             for (ItemStack item : new ArrayList<>(requestItemsToRemove)) {
-                HashMap<Integer, ItemStack> leftOver = inventory.removeItem(item);
+                Map<Integer, ItemStack> leftOver = inventory.removeItem(item);
                 if (leftOver.isEmpty()) {
                     requestItemsToRemove.remove(item);
                 } else if (inventory.contains(item.getType())) {
@@ -171,6 +132,7 @@ public class TradeUtils {
                     lastFewSpace.setAmount(1);
                     while (true) {
                         leftOver = inventory.removeItem(lastFewSpace);
+                        Main.message(player, "&cLeftOver : " + leftOver.size());
                         if (leftOver.isEmpty()) {
                             removed--;
                             if (removed <= 0) {
@@ -187,9 +149,10 @@ public class TradeUtils {
                     }
                 } else break;
             }
+            Main.message(player, "&cRequest items to add : " + resultItemsToAdd.size());
             //  Add the result items
             for (ItemStack item : new ArrayList<>(resultItemsToAdd)) {
-                HashMap<Integer, ItemStack> leftOver = inventory.addItem(item);
+                Map<Integer, ItemStack> leftOver = inventory.addItem(item);
                 if (leftOver.isEmpty()) {
                     resultItemsToAdd.remove(item);
                 } else {
@@ -215,6 +178,13 @@ public class TradeUtils {
                     }
                     break;
                 }
+            }
+            if (storage.isShulkerBox()) {
+                assert storage.blockStateMeta() != null;
+                assert storage.shulkerBox() != null;
+                assert storage.itemStack() != null;
+                storage.blockStateMeta().setBlockState(storage.shulkerBox());
+                storage.itemStack().setItemMeta(storage.blockStateMeta());
             }
         });
     }
@@ -259,13 +229,13 @@ public class TradeUtils {
         return output;
     }
 
-    public static @NotNull List<Inventory> getShulkersFromInventory(@NotNull Inventory inventory) {
-        List<Inventory> shulkers = new ArrayList<>();
+    public static @NotNull List<InventoryStorage> getShulkersFromInventory(@NotNull Inventory inventory) {
+        List<InventoryStorage> shulkers = new ArrayList<>();
         for (ItemStack loopItem : inventory.getStorageContents()) {
             if (loopItem != null) {
-                if (loopItem.getItemMeta() instanceof BlockStateMeta im) {
-                    if (im.getBlockState() instanceof ShulkerBox shulkerBox) {
-                        shulkers.add(shulkerBox.getInventory());
+                if (loopItem.getItemMeta() instanceof BlockStateMeta stateMeta) {
+                    if (stateMeta.getBlockState() instanceof ShulkerBox shulkerBox) {
+                        shulkers.add(new InventoryStorage(shulkerBox.getInventory(), loopItem, stateMeta, shulkerBox));
                     }
                 }
             }

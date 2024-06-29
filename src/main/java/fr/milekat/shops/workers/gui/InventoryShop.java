@@ -191,13 +191,13 @@ public class InventoryShop extends FastInv {
 
         //  Calculate the max doable trades
         int maxDoAbleTrades = TradeUtils.maxDoAbleTrades(this.player, tradeItems,
-                trade.getResultItem().clone(), fullInventories, tradeMode.equals(TradeMode.SHULKER));
+                trade.getResultItem().clone(), fullInventories, true);
         //  If no trades can be done, return 0
         if (maxDoAbleTrades == 0) return 0;
 
         //  Execute the trade
-        TradeUtils.executeTrade(this.player, tradeItems, trade.getResultItem().clone(), maxDoAbleTrades,
-                tradeMode.equals(TradeMode.SHULKER));
+        TradeUtils.executeTrade(this.player, tradeItems, trade.getResultItem().clone(),
+                maxDoAbleTrades, true);
 
         //  Call the TradeCompleteEvent
         for (int i = 0; i < maxDoAbleTrades; i++) {
