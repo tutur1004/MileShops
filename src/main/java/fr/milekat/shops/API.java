@@ -29,7 +29,7 @@ public class API implements MileShopsIAPI {
     @Override
     public @NotNull List<Trade> getShopTrades(@NotNull UUID uuid) throws StorageException {
         try {
-            return Main.getStorage().getTrades(uuid);
+            return Main.getStorage().getCacheTrades(uuid);
         } catch (StorageExecuteException exception) {
             throw new StorageException(exception, exception.getMessage());
         }
@@ -38,7 +38,7 @@ public class API implements MileShopsIAPI {
     @Override
     public @NotNull List<Trade> getShopTrades(@NotNull String name) throws StorageException {
         try {
-            return Main.getStorage().getTrades(name);
+            return Main.getStorage().getCacheTrades(name);
         } catch (StorageExecuteException exception) {
             throw new StorageException(exception, exception.getMessage());
         }
