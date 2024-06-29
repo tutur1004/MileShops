@@ -67,13 +67,18 @@ jar {
 
 shadowJar {
     getArchiveClassifier().set(null)
+
+    relocate 'fr.milekat.utils', 'fr.milekat.shops.lib.utils'
+    relocate 'fr.mrmicky' , 'fr.milekat.shops.lib.fastinv'
 }
 
 dependencies {
     implementation project('shops-api')
 
     //  Utils
-    implementation group: 'fr.milekat', name: 'milekat-utils', version: '1.2.0-SNAPSHOT'
+    implementation (group: 'fr.milekat', name: 'milekat-utils', version: '1.2.0') {
+        transitive = false
+    }
     implementation group: 'fr.mrmicky', name: 'FastInv', version: '3.0.4'
     compileOnly group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.15.2'
     compileOnly group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.15.2'
