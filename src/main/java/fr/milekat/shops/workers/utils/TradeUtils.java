@@ -126,7 +126,6 @@ public class TradeUtils {
                 if (leftOver.isEmpty()) {
                     requestItemsToRemove.remove(item);
                 } else if (inventory.contains(item.getType())) {
-                    //  TODO: Remove as many items as is still possible to remove from the inventory -- TEST
                     int removed = item.getAmount();
                     ItemStack lastFewSpace = item.clone();
                     lastFewSpace.setAmount(1);
@@ -156,7 +155,6 @@ public class TradeUtils {
                 if (leftOver.isEmpty()) {
                     resultItemsToAdd.remove(item);
                 } else {
-                    //  TODO: Add as many items as is still possible to fill the inventory -- TEST
                     int toAdd = item.getAmount();
                     ItemStack lastFewSpace = item.clone();
                     lastFewSpace.setAmount(1);
