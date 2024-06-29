@@ -1,10 +1,12 @@
 package fr.milekat.shops.workers.gui;
 
 import fr.milekat.shops.Main;
+import fr.milekat.shops.api.MileShopsAPI;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.events.PlayerOpenShop;
 import fr.milekat.shops.api.events.TradeCompleteEvent;
+import fr.milekat.shops.api.exceptions.ApiUnavailable;
 import fr.milekat.shops.workers.utils.Buttons;
 import fr.milekat.shops.workers.utils.TradeMode;
 import fr.milekat.shops.workers.utils.TradeUtils;
@@ -192,8 +194,26 @@ public class InventoryShop extends FastInv {
         //  Calculate the max doable trades
         int maxDoAbleTrades = TradeUtils.maxDoAbleTrades(this.player, tradeItems,
                 trade.getResultItem().clone(), fullInventories, true);
+
+        //  Trade usage limitation
+        if (trade.isUsageLimited()) {
+            try {
+                Map<String, Object> playerTags = MileShopsAPI.getAPI().getPlayerTags(player.getUniqueId());
+                if (playerTags != null && !playerTags.isEmpty()) {
+                    Map<String, Object> playerTradeTags = new HashMap<>();
+                    trade.getMaxTradeTagsNames().stream()
+                            .filter(playerTags::containsKey)
+                            .forEach(tag -> playerTradeTags.put(tag, playerTags.get(tag)));
+                    if (!playerTradeTags.isEmpty()) {
+                        maxDoAbleTrades = trade.getMaxTradeUse() -
+                                Main.getStorage().getTradeUses(playerTradeTags, trade);
+                    }
+                }
+            } catch (ApiUnavailable ignore) {}
+        }
+
         //  If no trades can be done, return 0
-        if (maxDoAbleTrades == 0) return 0;
+        if (maxDoAbleTrades <= 0) return 0;
 
         //  Execute the trade
         TradeUtils.executeTrade(this.player, tradeItems, trade.getResultItem().clone(),

@@ -171,7 +171,7 @@ public class SQLStorage implements StorageImplementation {
     }
 
     @Override
-    public int getTradeUses(@NotNull Map<String, Object> tags, @NotNull UUID tradeUuid) {
+    public int getTradeUses(@NotNull Map<String, Object> tags, @NotNull Trade trade) {
         return 0;
     }
 

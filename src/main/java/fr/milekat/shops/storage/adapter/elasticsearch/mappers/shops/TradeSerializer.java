@@ -9,6 +9,19 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 
+/**
+ * {
+ *     "trade": {
+ *         "shopUuid": UUID,
+ *         "position": Location,
+ *         "firstItem": ItemStack,
+ *         "resultItem": ItemStack,
+ *         "secondItem": ItemStack,
+ *         "maxTradeUse": int,
+ *         "maxTradeTagsNames": String[]
+ *     }
+ * }
+ */
 public class TradeSerializer  extends StdSerializer<Trade> {
     private final ObjectMapper mapper;
 
@@ -32,6 +45,14 @@ public class TradeSerializer  extends StdSerializer<Trade> {
         }
         gen.writeFieldName("resultItem");
         gen.writeObject(value.getResultItem());
+        if (value.isUsageLimited()){
+            gen.writeNumberField("maxTradeUse", value.getMaxTradeUse());
+            gen.writeArrayFieldStart("maxTradeTagsNames");
+            for (String tag : value.getMaxTradeTagsNames()) {
+                gen.writeString(tag);
+            }
+            gen.writeEndArray();
+        }
         gen.writeEndObject();
     }
 }

@@ -1,8 +1,10 @@
 package fr.milekat.shops.api.classes;
 
 import org.bukkit.inventory.ItemStack;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -16,27 +18,31 @@ public class Trade {
     private ItemStack secondItem;
     private ItemStack resultItem;
     private int maxTradeUse;
-    private Map<String, Object> maxTradeTags;
+    private List<String> maxTradeTagsNames;
     private boolean enabled; // TODO implement
 
     /**
      * Constructs a new Trade instance with the specified parameters.
      *
-     * @param shopUuid       The UUID of the shop that contains the trade.
-     * @param tradePosition  The position of the trade in the shop.
-     * @param firstItem      The first item of the trade.
-     * @param secondItem     The second item of the trade.
-     * @param resultItem     The resulting item of the trade.
+     * @param shopUuid          The UUID of the shop that contains the trade.
+     * @param tradePosition     The position of the trade in the shop.
+     * @param firstItem         The first item of the trade.
+     * @param secondItem        The second item of the trade.
+     * @param resultItem        The resulting item of the trade.
+     * @param maxTradeUse       The maximum number of times the trade can be used. (0 to disable limit)
+     * @param maxTradeTagsNames The tags associated with the maximum trade uses.
      */
-    public Trade(UUID shopUuid, int tradePosition, ItemStack firstItem, ItemStack secondItem, ItemStack resultItem) {
+    public Trade(@NotNull UUID shopUuid, int tradePosition,
+                 @NotNull ItemStack firstItem, @Nullable ItemStack secondItem, @NotNull ItemStack resultItem,
+                 int maxTradeUse, @Nullable List<String> maxTradeTagsNames) {
         this.shopUuid = shopUuid;
         this.tradePosition = tradePosition;
         this.firstItem = firstItem;
         this.secondItem = secondItem;
         this.resultItem = resultItem;
         enabled = true;
-        //  TODO trades uses
-        this.maxTradeUse = 0;
+        this.maxTradeUse = maxTradeUse;
+        this.maxTradeTagsNames = maxTradeTagsNames;
     }
 
     /**
@@ -143,17 +149,26 @@ public class Trade {
      *
      * @return The tags associated with the maximum trade uses.
      */
-    public Map<String, Object> getMaxTradeTags() {
-        return maxTradeTags;
+    public List<String> getMaxTradeTagsNames() {
+        return maxTradeTagsNames;
     }
 
     /**
      * Sets the tags associated with the maximum trade uses.
      *
-     * @param maxTradeTags The new tags associated with the maximum trade uses.
+     * @param maxTradeTagsNames The new tags associated with the maximum trade uses.
      */
-    public void setMaxTradeTags(Map<String, Object> maxTradeTags) {
-        this.maxTradeTags = maxTradeTags;
+    public void setMaxTradeTags(List<String> maxTradeTagsNames) {
+        this.maxTradeTagsNames = maxTradeTagsNames;
+    }
+
+    /**
+     * Checks if the trade is limited by usage.
+     *
+     * @return true if the trade is limited by usage, false otherwise.
+     */
+    public boolean isUsageLimited() {
+        return maxTradeUse > 0 && maxTradeTagsNames != null && !maxTradeTagsNames.isEmpty();
     }
 
     /**

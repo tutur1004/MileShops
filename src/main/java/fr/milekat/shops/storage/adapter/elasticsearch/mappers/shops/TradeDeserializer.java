@@ -9,6 +9,7 @@ import fr.milekat.shops.api.classes.Trade;
 import org.bukkit.inventory.ItemStack;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -18,7 +19,9 @@ import java.util.UUID;
  *         "position": Location,
  *         "firstItem": ItemStack,
  *         "resultItem": ItemStack,
- *         "secondItem": ItemStack
+ *         "secondItem": ItemStack,
+ *         "maxTradeUse": int,
+ *         "maxTradeTagsNames": String[]
  *     }
  * }
  */
@@ -38,12 +41,18 @@ public class TradeDeserializer  extends StdDeserializer<Trade> {
         int tradePosition = node.get("position").asInt();
         ItemStack firstItem = mapper.treeToValue(node.get("firstItem"), ItemStack.class);
         ItemStack resultItem = mapper.treeToValue(node.get("resultItem"), ItemStack.class);
+        ItemStack secondItem = null;
         if (node.has("secondItem")) {
-            ItemStack secondItem = mapper.treeToValue(node.get("secondItem"), ItemStack.class);
-            return new Trade(shopUuid, tradePosition, firstItem, secondItem, resultItem);
-        } else {
-            return new Trade(shopUuid, tradePosition, firstItem, null, resultItem);
+            secondItem = mapper.treeToValue(node.get("secondItem"), ItemStack.class);
         }
+        int maxTradeUse = 0;
+        List<String> maxTradeTagsNames = null;
+        if (node.has("maxTradeUse") && node.has("maxTradeTagsNames")) {
+            maxTradeUse = node.get("maxTradeUse").asInt();
+            maxTradeTagsNames = List.of(mapper.convertValue(node.get("maxTradeTagsNames"), String[].class));
+        }
+
+        return new Trade(shopUuid, tradePosition, firstItem, secondItem, resultItem, maxTradeUse, maxTradeTagsNames);
     }
 }
 

@@ -119,7 +119,8 @@ public class AdminEditor extends FastInv {
                         index + (9 * currentPage),
                         getFirstItemPos(index),
                         shop.getType().equals(ShopType.VANILLA) ? getSecondItemPos(index) : null,
-                        getResultItemPos(index))
+                        getResultItemPos(index),
+                        0 , null)
                 );
             }
         });
