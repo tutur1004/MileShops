@@ -6,18 +6,29 @@ import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.workers.gui.InventoryStorage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Tag;
 import org.bukkit.block.ShulkerBox;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BlockStateMeta;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
 public class TradeUtils {
     public static @NotNull String getMaterial(@NotNull Material material) {
         return Main.getConfigs().getString("materials-font." + material, material.toString());
+    }
+
+    public static @Nullable Tag<Material> getMaterialTag(@NotNull String tagName) {
+        Tag<Material> found = Bukkit.getTag(Tag.REGISTRY_BLOCKS, NamespacedKey.minecraft(tagName), Material.class);
+        if (found == null) {
+            found = Bukkit.getTag(Tag.REGISTRY_ITEMS, NamespacedKey.minecraft(tagName), Material.class);
+        }
+        return found;
     }
 
     /**

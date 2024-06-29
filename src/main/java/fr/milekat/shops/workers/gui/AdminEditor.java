@@ -6,16 +6,20 @@ import fr.milekat.shops.api.classes.ShopType;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.workers.ShopsManager;
 import fr.milekat.shops.workers.utils.Buttons;
+import fr.milekat.shops.workers.utils.TradeUtils;
 import fr.mrmicky.fastinv.FastInv;
 import fr.mrmicky.fastinv.ItemBuilder;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.Tag;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.stream.IntStream;
@@ -108,20 +112,32 @@ public class AdminEditor extends FastInv {
             setItem(18 + pagePosition, trade.getSecondItem());
         }
         setItem(36 + pagePosition, trade.getResultItem());
+        if (trade.isComplex()) {
+            //  TODO: Add complex trade display with null values (if not set)
+            setItem(27 + pagePosition, new ItemBuilder(Material.COMMAND_BLOCK)
+                    .name(ChatColor.GOLD + "Complex trade")
+                    .lore("firstItemTag:" + trade.getFirstItemTag().getKey().getKey())
+                    .lore("secondItemTag:" + trade.getSecondItemTag().getKey().getKey())
+                    .lore("maxTradeUse:" + trade.getMaxTradeUse())
+                    .lore("maxTradeTagsNames:" + String.join(",", trade.getMaxTradeTagsNames()))
+                    .build());
+        }
     }
 
     private void savePage() {
         List<Trade> newTrades = new LinkedList<>();
         IntStream.rangeClosed(0, 8).forEach(index -> {
             if (nonNullItem(getFirstItemPos(index)) && nonNullItem(getResultItemPos(index))) {
-                newTrades.add(new Trade(
+                //  Check if trade is complex
+                Trade complexTrade = getComplexTrade(index);
+                //  Trade without specifications
+                newTrades.add(Objects.requireNonNullElseGet(complexTrade, () -> new Trade(
                         shop.getUuid(),
                         index + (9 * currentPage),
-                        getFirstItemPos(index),
-                        shop.getType().equals(ShopType.VANILLA) ? getSecondItemPos(index) : null,
+                        getFirstItemPos(index), null,
+                        shop.getType().equals(ShopType.VANILLA) ? getSecondItemPos(index) : null, null,
                         getResultItemPos(index),
-                        0 , null)
-                );
+                        0, null)));
             }
         });
         this.trades.put(this.currentPage, newTrades);
@@ -142,6 +158,55 @@ public class AdminEditor extends FastInv {
     private @NotNull ItemStack getResultItemPos(int position) {
         return Objects.requireNonNullElse(this.getInventory().getItem(36 + position),
                 new ItemStack(Material.AIR)).clone();
+    }
+    private @NotNull ItemStack getComplexItemPos(int position) {
+        return Objects.requireNonNullElse(this.getInventory().getItem(27 + position),
+                new ItemStack(Material.AIR)).clone();
+    }
+
+    private @Nullable Trade getComplexTrade(int position) {
+        //  Check if trade is complex
+        ItemStack firstItem = getFirstItemPos(position);
+        if (firstItem.getType().equals(Material.AIR)) return null;
+        ItemStack complexItem = getComplexItemPos(position);
+        if (!complexItem.getType().equals(Material.COMMAND_BLOCK)) return null;
+
+        //  Get complexity from lore of complex item
+        ItemMeta meta = complexItem.getItemMeta();
+        if (meta==null || meta.getLore()==null) return null;
+        List<String> lore = meta.getLore();
+        if (lore.isEmpty()) return null;
+        Tag<Material> firstItemTag = null;
+        Tag<Material> secondItemTag = null;
+        int maxTradeUse = 0;
+        List<String> maxTradeTagsNames = null;
+        for (String line : lore) {
+            if (line.split(":").length!=2) continue;
+            String value = line.split(":")[1];
+            switch (line.split(":")[0]) {
+                case "firstItemTag":
+                    firstItemTag = TradeUtils.getMaterialTag(value);
+                    break;
+                case "secondItemTag":
+                    secondItemTag = TradeUtils.getMaterialTag(value);
+                    break;
+                case "maxTradeUse":
+                    maxTradeUse = Integer.parseInt(value);
+                    break;
+                case "maxTradeTagsNames":
+                    maxTradeTagsNames = List.of(value.split(","));
+                    break;
+            }
+        }
+
+        //  Set trade with complex specifications
+        return new Trade(
+                shop.getUuid(),
+                position + (9 * currentPage),
+                firstItem, firstItemTag,
+                getSecondItemPos(position), secondItemTag,
+                getResultItemPos(position),
+                maxTradeUse, maxTradeTagsNames);
     }
 
     @Override

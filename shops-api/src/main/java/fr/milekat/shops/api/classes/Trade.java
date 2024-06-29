@@ -1,5 +1,7 @@
 package fr.milekat.shops.api.classes;
 
+import org.bukkit.Material;
+import org.bukkit.Tag;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -15,7 +17,9 @@ public class Trade {
     private final UUID shopUuid;
     private int tradePosition;
     private ItemStack firstItem;
+    private Tag<Material> firstItemTag;
     private ItemStack secondItem;
+    private Tag<Material> secondItemTag;
     private ItemStack resultItem;
     private int maxTradeUse;
     private List<String> maxTradeTagsNames;
@@ -27,18 +31,24 @@ public class Trade {
      * @param shopUuid          The UUID of the shop that contains the trade.
      * @param tradePosition     The position of the trade in the shop.
      * @param firstItem         The first item of the trade.
+     * @param firstItemTag      If set, all materials from this tags will be allowed.
      * @param secondItem        The second item of the trade.
+     * @param secondItemTag     If set, all materials from this tags will be allowed.
      * @param resultItem        The resulting item of the trade.
      * @param maxTradeUse       The maximum number of times the trade can be used. (0 to disable limit)
      * @param maxTradeTagsNames The tags associated with the maximum trade uses.
      */
     public Trade(@NotNull UUID shopUuid, int tradePosition,
-                 @NotNull ItemStack firstItem, @Nullable ItemStack secondItem, @NotNull ItemStack resultItem,
+                 @NotNull ItemStack firstItem, @Nullable Tag<Material> firstItemTag,
+                 @Nullable ItemStack secondItem, @Nullable Tag<Material> secondItemTag,
+                 @NotNull ItemStack resultItem,
                  int maxTradeUse, @Nullable List<String> maxTradeTagsNames) {
         this.shopUuid = shopUuid;
         this.tradePosition = tradePosition;
         this.firstItem = firstItem;
+        this.firstItemTag = firstItemTag;
         this.secondItem = secondItem;
+        this.secondItemTag = secondItemTag;
         this.resultItem = resultItem;
         enabled = true;
         this.maxTradeUse = maxTradeUse;
@@ -91,6 +101,22 @@ public class Trade {
     }
 
     /**
+     * Retrieves the tags allowed for the first item.
+     * @return The tags allowed for the first item.
+     */
+    public Tag<Material> getFirstItemTag() {
+        return firstItemTag;
+    }
+
+    /**
+     * Sets the tags allowed for the first item.
+     * @param firstItemTag The new tags allowed for the first item.
+     */
+    public void setFirstItemTag(Tag<Material> firstItemTag) {
+        this.firstItemTag = firstItemTag;
+    }
+
+    /**
      * Retrieves the second item of the trade.
      *
      * @return The second item.
@@ -106,6 +132,22 @@ public class Trade {
      */
     public void setSecondItem(ItemStack secondItem) {
         this.secondItem = secondItem;
+    }
+
+    /**
+     * Retrieves the tags allowed for the second item.
+     * @return The tags allowed for the second item.
+     */
+    public Tag<Material> getSecondItemTag() {
+        return secondItemTag;
+    }
+
+    /**
+     * Sets the tags allowed for the second item.
+     * @param secondItemTag The new tags allowed for the second item.
+     */
+    public void setSecondItemTag(Tag<Material> secondItemTag) {
+        this.secondItemTag = secondItemTag;
     }
 
     /**
@@ -187,5 +229,14 @@ public class Trade {
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    /**
+     * Checks if the trade is complex.
+     *
+     * @return true if the trade is complex, false otherwise.
+     */
+    public boolean isComplex() {
+        return firstItemTag != null || secondItemTag != null || maxTradeUse > 0 || maxTradeTagsNames != null;
     }
 }
