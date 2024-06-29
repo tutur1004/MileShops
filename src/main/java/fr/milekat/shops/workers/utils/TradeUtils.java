@@ -110,8 +110,6 @@ public class TradeUtils {
             inventories.addAll(getShulkersFromInventory(player.getEnderChest()));
         }
 
-        Main.message(player, "&c" + inventories.size() + " inventories to proceed");
-
         //  List all items to remove and add by stacks (Performances improvement)
         List<ItemStack> requestItemsToRemove = new ArrayList<>();
         requiredItems.forEach(item -> requestItemsToRemove.addAll(getAllByStacks(item, trades)));
@@ -131,7 +129,6 @@ public class TradeUtils {
                     lastFewSpace.setAmount(1);
                     while (true) {
                         leftOver = inventory.removeItem(lastFewSpace);
-                        Main.message(player, "&cLeftOver : " + leftOver.size());
                         if (leftOver.isEmpty()) {
                             removed--;
                             if (removed <= 0) {
@@ -148,7 +145,6 @@ public class TradeUtils {
                     }
                 } else break;
             }
-            Main.message(player, "&cRequest items to add : " + resultItemsToAdd.size());
             //  Add the result items
             for (ItemStack item : new ArrayList<>(resultItemsToAdd)) {
                 Map<Integer, ItemStack> leftOver = inventory.addItem(item);
