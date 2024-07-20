@@ -21,6 +21,27 @@ public enum HeadsUtils {
         this.texture = texture;
     }
 
+    /**
+     * A method used to set the skin of a player skull via a base64 encoded string
+     *
+     * @param meta   the skull meta to modify
+     * @param base64 the base64 encoded string
+     */
+    private static void setSkinViaBase64(SkullMeta meta, String base64) {
+        Field profileField;
+        try {
+            GameProfile profile = new GameProfile(UUID.randomUUID(), "skull-texture");
+            profile.getProperties().put("textures", new Property("textures", base64));
+            profileField = meta.getClass().getDeclaredField("profile");
+            profileField.setAccessible(true);
+            profileField.set(meta, profile);
+        } catch (IllegalAccessException | NoSuchFieldException exception) {
+            Main.getMileLogger().warning("There was a severe internal reflection " +
+                    "error when attempting to set the skin of a player skull via base64!");
+            Main.getMileLogger().stack(exception.getStackTrace());
+        }
+    }
+
     public String getTexture() {
         return texture;
     }
@@ -35,26 +56,5 @@ public enum HeadsUtils {
         itemStack.setItemMeta(skullMeta);
 
         return itemStack;
-    }
-
-    /**
-     * A method used to set the skin of a player skull via a base64 encoded string
-     *
-     * @param meta the skull meta to modify
-     * @param base64 the base64 encoded string
-     */
-    private static void setSkinViaBase64(SkullMeta meta, String base64) {
-        Field profileField;
-        try {
-            GameProfile profile = new GameProfile(UUID.randomUUID(), "skull-texture");
-            profile.getProperties().put("textures", new Property("textures", base64));
-            profileField = meta.getClass().getDeclaredField("profile");
-            profileField.setAccessible(true);
-            profileField.set(meta, profile);
-        } catch (IllegalAccessException | NoSuchFieldException exception) {
-            Main.getMileLogger().warning("There was a severe internal reflection " +
-                    "error when attempting to set the skin of a player skull via base64!");
-            exception.printStackTrace();
-        }
     }
 }

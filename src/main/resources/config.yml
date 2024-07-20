@@ -49,7 +49,7 @@ messages:
             - "&6previous page"
         exit:
           title: "&cClose"
-          lore: []
+          lore: [ ]
     chest-shop:
       title: "&3Shop <shop_name>"
       buttons:

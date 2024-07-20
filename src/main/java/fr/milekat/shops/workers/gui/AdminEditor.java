@@ -4,7 +4,6 @@ import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.ShopType;
 import fr.milekat.shops.api.classes.Trade;
-import fr.milekat.shops.workers.ShopsManager;
 import fr.milekat.shops.workers.utils.Buttons;
 import fr.milekat.shops.workers.utils.TradeUtils;
 import fr.mrmicky.fastinv.FastInv;
@@ -28,9 +27,9 @@ public class AdminEditor extends FastInv {
     public static final int EDITOR_TRADES_PER_PAGE = 9;
 
     private final Player player;
-    private int currentPage = 1;
     private final Shop shop;
     private final Map<Integer, List<Trade>> trades;
+    private int currentPage = 1;
 
     public AdminEditor(Player player, @NotNull Shop shop, @NotNull List<Trade> trades) {
         super(54, Main.getConfigs()
@@ -63,11 +62,11 @@ public class AdminEditor extends FastInv {
 
     private void pageButtons() {
         setItem(4, new ItemBuilder(Material.PAPER)
-                .amount(this.currentPage)
-                .name(ChatColor.GOLD + "Click to save page (" + (this.currentPage) + ")")
-                .build(),
+                        .amount(this.currentPage)
+                        .name(ChatColor.GOLD + "Click to save page (" + (this.currentPage) + ")")
+                        .build(),
                 event -> savePage());
-        if (this.currentPage > 1 ) {
+        if (this.currentPage > 1) {
             setItem(45, Buttons.PREVIOUS.get(), event -> {
                 savePage();
                 if (this.currentPage > 1) {
@@ -110,7 +109,7 @@ public class AdminEditor extends FastInv {
 
     private void displayTrade(int pagePosition, @NotNull Trade trade) {
         setItem(9 + pagePosition, trade.getFirstItem());
-        if (shop.getType().equals(ShopType.VANILLA) && trade.getSecondItem() != null){
+        if (shop.getType().equals(ShopType.VANILLA) && trade.getSecondItem() != null) {
             setItem(18 + pagePosition, trade.getSecondItem());
         }
         setItem(36 + pagePosition, trade.getResultItem());
@@ -153,14 +152,17 @@ public class AdminEditor extends FastInv {
         return Objects.requireNonNullElse(this.getInventory().getItem(9 + position),
                 new ItemStack(Material.AIR)).clone();
     }
+
     private @NotNull ItemStack getSecondItemPos(int position) {
         return Objects.requireNonNullElse(this.getInventory().getItem(18 + position),
                 new ItemStack(Material.AIR)).clone();
     }
+
     private @NotNull ItemStack getResultItemPos(int position) {
         return Objects.requireNonNullElse(this.getInventory().getItem(36 + position),
                 new ItemStack(Material.AIR)).clone();
     }
+
     private @NotNull ItemStack getComplexItemPos(int position) {
         return Objects.requireNonNullElse(this.getInventory().getItem(27 + position),
                 new ItemStack(Material.AIR)).clone();
@@ -175,7 +177,7 @@ public class AdminEditor extends FastInv {
 
         //  Get complexity from lore of complex item
         ItemMeta meta = complexItem.getItemMeta();
-        if (meta==null || meta.getLore()==null) return null;
+        if (meta == null || meta.getLore() == null) return null;
         List<String> lore = meta.getLore();
         if (lore.isEmpty()) return null;
         Tag<Material> firstItemTag = null;
@@ -183,7 +185,7 @@ public class AdminEditor extends FastInv {
         int maxTradeUse = 0;
         List<String> maxTradeTagsNames = null;
         for (String line : lore) {
-            if (line.split(":").length!=2) continue;
+            if (line.split(":").length != 2) continue;
             String value = line.split(":")[1];
             switch (line.split(":")[0]) {
                 case "firstItemTag":
@@ -213,7 +215,7 @@ public class AdminEditor extends FastInv {
 
     @Override
     protected void onClick(@NotNull InventoryClickEvent event) {
-        if (event.getClickedInventory()==null || event.getClickedInventory().getType().equals(InventoryType.CHEST)) {
+        if (event.getClickedInventory() == null || event.getClickedInventory().getType().equals(InventoryType.CHEST)) {
             int slot = event.getSlot();
             if (shop.getType().equals(ShopType.VANILLA)) {
                 if (slot <= 8 || (slot >= 27 && slot <= 35) || (slot >= 45 && slot <= 53)) return;

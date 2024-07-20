@@ -42,10 +42,10 @@ public class InventoryShop extends FastInv {
     //  Shop & player variables
     private final Shop shop;
     private final Player player;
-    private TradeMode tradeMode;
-    private int currentPage = 1;
     private final Map<Integer, List<Trade>> pagesTrades;
     private final Map<Trade, Integer> tradeCompleted = new HashMap<>();
+    private TradeMode tradeMode;
+    private int currentPage = 1;
 
     public InventoryShop(@NotNull InventoryShopShape inventoryShopShape, @NotNull Shop shop, @NotNull Player player)
             throws StorageExecuteException {
@@ -145,7 +145,7 @@ public class InventoryShop extends FastInv {
     }
 
     private void updatePageButtons() {
-        if (this.currentPage > 1 ) {
+        if (this.currentPage > 1) {
             setItem(this.previousPageSlot, Buttons.PREVIOUS.get(), event -> {
                 if (this.currentPage > 1) {
                     this.currentPage--;

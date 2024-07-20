@@ -166,6 +166,7 @@ public class Main extends JavaPlugin {
 
     /**
      * Get Storage
+     *
      * @return Storage implementation
      */
     public static StorageImplementation getStorage() {
@@ -174,6 +175,7 @@ public class Main extends JavaPlugin {
 
     /**
      * Get config file
+     *
      * @return Config file
      */
     public static Configs getConfigs() {
@@ -187,7 +189,6 @@ public class Main extends JavaPlugin {
         // If config file doesn't exist, create it
         plugin.saveDefaultConfig();
         config = new Configs(new File(plugin.getDataFolder(), "config.yml"));
-        PREFIX = config.getMessage("messages.prefix");
         DEBUG = config.getBoolean("debug", false);
         logger.setDebug(DEBUG);
         PREFIX = ChatColor.translateAlternateColorCodes('&',
@@ -262,6 +263,7 @@ public class Main extends JavaPlugin {
 
     /**
      * Get the plugin instance
+     *
      * @return bukkit plugin instance
      */
     public static JavaPlugin getInstance() {

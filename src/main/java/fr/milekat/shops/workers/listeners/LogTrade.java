@@ -31,7 +31,7 @@ public class LogTrade implements Listener {
         }
     }
 
-    @EventHandler (priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.MONITOR)
     public void logTrade(@NotNull TradeCompleteEvent event) {
         if (event.isCancelled()) return;
         if (playerTags.containsKey(event.getPlayer().getUniqueId())) {

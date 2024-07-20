@@ -69,7 +69,7 @@ public enum InventoryShopShape {
                        List<TradeSlots> tradeSlots,
                        int previousPageSlot, int nextPageSlot, int inventoryModeSlot, int closeSlot,
                        boolean fillBackground
-              ) {
+    ) {
         this.inventoryType = type;
         this.size = size;
         this.title = title;

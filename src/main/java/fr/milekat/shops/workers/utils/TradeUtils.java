@@ -33,6 +33,7 @@ public class TradeUtils {
 
     /**
      * Method to replace all trade placeholders
+     *
      * @return the message with all trade placeholders replaced
      */
     public static @NotNull String tradeFormatting(@NotNull String message, @NotNull Shop shop,
@@ -50,12 +51,12 @@ public class TradeUtils {
     /**
      * Method to calculate the maximum amount of trades that can be done
      *
-     * @param player            the player who will do the trades (used to get the player's inventory and ender chest)
-     * @param requiredItems     the list of items required for the trade
-     * @param resultItem        the item that will be given to the player
-     * @param unlimitedTrades   if it needs to check for unlimited trades
-     * @param shulkerMode       if it needs to check for shulker boxes
-     * @return                  the maximum amount of trades that can be done
+     * @param player          the player who will do the trades (used to get the player's inventory and ender chest)
+     * @param requiredItems   the list of items required for the trade
+     * @param resultItem      the item that will be given to the player
+     * @param unlimitedTrades if it needs to check for unlimited trades
+     * @param shulkerMode     if it needs to check for shulker boxes
+     * @return the maximum amount of trades that can be done
      */
     public static int maxDoAbleTrades(@NotNull Player player,
                                       @NotNull List<ItemStack> requiredItems,
