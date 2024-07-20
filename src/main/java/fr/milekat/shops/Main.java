@@ -238,6 +238,29 @@ public class Main extends JavaPlugin {
     }
 
     /**
+     * Reload all shops
+     *
+     * @return number of loaded shops
+     */
+    public static int reloadShops() {
+        int loaded = 0;
+        logger.info("Loading all shops...");
+        Main.SHOP_CACHE.clear();
+        Main.TRADE_CACHE.clear();
+        Main.TRADE_MODE_CACHE.clear();
+        try {
+            List<Shop> shops = getStorage().getAllShops();
+            loaded = shops.size();
+            logger.info(loaded + " shops loaded !");
+        } catch (StorageExecuteException e) {
+            logger.warning(e.getMessage());
+            logger.stack(e.getStackTrace());
+            logger.warning("Storage error");
+        }
+        return loaded;
+    }
+
+    /**
      * Get the plugin instance
      * @return bukkit plugin instance
      */

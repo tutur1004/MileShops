@@ -8,17 +8,23 @@ public enum ShopType {
     /**
      * Represents a vanilla shop (Using Minecraft vanilla villager GUI).
      */
-    VANILLA,
+    VANILLA(false),
     /**
-     * Represents an inventory shop (Using Minecraft chest GUI).
+     * A chest shop with 1 column of 4 trades without secondary item
      */
-    INVENTORY_SMALL,
+    BASIC_FOUR(true),
     /**
-     * Represents a large inventory shop (Using Minecraft double chest GUI).
+     * A chest shop with 2 columns of 6 trades without secondary item
      */
-    INVENTORY_LARGE,
-    /**
-     * Represents a large inventory shop, but without fill items (Using Minecraft double chest GUI).
-     */
-    INVENTORY_LARGE_NO_FILL,
+    DOUBLE_SIX(true);
+
+    private final Boolean shaped;
+
+    ShopType(Boolean shaped) {
+        this.shaped = shaped;
+    }
+
+    public Boolean isShaped() {
+        return shaped;
+    }
 }

@@ -1,10 +1,10 @@
 package fr.milekat.shops;
 
+import fr.milekat.milenpc.api.classes.NPC;
 import fr.milekat.shops.api.MileShopsIAPI;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.exceptions.StorageException;
-import fr.milekat.shops.workers.ShopsManager;
 import fr.milekat.shops.workers.listeners.LogTrade;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import org.jetbrains.annotations.NotNull;
@@ -12,7 +12,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 public class API implements MileShopsIAPI {
@@ -47,12 +46,13 @@ public class API implements MileShopsIAPI {
     @Override
     public @NotNull List<Trade> getNpcShopTrades(@NotNull UUID uuid) throws StorageException {
         try {
-            Map.Entry<Shop, List<Trade>> shop = ShopsManager.getShop(uuid);
-            return Objects.requireNonNull(shop).getValue();
+            NPC npc = Main.getNpcManager().getNpc(uuid);
+            if (npc == null) {
+                throw new StorageException(new Exception(), "NPC not found.");
+            }
+            return Main.getStorage().getCacheTrades(npc.getName());
         } catch (StorageExecuteException exception) {
             throw new StorageException(exception, exception.getMessage());
-        } catch (NullPointerException exception) {
-            throw new StorageException(exception, "NPC trades not found");
         }
     }
 

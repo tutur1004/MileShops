@@ -25,6 +25,8 @@ import java.util.*;
 import java.util.stream.IntStream;
 
 public class AdminEditor extends FastInv {
+    public static final int EDITOR_TRADES_PER_PAGE = 9;
+
     private final Player player;
     private int currentPage = 1;
     private final Shop shop;
@@ -44,7 +46,7 @@ public class AdminEditor extends FastInv {
             tradesLoop.add(trade);
             pageTradeCount++;
             tradesPages.put(page, tradesLoop);
-            if (pageTradeCount > ShopsManager.EDITOR_TRADES_PER_PAGE) {
+            if (pageTradeCount > EDITOR_TRADES_PER_PAGE) {
                 tradesLoop = new LinkedList<>();
                 pageTradeCount = 1;
                 page++;
