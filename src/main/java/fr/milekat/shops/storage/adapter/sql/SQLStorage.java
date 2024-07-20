@@ -122,7 +122,7 @@ public class SQLStorage implements StorageImplementation {
         SQL Queries execution
      */
     @Override
-    public void asyncSaveShop(@NotNull Shop shop, CommandSender sender, boolean createIfNotExist) {
+    public void asyncSaveShop(@NotNull Shop shop, boolean createIfNotExist, CommandSender sender) {
 
     }
 

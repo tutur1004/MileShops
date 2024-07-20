@@ -104,7 +104,7 @@ public class ShopsCmd implements CommandExecutor {
                 try {
                     NPC npc = NPCUtils.create(npcUuid, args[1], ((Player) sender).getLocation());
                     Shop shop = new Shop(npcUuid, args[1], npc, ShopType.valueOf(args[2].toUpperCase(Locale.ROOT)));
-                    Main.getStorage().asyncSaveShop(shop, sender, true);
+                    Main.getStorage().asyncSaveShop(shop, true, player);
                 } catch (IllegalArgumentException exception) {
                     NPCUtils.destroy(npcUuid);
                     Main.message(sender, "&cUnknown NPC type !");

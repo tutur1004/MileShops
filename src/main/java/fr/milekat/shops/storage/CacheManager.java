@@ -1,6 +1,5 @@
 package fr.milekat.shops.storage;
 
-import fr.milekat.milenpc.api.classes.NPC;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
@@ -14,111 +13,6 @@ import java.util.*;
 
 @SuppressWarnings("unused")
 public interface CacheManager {
-    /**
-     * Fetch a shop from cache shop if present, otherwise fetch it from storage
-     * @param shopUuid {@link UUID} of shop
-     * @return {@link Shop}
-     * @throws StorageExecuteException if any issue while fetching from cache
-     */
-    default Shop getCacheShop(@NotNull UUID shopUuid) throws StorageExecuteException {
-        Main.getMileLogger().debug("Get cache shop '" + shopUuid + "'.");
-        Optional<Map.Entry<Shop, Date>> optionalShop = Main.SHOP_CACHE.entrySet()
-                .stream()
-                .filter(entry -> entry.getKey().getUuid().equals(shopUuid))
-                .filter(entry -> entry.getValue().getTime() + Main.SHOP_DELAY > new Date().getTime())
-                .findFirst();
-        if (optionalShop.isPresent()) {
-            Main.getMileLogger().debug("Shop '" + shopUuid + "' found.");
-            return optionalShop.get().getKey();
-        } else  {
-            Main.getMileLogger().debug("Shop '" + shopUuid + "' not found in cache, try to search it.");
-            return Main.getStorage().getShop(shopUuid);
-        }
-    }
-
-    /**
-     * Fetch a shop from cache shop if present, otherwise fetch it from storage
-     * @param shopName name of {@link Shop}
-     * @return {@link Shop}
-     * @throws StorageExecuteException if any issue while fetching from cache
-     */
-    default Shop getCacheShop(@NotNull String shopName) throws StorageExecuteException {
-        Main.getMileLogger().debug("Get cache shop with '" + shopName + "'.");
-        Optional<Map.Entry<Shop, Date>> optionalShop = Main.SHOP_CACHE.entrySet()
-                .stream()
-                .filter(entry -> entry.getKey().getName().equals(shopName))
-                .filter(entry -> entry.getValue().getTime() + Main.SHOP_DELAY > new Date().getTime())
-                .findFirst();
-        if (optionalShop.isPresent()) {
-            Main.getMileLogger().debug("Shop '" + optionalShop.get().getKey().getUuid() + "' found.");
-            return optionalShop.get().getKey();
-        } else  {
-            Main.getMileLogger().debug("Shop with name '" + shopName + "' not found in cache, try to search it.");
-            return Main.getStorage().getShop(shopName);
-        }
-    }
-
-    /**
-     * Fetch all shops from cache shop if up to date, otherwise fetch it from storage
-     * @return {@link List} of all {@link Shop}
-     * @throws StorageExecuteException if any issue while fetching from cache
-     */
-    default @NotNull List<Shop> getCacheAllShops() throws StorageExecuteException {
-        Main.getMileLogger().debug("Get all shop from cache.");
-        if (Main.SHOP_CACHE.values().stream()
-                .noneMatch(date -> date.getTime() + Main.SHOP_DELAY < new Date().getTime())) {
-            Main.getMileLogger().debug("No up to date cache found, try to search it.");
-            return Main.getStorage().getAllShops();
-        } else {
-            Main.getMileLogger().debug("Found '" + Main.SHOP_CACHE.keySet().size() + "' shops in cache.");
-            return new ArrayList<>(Main.SHOP_CACHE.keySet());
-        }
-    }
-
-    /**
-     * Fetch all trades from trade cache if present, otherwise fetch it from storage
-     * @param shopUuid {@link UUID} of {@link Shop}
-     * @return {@link List} of all {@link Trade} of this {@link Shop}
-     * @throws StorageExecuteException if any issue while fetching from cache
-     */
-    default List<Trade> getCacheTrades(@NotNull UUID shopUuid) throws StorageExecuteException {
-        Main.getMileLogger().debug("Get cache trades from shop '" + shopUuid + "'.");
-        Optional<Map.Entry<ShopTrades, Date>> optionalTrades = Main.TRADE_CACHE.entrySet()
-                .stream()
-                .filter(entry -> entry.getKey().shopUuid().equals(shopUuid))
-                .filter(entry -> entry.getValue().getTime() + Main.TRADE_DELAY > new Date().getTime())
-                .findFirst();
-        if (optionalTrades.isPresent()) {
-            Main.getMileLogger().debug("Found '" + optionalTrades.get().getKey().trades().size() + "' trades.");
-            return optionalTrades.get().getKey().trades();
-        } else {
-            Main.getMileLogger().debug("Trades for shop '" + shopUuid + "' not found in cache, try to search them.");
-            return Main.getStorage().getTrades(shopUuid);
-        }
-    }
-
-    /**
-     * Fetch player TradeMode from trade mode cache if present, otherwise fetch it from storage
-     * @param playerUuid {@link UUID} of player
-     * @return {@link TradeMode}
-     * @throws StorageExecuteException if any issue while fetching from cache
-     */
-    default TradeMode getCacheTradeMode(@NotNull UUID playerUuid) throws StorageExecuteException {
-        Main.getMileLogger().debug("Get cache user trade mode of '" + playerUuid + "'.");
-        Optional<Map.Entry<PlayerTradeMode, Date>> optionalPlayerMode = Main.TRADE_MODE_CACHE.entrySet()
-                .stream()
-                .filter(entry -> entry.getKey().playerUuid().equals(playerUuid))
-                .filter(entry -> entry.getValue().getTime() + Main.TRADE_MODE_DELAY > new Date().getTime())
-                .findFirst();
-        if (optionalPlayerMode.isPresent()) {
-            Main.getMileLogger().debug("Trade mode found for player '" + playerUuid + "'.");
-            return optionalPlayerMode.get().getKey().tradeMode();
-        } else {
-            Main.getMileLogger().debug("Trades mode for player '" + playerUuid + "' not found in cache, try to search them.");
-            return Main.getStorage().getTradeMode(playerUuid);
-        }
-    }
-
     /**
      * Add a Shop to the cache Shop map
      */
@@ -167,5 +61,115 @@ public interface CacheManager {
             cache.put(playerTradeMode, new Date());
         }
         Main.TRADE_MODE_CACHE = cache;
+    }
+
+    /**
+     * Fetch a shop from cache shop if present, otherwise fetch it from storage
+     *
+     * @param shopUuid {@link UUID} of shop
+     * @return {@link Shop}
+     * @throws StorageExecuteException if any issue while fetching from cache
+     */
+    default Shop getCacheShop(@NotNull UUID shopUuid) throws StorageExecuteException {
+        Main.getMileLogger().debug("Get cache shop '" + shopUuid + "'.");
+        Optional<Map.Entry<Shop, Date>> optionalShop = Main.SHOP_CACHE.entrySet()
+                .stream()
+                .filter(entry -> entry.getKey().getUuid().equals(shopUuid))
+                .filter(entry -> entry.getValue().getTime() + Main.SHOP_DELAY > new Date().getTime())
+                .findFirst();
+        if (optionalShop.isPresent()) {
+            Main.getMileLogger().debug("Shop '" + shopUuid + "' found.");
+            return optionalShop.get().getKey();
+        } else {
+            Main.getMileLogger().debug("Shop '" + shopUuid + "' not found in cache, try to search it.");
+            return Main.getStorage().getShop(shopUuid);
+        }
+    }
+
+    /**
+     * Fetch a shop from cache shop if present, otherwise fetch it from storage
+     *
+     * @param shopName name of {@link Shop}
+     * @return {@link Shop}
+     * @throws StorageExecuteException if any issue while fetching from cache
+     */
+    default Shop getCacheShop(@NotNull String shopName) throws StorageExecuteException {
+        Main.getMileLogger().debug("Get cache shop with '" + shopName + "'.");
+        Optional<Map.Entry<Shop, Date>> optionalShop = Main.SHOP_CACHE.entrySet()
+                .stream()
+                .filter(entry -> entry.getKey().getName().equals(shopName))
+                .filter(entry -> entry.getValue().getTime() + Main.SHOP_DELAY > new Date().getTime())
+                .findFirst();
+        if (optionalShop.isPresent()) {
+            Main.getMileLogger().debug("Shop '" + optionalShop.get().getKey().getUuid() + "' found.");
+            return optionalShop.get().getKey();
+        } else {
+            Main.getMileLogger().debug("Shop with name '" + shopName + "' not found in cache, try to search it.");
+            return Main.getStorage().getShop(shopName);
+        }
+    }
+
+    /**
+     * Fetch all shops from cache shop if up to date, otherwise fetch it from storage
+     *
+     * @return {@link List} of all {@link Shop}
+     * @throws StorageExecuteException if any issue while fetching from cache
+     */
+    default @NotNull List<Shop> getCacheAllShops() throws StorageExecuteException {
+        Main.getMileLogger().debug("Get all shop from cache.");
+        if (Main.SHOP_CACHE.values().stream()
+                .noneMatch(date -> date.getTime() + Main.SHOP_DELAY < new Date().getTime())) {
+            Main.getMileLogger().debug("No up to date cache found, try to search it.");
+            return Main.getStorage().getAllShops();
+        } else {
+            Main.getMileLogger().debug("Found '" + Main.SHOP_CACHE.keySet().size() + "' shops in cache.");
+            return new ArrayList<>(Main.SHOP_CACHE.keySet());
+        }
+    }
+
+    /**
+     * Fetch all trades from trade cache if present, otherwise fetch it from storage
+     *
+     * @param shopUuid {@link UUID} of {@link Shop}
+     * @return {@link List} of all {@link Trade} of this {@link Shop}
+     * @throws StorageExecuteException if any issue while fetching from cache
+     */
+    default List<Trade> getCacheTrades(@NotNull UUID shopUuid) throws StorageExecuteException {
+        Main.getMileLogger().debug("Get cache trades from shop '" + shopUuid + "'.");
+        Optional<Map.Entry<ShopTrades, Date>> optionalTrades = Main.TRADE_CACHE.entrySet()
+                .stream()
+                .filter(entry -> entry.getKey().shopUuid().equals(shopUuid))
+                .filter(entry -> entry.getValue().getTime() + Main.TRADE_DELAY > new Date().getTime())
+                .findFirst();
+        if (optionalTrades.isPresent()) {
+            Main.getMileLogger().debug("Found '" + optionalTrades.get().getKey().trades().size() + "' trades.");
+            return optionalTrades.get().getKey().trades();
+        } else {
+            Main.getMileLogger().debug("Trades for shop '" + shopUuid + "' not found in cache, try to search them.");
+            return Main.getStorage().getTrades(shopUuid);
+        }
+    }
+
+    /**
+     * Fetch player TradeMode from trade mode cache if present, otherwise fetch it from storage
+     *
+     * @param playerUuid {@link UUID} of player
+     * @return {@link TradeMode}
+     * @throws StorageExecuteException if any issue while fetching from cache
+     */
+    default TradeMode getCacheTradeMode(@NotNull UUID playerUuid) throws StorageExecuteException {
+        Main.getMileLogger().debug("Get cache user trade mode of '" + playerUuid + "'.");
+        Optional<Map.Entry<PlayerTradeMode, Date>> optionalPlayerMode = Main.TRADE_MODE_CACHE.entrySet()
+                .stream()
+                .filter(entry -> entry.getKey().playerUuid().equals(playerUuid))
+                .filter(entry -> entry.getValue().getTime() + Main.TRADE_MODE_DELAY > new Date().getTime())
+                .findFirst();
+        if (optionalPlayerMode.isPresent()) {
+            Main.getMileLogger().debug("Trade mode found for player '" + playerUuid + "'.");
+            return optionalPlayerMode.get().getKey().tradeMode();
+        } else {
+            Main.getMileLogger().debug("Trades mode for player '" + playerUuid + "' not found in cache, try to search them.");
+            return Main.getStorage().getTradeMode(playerUuid);
+        }
     }
 }

@@ -127,7 +127,7 @@ public class ESStorage implements StorageImplementation {
         ES Queries execution
      */
     @Override
-    public void asyncSaveShop(@NotNull Shop shop, CommandSender sender, boolean createIfNotExist) {
+    public void asyncSaveShop(@NotNull Shop shop, boolean createIfNotExist, CommandSender sender) {
         //  Open Bukkit async task
         Bukkit.getScheduler().runTaskAsynchronously(Main.getInstance(), () -> {
             //  Open Elasticsearch connection
