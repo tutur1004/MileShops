@@ -20,10 +20,20 @@ public enum ShopType {
 
     private final Boolean shaped;
 
+    /**
+     * ShopType.
+     *
+     * @param shaped true if the shop is compatible with the InventoryShopShape enum, false otherwise
+     */
     ShopType(Boolean shaped) {
         this.shaped = shaped;
     }
 
+    /**
+     * Check if the shop is compatible with the InventoryShopShape enum.
+     *
+     * @return true if the shop is shaped, false otherwise
+     */
     public Boolean isShaped() {
         return shaped;
     }
