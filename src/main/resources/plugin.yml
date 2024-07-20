@@ -9,10 +9,11 @@ depend:
   - MileNpc
 libraries:
   # Utils
-  - com.fasterxml.jackson.core:jackson-databind:2.15.2
-  - com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2
+  - fr.milekat:milekat-utils:1.3.0
+  - com.fasterxml.jackson.core:jackson-databind:2.17.2
+  - com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.17.2
   # Storage
-  - co.elastic.clients:elasticsearch-java:8.13.0
+  - co.elastic.clients:elasticsearch-java:8.14.3
 commands:
   shop:
     description: "Command to manage shops"
