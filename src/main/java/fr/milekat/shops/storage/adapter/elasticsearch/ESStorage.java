@@ -63,17 +63,6 @@ public class ESStorage implements StorageImplementation {
         }
     }
 
-    @Contract(" -> new")
-    private @NotNull ESConnection getConnection() {
-        return new ESConnection(config, Main.getMileLogger());
-    }
-    
-    private @NotNull JacksonJsonpMapper getMapper() {
-        JacksonJsonpMapper mapper = new JacksonJsonpMapper();
-        mapper.objectMapper().registerModule(new CustomMappers().getModule());
-        return mapper;
-    }
-
     @NotNull
     private static TradeMode getTradeMode(@NotNull SearchResponse<PlayerTradeMode> searchResponse) {
         TradeMode tradeMode = TradeMode.INVENTORY;
@@ -87,6 +76,17 @@ public class ESStorage implements StorageImplementation {
             tradeMode = TradeMode.INVENTORY;
         }
         return tradeMode;
+    }
+
+    @Contract(" -> new")
+    private @NotNull ESConnection getConnection() {
+        return new ESConnection(config, Main.getMileLogger());
+    }
+
+    private @NotNull JacksonJsonpMapper getMapper() {
+        JacksonJsonpMapper mapper = new JacksonJsonpMapper();
+        mapper.objectMapper().registerModule(new CustomMappers().getModule());
+        return mapper;
     }
 
     @Override
@@ -129,7 +129,7 @@ public class ESStorage implements StorageImplementation {
     @Override
     public void asyncSaveShop(@NotNull Shop shop, CommandSender sender, boolean createIfNotExist) {
         //  Open Bukkit async task
-        Bukkit.getScheduler().runTaskAsynchronously(Main.getInstance(), ()-> {
+        Bukkit.getScheduler().runTaskAsynchronously(Main.getInstance(), () -> {
             //  Open Elasticsearch connection
             try (StorageConnection connection = getConnection()) {
                 Main.getMileLogger().debug("[ES-aSync] prepareShopAsync - search shop with field 'name' and " +
@@ -258,7 +258,7 @@ public class ESStorage implements StorageImplementation {
 
     @Override
     public void asyncDeleteShop(@NotNull Shop shop, CommandSender sender) {
-        Bukkit.getScheduler().runTaskAsynchronously(Main.getInstance(), ()-> {
+        Bukkit.getScheduler().runTaskAsynchronously(Main.getInstance(), () -> {
             try (StorageConnection connection = getConnection()) {
                 connection.getEsClient().deleteByQuery(new DeleteByQueryRequest.Builder()
                         .index(INDEX_TRADES)
@@ -268,6 +268,10 @@ public class ESStorage implements StorageImplementation {
                         .index(INDEX_SHOPS)
                         .query(q -> q.match(m -> m.field("uuid").query(String.valueOf(shop.getUuid()))))
                         .build());
+                Main.getMileLogger().info("Shop '" + shop.getName() + "' has been deleted");
+                if (sender != null) {
+                    Main.message(sender, "&2Shop deleted !");
+                }
             } catch (ElasticsearchException | IOException e) {
                 Main.getMileLogger().warning("Error while trying to fetch trades for shop with uuid " + shop.getUuid());
                 Main.getMileLogger().stack(e.getStackTrace());
@@ -277,7 +281,7 @@ public class ESStorage implements StorageImplementation {
 
     @Override
     public void asyncSaveShopTrades(@NotNull Shop shop, @NotNull List<Trade> trades, CommandSender sender) {
-        Bukkit.getScheduler().runTaskAsynchronously(Main.getInstance(), ()-> {
+        Bukkit.getScheduler().runTaskAsynchronously(Main.getInstance(), () -> {
             try (StorageConnection connection = getConnection()) {
                 List<BulkOperation> bulkDocs = new ArrayList<>();
                 trades.forEach(trade -> bulkDocs
@@ -346,7 +350,7 @@ public class ESStorage implements StorageImplementation {
 
     @Override
     public void asyncSaveTradeMode(@NotNull UUID playerUuid, @NotNull TradeMode mode) {
-        Bukkit.getScheduler().runTaskAsynchronously(Main.getInstance(), ()-> {
+        Bukkit.getScheduler().runTaskAsynchronously(Main.getInstance(), () -> {
             try (StorageConnection connection = getConnection()) {
                 PlayerTradeMode playerMode = new PlayerTradeMode(playerUuid, mode);
                 Main.getMileLogger().debug("[ES-aSync] asyncSaveTradeMode - search users-mode");
@@ -437,7 +441,7 @@ public class ESStorage implements StorageImplementation {
     }
 
     private void logPool() {
-        Bukkit.getScheduler().runTaskTimerAsynchronously(Main.getInstance(), ()-> {
+        Bukkit.getScheduler().runTaskTimerAsynchronously(Main.getInstance(), () -> {
             List<BulkOperation> processing = new ArrayList<>(logToProcess);
             logToProcess.clear();
             if (!processing.isEmpty()) {

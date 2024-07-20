@@ -30,7 +30,7 @@ import java.util.UUID;
  *     }
  * }
  */
-public class TradeDeserializer  extends StdDeserializer<Trade> {
+public class TradeDeserializer extends StdDeserializer<Trade> {
     private final ObjectMapper mapper;
 
     public TradeDeserializer(ObjectMapper mapper) {

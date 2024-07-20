@@ -92,6 +92,7 @@ public class SQLStorage implements StorageImplementation {
 
     /**
      * Check if all tables are created
+     *
      * @return true if all tables are created
      */
     @Override

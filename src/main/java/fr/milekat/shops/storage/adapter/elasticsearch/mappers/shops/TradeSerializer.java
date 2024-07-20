@@ -22,7 +22,7 @@ import java.io.IOException;
  *     }
  * }
  */
-public class TradeSerializer  extends StdSerializer<Trade> {
+public class TradeSerializer extends StdSerializer<Trade> {
     private final ObjectMapper mapper;
 
     public TradeSerializer(ObjectMapper mapper) {
@@ -39,13 +39,13 @@ public class TradeSerializer  extends StdSerializer<Trade> {
         gen.writeNumberField("position", value.getTradePosition());
         gen.writeFieldName("firstItem");
         gen.writeObject(value.getFirstItem());
-        if (value.getSecondItem()!=null) {
+        if (value.getSecondItem() != null) {
             gen.writeFieldName("secondItem");
             gen.writeObject(value.getSecondItem());
         }
         gen.writeFieldName("resultItem");
         gen.writeObject(value.getResultItem());
-        if (value.isUsageLimited()){
+        if (value.isUsageLimited()) {
             gen.writeNumberField("maxTradeUse", value.getMaxTradeUse());
             gen.writeArrayFieldStart("maxTradeTagsNames");
             for (String tag : value.getMaxTradeTagsNames()) {
