@@ -69,7 +69,7 @@ public class TradeUtils {
         if (shulkerMode) {
             //  Add shulkers from player inventory and ender chest to the list
             inventories.addAll(getShulkersFromInventory(player.getInventory()));
-            inventories.addAll(getShulkersFromInventory(player.getEnderChest()));
+//            inventories.addAll(getShulkersFromInventory(player.getEnderChest()));
         }
 
         List<Inventory> virtualInventories = new ArrayList<>();
@@ -84,13 +84,19 @@ public class TradeUtils {
         int doAbleTrade = 0;
         for (Inventory virtualInv : virtualInventories) {
             while (true) {
-                if (requiredItems.stream().anyMatch(item -> getStackRemoved(virtualInv, item) != item.getAmount())) {
+                if (requiredItems.stream().anyMatch(item -> !virtualInv.containsAtLeast(item, item.getAmount()))) {
+                    Main.getMileLogger().debug("Inventory doesn't have one of the required items");
                     break;
                 }
+                //  Remove the required items
+                requiredItems.forEach(virtualInv::removeItem);
+                //  Try to add the result item
                 Map<Integer, ItemStack> leftOver = virtualInv.addItem(resultItem.clone());
                 if (leftOver.isEmpty()) {
+                    //  Increment the doAbleTrade counter
                     doAbleTrade++;
                 } else {
+                    Main.getMileLogger().debug("Inventory doesn't have enough space for the result item");
                     break;
                 }
                 if (!unlimitedTrades) break;
@@ -119,69 +125,49 @@ public class TradeUtils {
         if (shulkerMode) {
             //  Add shulkers from player inventory and ender chest to the list
             inventories.addAll(getShulkersFromInventory(player.getInventory()));
-            inventories.addAll(getShulkersFromInventory(player.getEnderChest()));
+//            inventories.addAll(getShulkersFromInventory(player.getEnderChest()));
         }
 
         //  List all items to remove and add by stacks (Performances improvement)
-        List<ItemStack> requestItemsToRemove = new ArrayList<>();
-        requiredItems.forEach(item -> requestItemsToRemove.addAll(getAllByStacks(item, trades)));
+//        List<ItemStack> requestItemsToRemove = new ArrayList<>();
+//        requiredItems.forEach(item -> requestItemsToRemove.addAll(getAllByStacks(item, trades)));
         List<ItemStack> resultItemsToAdd = getAllByStacks(resultItem, trades);
 
-        //  Add and remove the items from the inventories
-        inventories.forEach(storage -> {
-            Inventory inventory = storage.inventory();
-            //  Remove the traded items
-            for (ItemStack item : new ArrayList<>(requestItemsToRemove)) {
-                Map<Integer, ItemStack> leftOver = inventory.removeItem(item);
-                if (leftOver.isEmpty()) {
-                    requestItemsToRemove.remove(item);
-                } else if (inventory.contains(item.getType())) {
-                    int removed = item.getAmount();
-                    ItemStack lastFewSpace = item.clone();
-                    lastFewSpace.setAmount(1);
-                    while (true) {
-                        leftOver = inventory.removeItem(lastFewSpace);
-                        if (leftOver.isEmpty()) {
-                            removed--;
-                            if (removed <= 0) {
-                                requestItemsToRemove.remove(item);
-                                break;
-                            }
-                        } else {
-                            requestItemsToRemove.remove(item);
-                            ItemStack remainingItems = item.clone();
-                            remainingItems.setAmount(removed);
-                            requestItemsToRemove.add(remainingItems);
-                            break;
-                        }
+        //  Remove all required items from the inventories
+        for (ItemStack item : requiredItems) {
+            int toRemove = trades;
+            for (InventoryStorage storage : inventories) {
+                while (true) {
+                    if (toRemove <= 0) break;
+                    if (storage.inventory().containsAtLeast(item.clone(), item.getAmount())) {
+                        storage.inventory().removeItem(item.clone());
+                        toRemove--;
+                    } else {
+                        break;
                     }
-                } else break;
+                }
+                if (storage.isShulkerBox()) {
+                    assert storage.blockStateMeta() != null;
+                    assert storage.shulkerBox() != null;
+                    assert storage.itemStack() != null;
+                    storage.blockStateMeta().setBlockState(storage.shulkerBox());
+                    storage.itemStack().setItemMeta(storage.blockStateMeta());
+                }
             }
-            //  Add the result items
-            for (ItemStack item : new ArrayList<>(resultItemsToAdd)) {
-                Map<Integer, ItemStack> leftOver = inventory.addItem(item);
+            if (toRemove > 0) {
+                Main.getMileLogger().warning("Not enough items to remove from the inventories");
+            }
+        }
+
+        //  Add the result items to the inventories
+        int given = 0;
+        for (InventoryStorage storage : inventories) {
+            while (true) {
+                if (given >= trades) break;
+                Map<Integer, ItemStack> leftOver = storage.inventory().addItem(resultItem.clone());
                 if (leftOver.isEmpty()) {
-                    resultItemsToAdd.remove(item);
+                    given++;
                 } else {
-                    int toAdd = item.getAmount();
-                    ItemStack lastFewSpace = item.clone();
-                    lastFewSpace.setAmount(1);
-                    while (true) {
-                        leftOver = inventory.addItem(lastFewSpace);
-                        if (leftOver.isEmpty()) {
-                            toAdd--;
-                            if (toAdd <= 0) {
-                                resultItemsToAdd.remove(item);
-                                break;
-                            }
-                        } else {
-                            resultItemsToAdd.remove(item);
-                            ItemStack remainingItems = item.clone();
-                            remainingItems.setAmount(toAdd);
-                            resultItemsToAdd.add(remainingItems);
-                            break;
-                        }
-                    }
                     break;
                 }
             }
@@ -192,7 +178,7 @@ public class TradeUtils {
                 storage.blockStateMeta().setBlockState(storage.shulkerBox());
                 storage.itemStack().setItemMeta(storage.blockStateMeta());
             }
-        });
+        }
     }
 
     public static int getStackRemoved(@NotNull Inventory inventory, @NotNull ItemStack itemToRemove) {
