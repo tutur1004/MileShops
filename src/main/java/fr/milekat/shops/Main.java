@@ -44,6 +44,8 @@ public class Main extends JavaPlugin {
     public static Boolean DEBUG = false;
     public static String PREFIX;
     private static StorageImplementation STORAGE;
+    public static final Map<String, Class<?>> TAGS = new HashMap<>();
+    public static final Map<UUID, Map<String, Object>> PLAYER_TAGS = new HashMap<>();
     /*
         Shop cache
      */
@@ -189,6 +191,17 @@ public class Main extends JavaPlugin {
         // If config file doesn't exist, create it
         plugin.saveDefaultConfig();
         config = new Configs(new File(plugin.getDataFolder(), "config.yml"));
+        TAGS.clear();
+        if (config.getBoolean("tags.enable_builtin_tags", true)) {
+            TAGS.put("player-uuid", String.class);
+            TAGS.put("player-name", String.class);
+        } else {
+            config.getStringList("tags.custom.string").forEach(tag -> TAGS.put(tag, String.class));
+            config.getStringList("tags.custom.integer").forEach(tag -> TAGS.put(tag, Integer.class));
+            config.getStringList("tags.custom.long").forEach(tag -> TAGS.put(tag, Float.class));
+            config.getStringList("tags.custom.double").forEach(tag -> TAGS.put(tag, Double.class));
+            config.getStringList("tags.custom.boolean").forEach(tag -> TAGS.put(tag, Boolean.class));
+        }
         DEBUG = config.getBoolean("debug", false);
         logger.setDebug(DEBUG);
         PREFIX = ChatColor.translateAlternateColorCodes('&',

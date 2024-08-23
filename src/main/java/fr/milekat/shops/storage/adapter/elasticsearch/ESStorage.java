@@ -1,10 +1,9 @@
 package fr.milekat.shops.storage.adapter.elasticsearch;
 
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
-import co.elastic.clients.elasticsearch.core.BulkRequest;
-import co.elastic.clients.elasticsearch.core.DeleteByQueryRequest;
-import co.elastic.clients.elasticsearch.core.SearchRequest;
-import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
 import co.elastic.clients.elasticsearch.core.bulk.CreateOperation;
 import co.elastic.clients.elasticsearch.core.search.Hit;
@@ -22,6 +21,7 @@ import fr.milekat.utils.Configs;
 import fr.milekat.utils.DateMileKat;
 import fr.milekat.utils.storage.StorageConnection;
 import fr.milekat.utils.storage.adapter.elasticsearch.connetion.ESConnection;
+import fr.milekat.utils.storage.adapter.elasticsearch.features.Index;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import fr.milekat.utils.storage.exceptions.StorageLoadException;
 import org.bukkit.Bukkit;
@@ -35,10 +35,12 @@ import java.util.*;
 
 public class ESStorage implements StorageImplementation {
     private final Configs config;
+    private final String numberOfReplicas;
     private final String INDEX_TRADES;
     private final String INDEX_SHOPS;
-    private final String INDEX_HISTORY;
     private final String INDEX_USERS_MODES;
+    private final String INDEX_HISTORY;
+    private final Map<String, Class<?>> history_fields = new HashMap<>();
     private final List<BulkOperation> logToProcess = new ArrayList<>();
 
     /*
@@ -53,29 +55,18 @@ public class ESStorage implements StorageImplementation {
         }
         this.INDEX_TRADES = prefix + "trades";
         this.INDEX_SHOPS = prefix + "shops";
-        this.INDEX_HISTORY = prefix + "history";
         this.INDEX_USERS_MODES = prefix + "users-mode";
+        this.INDEX_HISTORY = prefix + "history";
+        this.numberOfReplicas = config.getString("storage.elasticsearch.replicas", "0");
+        history_fields.put("trade", Trade.class);
+        history_fields.put("@timestamp", Date.class);
+        history_fields.putAll(Main.TAGS);
         try (StorageConnection connection = getConnection()) {
             Main.getMileLogger().debug(connection.getEsClient().cluster().health().toString());
             logPool();
         } catch (IOException exception) {
             throw new StorageLoadException("Error while trying to load ElasticSearch cluster");
         }
-    }
-
-    @NotNull
-    private static TradeMode getTradeMode(@NotNull SearchResponse<PlayerTradeMode> searchResponse) {
-        TradeMode tradeMode = TradeMode.INVENTORY;
-        if (!searchResponse.hits().hits().isEmpty() && searchResponse.hits().hits().get(0).source() != null) {
-            PlayerTradeMode playerTradeMode = searchResponse.hits().hits().get(0).source();
-            if (playerTradeMode != null) {
-                tradeMode = playerTradeMode.tradeMode();
-            }
-        }
-        if (tradeMode == null) {
-            tradeMode = TradeMode.INVENTORY;
-        }
-        return tradeMode;
     }
 
     @Contract(" -> new")
@@ -90,19 +81,11 @@ public class ESStorage implements StorageImplementation {
     }
 
     @Override
-    public void disconnect() {
-        Main.getMileLogger().debug("ElasticSearch automatically close connections after execution, using try-with-resources.");
-    }
-
-    @Override
     public boolean checkStorages() {
-        List<String> indices = new ArrayList<>();
-        indices.add(INDEX_TRADES);
-        indices.add(INDEX_SHOPS);
-        indices.add(INDEX_HISTORY);
-        indices.add(INDEX_USERS_MODES);
+        Main.getMileLogger().debug("Check if storage is ready...");
         try (StorageConnection connection = getConnection()) {
-            for (String index : indices) {
+            Main.getMileLogger().debug("Check indices...");
+            for (String index : List.of(INDEX_TRADES, INDEX_SHOPS, INDEX_USERS_MODES)) {
                 //  Check if index exist, otherwise create it
                 if (!connection.getEsClient()
                         .indices()
@@ -114,13 +97,20 @@ public class ESStorage implements StorageImplementation {
                     Main.getMileLogger().debug("Index '" + index + "' found !");
                 }
             }
-            Main.getMileLogger().debug("Indices loaded");
+            new Index(connection.getEsClient(), INDEX_HISTORY, numberOfReplicas,
+                    history_fields, Main.TAGS, "tags");
+            Main.getMileLogger().debug("Storage is ready.");
             return true;
-        } catch (ElasticsearchException | IOException exception) {
+        } catch (StorageLoadException | IOException exception) {
             Main.getMileLogger().warning("Error while trying to load ElasticSearch indices.");
             Main.getMileLogger().stack(exception.getStackTrace());
         }
         return false;
+    }
+
+    @Override
+    public void disconnect() {
+        Main.getMileLogger().debug("ElasticSearch automatically close connections after execution, using try-with-resources.");
     }
 
     /*
@@ -393,6 +383,21 @@ public class ESStorage implements StorageImplementation {
                 }
             }
         });
+    }
+
+    @NotNull
+    private static TradeMode getTradeMode(@NotNull SearchResponse<PlayerTradeMode> searchResponse) {
+        TradeMode tradeMode = TradeMode.INVENTORY;
+        if (!searchResponse.hits().hits().isEmpty() && searchResponse.hits().hits().get(0).source() != null) {
+            PlayerTradeMode playerTradeMode = searchResponse.hits().hits().get(0).source();
+            if (playerTradeMode != null) {
+                tradeMode = playerTradeMode.tradeMode();
+            }
+        }
+        if (tradeMode == null) {
+            tradeMode = TradeMode.INVENTORY;
+        }
+        return tradeMode;
     }
 
     @Override

@@ -76,3 +76,21 @@ messages:
           - "&6Trade was <first_amount>x<first_material> for <result_amount>x<result_material>"
     admin-shop:
       title: "&3Editing <shop_name>"
+
+# Tags feature (Advanced users)
+tags:
+  # If false, you will have to set players tags alone
+  enable_builtin_tags: true
+  ##############################
+  # Advanced users ONLY (This section require a plugin who set tags for players)
+  # Need 'enable_builtin_tags' to false
+  # Tags must be lowercase and without spaces, only letters and dashes are allowed
+  # Tags names length must be between 3 and 16 characters
+  ##############################
+  custom:
+    string: [ "player-name", "player-uuid" ]
+    integer: [ ]
+    long: [ ]
+    double: [ ]
+    boolean: [ ]
+  ##############################
