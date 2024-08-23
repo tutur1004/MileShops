@@ -12,6 +12,7 @@ public class TimedShops {
     private final BukkitTask task;
 
     public TimedShops() {
+        Main.getMileLogger().info("Starting timed shops worker...");
         task = prepareTask();
     }
 
@@ -44,7 +45,7 @@ public class TimedShops {
             } catch (StorageExecuteException e) {
                 Main.getMileLogger().warning("Error while getting all shops from database.");
             }
-        }, 600, 600);
+        }, 100, 600);
     }
 
     public void cancel() {
