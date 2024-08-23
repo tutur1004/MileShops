@@ -178,8 +178,6 @@ public class InventoryShop extends FastInv {
         int processedTrades = processedTrades(trade, click.isShiftClick());
         if (processedTrades > 0) {
             tradeCompleted.put(trade, tradeCompleted.getOrDefault(trade, 0) + processedTrades);
-        } else {
-            Main.message(player, "&cYou don't have the required items to trade or your inventory is full.");
         }
     }
 
@@ -205,15 +203,27 @@ public class InventoryShop extends FastInv {
                             .filter(playerTags::containsKey)
                             .forEach(tag -> playerTradeTags.put(tag, playerTags.get(tag)));
                     if (!playerTradeTags.isEmpty()) {
-                        maxDoAbleTrades = trade.getMaxTradeUse() -
-                                Main.getStorage().getTradeUses(playerTradeTags, trade);
+                        int tradeUses = Main.getStorage().getTradeUses(playerTradeTags, trade);
+                        int maxDoAllowedTrades = trade.getMaxTradeUse() - tradeUses;
+                        if (maxDoAllowedTrades < maxDoAbleTrades) {
+                            Main.message(player, Main.getConfigs().getMessage(
+                                    "messages.gui.chest-shop.messages.max-trade",
+                                    "&cYou have reached the maximum number of uses for this trade(<trade_limit>).")
+                                    .replace("<trade_limit>", String.valueOf(tradeUses)));
+                            if (maxDoAllowedTrades <= 0) return 0;
+                            maxDoAbleTrades = maxDoAllowedTrades;
+                        }
                     }
                 }
             } catch (ApiUnavailable ignore) {}
         }
 
         //  If no trades can be done, return 0
-        if (maxDoAbleTrades <= 0) return 0;
+        if (maxDoAbleTrades <= 0) {
+            Main.message(player, Main.getConfigs().getMessage("messages.gui.chest-shop.messages.no-trade",
+                            "&cYou don't have the required items to trade, or your inventory is full"));
+            return 0;
+        }
 
         //  Execute the trade
         TradeUtils.executeTrade(this.player, tradeItems, trade.getResultItem().clone(),
@@ -230,6 +240,7 @@ public class InventoryShop extends FastInv {
     @Override
     protected void onClose(InventoryCloseEvent event) {
         super.onClose(event);
+        if (!player.hasPermission("shops.admin")) return;
         this.tradeCompleted.forEach((trade, count) -> {
             BaseComponent message = new TextComponent(TradeUtils.tradeFormatting(Main.getConfigs()
                     .getMessage("messages.gui.chest-shop.messages.trade-result",

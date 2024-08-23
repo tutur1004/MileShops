@@ -427,20 +427,22 @@ public class ESStorage implements StorageImplementation {
         if (!trade.isUsageLimited()) return 0;
         try {
             try (StorageConnection connection = getConnection()) {
-                Main.getMileLogger().debug("[ES-Sync] getTradeUses - search trades with tags '" + tags + "'.");
+                Main.getMileLogger().debug("[ES-Sync] getTradeUses - search trades uses for trade '" +
+                        trade.getShopUuid().toString() + "-" + trade.getTradePosition() +
+                        "' with tags '" + tags + "'.");
                 CountRequest countRequest = new CountRequest.Builder()
                     .index(INDEX_HISTORY)
                     .query(q -> {
                         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
                         boolQueryBuilder.filter(f -> f.term(t -> t
-                                .field("trade.shopUuid")
+                                .field("trade.shopUuid.keyword")
                                 .value(trade.getShopUuid().toString())));
                         boolQueryBuilder.filter(f -> f.term(t -> t
                                 .field("trade.position")
-                                .value(trade.getTradePosition())));
+                                .value(FieldValue.of(trade.getTradePosition()))));
                         tags.forEach((tag, value) -> boolQueryBuilder.must(m -> m.match(ma -> ma
-                                .field("tags." + tag)
-                                .query((FieldValue) value)
+                                .field("tags." + tag + ".keyword")
+                                .query(FieldValue.of(value))
                         )));
                         return q.bool(boolQueryBuilder.build());
                     })

@@ -70,6 +70,8 @@ messages:
       messages:
         inventory-space: "&cNot enough space in inventory to receive result"
         no-item: "&cNot enough items"
+        no-trade: "&cYou don't have the required items to trade, or your inventory is full"
+        max-trade: "&cYou have reached the maximum number of uses for this trade (<trade_limit>)."
         trade-result: "&2You trade <first_total_amount>x<first_material>, for <result_total_amount>x<result_material>."
         trade-result-hover:
           - "&6You do this trade <count> times"
