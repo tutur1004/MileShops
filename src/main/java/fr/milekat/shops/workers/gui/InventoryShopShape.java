@@ -36,19 +36,19 @@ public enum InventoryShopShape {
             Main.getConfigs().getMessage("messages.gui.chest-shop.title", "&3Shop <shop_name>"),
             List.of(
                     //  First column
-                    new TradeSlots(1, null, 3, new HashMap<>()),
-                    new TradeSlots(10, null, 12, new HashMap<>()),
-                    new TradeSlots(19, null, 21, new HashMap<>()),
-                    new TradeSlots(28, null, 30, new HashMap<>()),
-                    new TradeSlots(37, null, 39, new HashMap<>()),
-                    new TradeSlots(46, null, 48, new HashMap<>()),
+                    new TradeSlots(0, null, 3, new HashMap<>()),
+                    new TradeSlots(9, null, 12, new HashMap<>()),
+                    new TradeSlots(18, null, 21, new HashMap<>()),
+                    new TradeSlots(27, null, 30, new HashMap<>()),
+                    new TradeSlots(36, null, 39, new HashMap<>()),
+                    new TradeSlots(45, null, 48, new HashMap<>()),
                     //  Second column
-                    new TradeSlots(5, null, 7, new HashMap<>()),
-                    new TradeSlots(14, null, 16, new HashMap<>()),
-                    new TradeSlots(23, null, 25, new HashMap<>()),
-                    new TradeSlots(32, null, 34, new HashMap<>()),
-                    new TradeSlots(41, null, 43, new HashMap<>()),
-                    new TradeSlots(50, null, 52, new HashMap<>())
+                    new TradeSlots(5, null, 8, new HashMap<>()),
+                    new TradeSlots(14, null, 17, new HashMap<>()),
+                    new TradeSlots(23, null, 26, new HashMap<>()),
+                    new TradeSlots(32, null, 35, new HashMap<>()),
+                    new TradeSlots(41, null, 44, new HashMap<>()),
+                    new TradeSlots(50, null, 53, new HashMap<>())
             ),
 
             0, 0, 0, 0,
