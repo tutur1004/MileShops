@@ -425,7 +425,33 @@ public class ESStorage implements StorageImplementation {
     @Override
     public int getTradeUses(@NotNull Map<String, Object> tags, @NotNull Trade trade) {
         if (!trade.isUsageLimited()) return 0;
-
+        try {
+            try (StorageConnection connection = getConnection()) {
+                Main.getMileLogger().debug("[ES-Sync] getTradeUses - search trades with tags '" + tags + "'.");
+                CountRequest countRequest = new CountRequest.Builder()
+                    .index(INDEX_HISTORY)
+                    .query(q -> {
+                        BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
+                        boolQueryBuilder.filter(f -> f.term(t -> t
+                                .field("trade.shopUuid")
+                                .value(trade.getShopUuid().toString())));
+                        boolQueryBuilder.filter(f -> f.term(t -> t
+                                .field("trade.position")
+                                .value(trade.getTradePosition())));
+                        tags.forEach((tag, value) -> boolQueryBuilder.must(m -> m.match(ma -> ma
+                                .field("tags." + tag)
+                                .query((FieldValue) value)
+                        )));
+                        return q.bool(boolQueryBuilder.build());
+                    })
+                    .build();
+                CountResponse response = connection.getEsClient(getMapper()).count(countRequest);
+                return Math.round(response.count());
+            }
+        } catch (ElasticsearchException | IOException exception) {
+            Main.getMileLogger().warning("Error while trying to fetch trade uses with tags " + tags);
+            Main.getMileLogger().stack(exception.getStackTrace());
+        }
         return 0;
     }
 
