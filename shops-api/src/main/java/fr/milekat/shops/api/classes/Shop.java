@@ -140,6 +140,15 @@ public class Shop {
     }
 
     /**
+     * Retrieves whether the shop should be spawned in.
+     *
+     * @return Whether the shop should be spawned in.
+     */
+    public boolean shouldBeSpawned() {
+        return isTimed() && spawnIn.before(new Date()) && spawnOut.after(new Date());
+    }
+
+    /**
      * Retrieves the date when the shop will spawn in.
      *
      * @return The date when the shop will spawn in.

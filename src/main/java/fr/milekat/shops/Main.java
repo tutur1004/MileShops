@@ -14,6 +14,7 @@ import fr.milekat.shops.storage.utils.ShopTrades;
 import fr.milekat.shops.workers.commands.ShopsCmd;
 import fr.milekat.shops.workers.listeners.LogTrade;
 import fr.milekat.shops.workers.listeners.ShopsListeners;
+import fr.milekat.shops.workers.utils.TimedShops;
 import fr.milekat.utils.Configs;
 import fr.milekat.utils.MileLogger;
 import fr.milekat.utils.storage.StorageConnection;
@@ -46,6 +47,7 @@ public class Main extends JavaPlugin {
     private static StorageImplementation STORAGE;
     public static final Map<String, Class<?>> TAGS = new HashMap<>();
     public static final Map<UUID, Map<String, Object>> PLAYER_TAGS = new HashMap<>();
+    private TimedShops timedShops;
     /*
         Shop cache
      */
@@ -96,6 +98,7 @@ public class Main extends JavaPlugin {
         //  Load plugin workers
         plugin.getServer().getPluginManager().registerEvents(new ShopsListeners(), this);
         plugin.getServer().getPluginManager().registerEvents(new LogTrade(), this);
+        timedShops = new TimedShops();
         PluginCommand shopCommand = plugin.getCommand("shop");
         if (shopCommand != null) {
             shopCommand.setExecutor(new ShopsCmd());
@@ -106,6 +109,7 @@ public class Main extends JavaPlugin {
     public void onDisable() {
         try {
             getStorage().disconnect();
+            timedShops.cancel();
         } catch (Exception ignored) {}
     }
 

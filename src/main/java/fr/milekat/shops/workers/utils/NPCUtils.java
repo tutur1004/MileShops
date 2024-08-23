@@ -29,6 +29,20 @@ public class NPCUtils {
         }
     }
 
+    public static void ensureVisible(@NotNull UUID uuid) {
+        NPC npc = Main.getNpc(uuid);
+        if (npc != null) {
+            npc.show();
+        }
+    }
+
+    public static void ensureInvisible(@NotNull UUID uuid) {
+        NPC npc = Main.getNpc(uuid);
+        if (npc != null) {
+            npc.hide();
+        }
+    }
+
     public static void destroy(@NotNull UUID uuid) {
         NPC npc = Main.getNpc(uuid);
         if (npc != null) {
