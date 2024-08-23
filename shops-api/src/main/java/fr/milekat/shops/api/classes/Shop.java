@@ -5,6 +5,8 @@ import fr.milekat.shops.api.MileShopsAPI;
 import fr.milekat.shops.api.exceptions.ApiUnavailable;
 import fr.milekat.shops.api.exceptions.StorageException;
 
+import org.jetbrains.annotations.Nullable;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -17,6 +19,8 @@ public class Shop {
     private String name;
     private NPC npc;
     private ShopType type;
+    private Date spawnIn;
+    private Date spawnOut;
 
     /**
      * Constructs a new Shop instance with the specified UUID, name, NPC UUID, and shop type.
@@ -31,6 +35,25 @@ public class Shop {
         this.name = name;
         this.npc = npc;
         this.type = type;
+    }
+
+    /**
+     * Constructs a new Shop instance with the specified UUID, name, NPC UUID, shop type, spawn in date, and spawn out date.
+     *
+     * @param uuid The UUID of the shop.
+     * @param name The name of the shop.
+     * @param npc  The UUID of the NPC associated with the shop.
+     * @param type The type of the shop.
+     * @param spawnIn The date when the shop will spawn in.
+     * @param spawnOut The date when the shop will spawn out.
+     */
+    public Shop(UUID uuid, String name, NPC npc, ShopType type, Date spawnIn, Date spawnOut) {
+        this.uuid = uuid;
+        this.name = name;
+        this.npc = npc;
+        this.type = type;
+        this.spawnIn = spawnIn;
+        this.spawnOut = spawnOut;
     }
 
     /**
@@ -105,5 +128,52 @@ public class Shop {
      */
     public List<Trade> getTrades() throws ApiUnavailable, StorageException {
         return MileShopsAPI.getAPI().getShopTrades(this.uuid);
+    }
+
+    /**
+     * Retrieves whether the shop is timed.
+     *
+     * @return Whether the shop is timed.
+     */
+    public boolean isTimed() {
+        return spawnIn != null && spawnOut != null;
+    }
+
+    /**
+     * Retrieves the date when the shop will spawn in.
+     *
+     * @return The date when the shop will spawn in.
+     */
+    @Nullable
+    public Date getSpawnIn() {
+        return spawnIn;
+    }
+
+    /**
+     * Sets the date when the shop will spawn in.
+     *
+     * @param spawnIn The date when the shop will spawn in.
+     */
+    public void setSpawnIn(Date spawnIn) {
+        this.spawnIn = spawnIn;
+    }
+
+    /**
+     * Retrieves the date when the shop will spawn out.
+     *
+     * @return The date when the shop will spawn out.
+     */
+    @Nullable
+    public Date getSpawnOut() {
+        return spawnOut;
+    }
+
+    /**
+     * Sets the date when the shop will spawn out.
+     *
+     * @param spawnOut The date when the shop will spawn out.
+     */
+    public void setSpawnOut(Date spawnOut) {
+        this.spawnOut = spawnOut;
     }
 }

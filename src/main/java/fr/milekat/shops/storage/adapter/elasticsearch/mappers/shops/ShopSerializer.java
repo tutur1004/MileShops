@@ -7,9 +7,11 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import fr.milekat.milenpc.api.classes.NPC;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.ShopType;
+import fr.milekat.utils.DateMileKat;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.UUID;
 
 /**
@@ -18,7 +20,9 @@ import java.util.UUID;
  *         "uuid": {@link UUID},
  *         "name": {@link String},
  *         "npc": {@link NPC},
- *         "type": {@link ShopType}
+ *         "type": {@link ShopType},
+ *         "spawnIn": {@link Date},
+ *         "spawnOut": {@link Date}
  *     }
  * }
  */
@@ -42,6 +46,12 @@ public class ShopSerializer extends StdSerializer<Shop> {
             gen.writeObjectField("npc", value.getNpc());
         }
         gen.writeStringField("type", String.valueOf(value.getType()));
+
+        if (value.isTimed() && value.getSpawnIn() != null && value.getSpawnOut() != null) {
+            gen.writeStringField("spawnIn", DateMileKat.getDateEs(value.getSpawnIn()));
+            gen.writeStringField("spawnOut", DateMileKat.getDateEs(value.getSpawnOut()));
+        }
+
         gen.writeEndObject();
     }
 }

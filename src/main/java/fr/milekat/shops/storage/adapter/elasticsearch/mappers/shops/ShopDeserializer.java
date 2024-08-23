@@ -8,8 +8,11 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import fr.milekat.milenpc.api.classes.NPC;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.ShopType;
+import fr.milekat.utils.DateMileKat;
 
 import java.io.IOException;
+import java.text.ParseException;
+import java.util.Date;
 import java.util.UUID;
 
 /**
@@ -18,7 +21,9 @@ import java.util.UUID;
  *         "uuid": {@link UUID},
  *         "name": {@link String},
  *         "npc": {@link NPC},
- *         "type": {@link ShopType}
+ *         "type": {@link ShopType},
+ *         "spawnIn": {@link Date},
+ *         "spawnOut": {@link Date}
  *     }
  * }
  */
@@ -40,6 +45,14 @@ public class ShopDeserializer extends StdDeserializer<Shop> {
         NPC npc = mapper.treeToValue(node.get("npc"), NPC.class);
         if (npc == null) return null;
         ShopType shopType = ShopType.valueOf(node.get("type").asText());
+
+        if (node.has("spawnIn") && node.has("spawnOut")) {
+            try {
+                Date spawnIn = DateMileKat.getESStringDate(node.get("spawnIn").asText());
+                Date spawnOut = DateMileKat.getESStringDate(node.get("spawnOut").asText());
+                return new Shop(shopUuid, shopName, npc, shopType, spawnIn, spawnOut);
+            } catch (ParseException ignored) {}
+        }
 
         return new Shop(shopUuid, shopName, npc, shopType);
     }
