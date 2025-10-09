@@ -20,6 +20,7 @@ import fr.milekat.utils.MileLogger;
 import fr.milekat.utils.storage.StorageConnection;
 import fr.milekat.utils.storage.StorageLoader;
 import fr.milekat.utils.storage.StorageVendor;
+import fr.milekat.utils.storage.adapter.elasticsearch.connection.ESConnection;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import fr.milekat.utils.storage.exceptions.StorageLoadException;
 import fr.mrmicky.fastinv.FastInvManager;
@@ -223,7 +224,7 @@ public class Main extends JavaPlugin {
         } catch (Exception ignored) {}
         StorageConnection connection = new StorageLoader(config, logger).getLoadedConnection();
         if (Objects.requireNonNull(connection.getVendor()) == StorageVendor.ELASTICSEARCH) {
-            STORAGE = new ESStorage(config);
+            STORAGE = new ESStorage((ESConnection) connection, config);
         } else if (Objects.requireNonNull(connection.getVendor()) == StorageVendor.MYSQL) {
             STORAGE = new SQLStorage(config);
         } else {

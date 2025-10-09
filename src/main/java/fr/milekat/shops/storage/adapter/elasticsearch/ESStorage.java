@@ -1,5 +1,6 @@
 package fr.milekat.shops.storage.adapter.elasticsearch;
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.ElasticsearchException;
 import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
@@ -19,14 +20,12 @@ import fr.milekat.shops.storage.utils.ShopTrades;
 import fr.milekat.shops.workers.utils.TradeMode;
 import fr.milekat.utils.Configs;
 import fr.milekat.utils.DateMileKat;
-import fr.milekat.utils.storage.StorageConnection;
-import fr.milekat.utils.storage.adapter.elasticsearch.connetion.ESConnection;
+import fr.milekat.utils.storage.adapter.elasticsearch.connection.ESConnection;
 import fr.milekat.utils.storage.adapter.elasticsearch.features.Index;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import fr.milekat.utils.storage.exceptions.StorageLoadException;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -34,8 +33,11 @@ import java.io.IOException;
 import java.util.*;
 
 public class ESStorage implements StorageImplementation {
-    private final Configs config;
+    // Elastic settings
+    private final ESConnection connection;
     private final String numberOfReplicas;
+
+    // Indexes settings
     private final String INDEX_TRADES;
     private final String INDEX_SHOPS;
     private final String INDEX_USERS_MODES;
@@ -46,8 +48,8 @@ public class ESStorage implements StorageImplementation {
     /*
         Main DB
     */
-    public ESStorage(@NotNull Configs config) throws StorageLoadException {
-        this.config = config;
+    public ESStorage(@NotNull ESConnection connection, @NotNull Configs config) throws StorageLoadException {
+        this.connection = connection;
         String prefix = config.getString("storage.elasticsearch.prefix", "shop-");
         if (!prefix.matches("[a-z0-9][a-z0-9-]{0,19}")) {
             throw new StorageLoadException("Elasticsearch prefix wrong, please only lower cases (a-z), " +
@@ -61,17 +63,12 @@ public class ESStorage implements StorageImplementation {
         history_fields.put("trade", Trade.class);
         history_fields.put("@timestamp", Date.class);
         history_fields.putAll(Main.TAGS);
-        try (StorageConnection connection = getConnection()) {
-            Main.getMileLogger().debug(connection.getEsClient().cluster().health().toString());
+        try (ElasticsearchClient esClient = connection.getEsClient(getMapper())) {
+            Main.getMileLogger().debug(esClient.cluster().health().toString());
             logPool();
         } catch (IOException exception) {
             throw new StorageLoadException("Error while trying to load ElasticSearch cluster");
         }
-    }
-
-    @Contract(" -> new")
-    private @NotNull ESConnection getConnection() {
-        return new ESConnection(config, Main.getMileLogger());
     }
 
     private @NotNull JacksonJsonpMapper getMapper() {
@@ -83,21 +80,21 @@ public class ESStorage implements StorageImplementation {
     @Override
     public boolean checkStorages() {
         Main.getMileLogger().debug("Check if storage is ready...");
-        try (StorageConnection connection = getConnection()) {
+        try (ElasticsearchClient esClient = connection.getEsClient(getMapper())) {
             Main.getMileLogger().debug("Check indices...");
             for (String index : List.of(INDEX_TRADES, INDEX_SHOPS, INDEX_USERS_MODES)) {
                 //  Check if index exist, otherwise create it
-                if (!connection.getEsClient()
+                if (!esClient
                         .indices()
                         .exists(ExistsRequest.of(builder -> builder.index(index)))
                         .value()) {
-                    connection.getEsClient().indices().create(c ->
+                    esClient.indices().create(c ->
                             c.index(index).settings(s -> s.numberOfReplicas("0")));
                 } else {
                     Main.getMileLogger().debug("Index '" + index + "' found !");
                 }
             }
-            new Index(connection.getEsClient(), INDEX_HISTORY, numberOfReplicas,
+            new Index(esClient, INDEX_HISTORY, numberOfReplicas,
                     history_fields, Main.TAGS, "tags");
             Main.getMileLogger().debug("Storage is ready.");
             return true;
@@ -121,14 +118,17 @@ public class ESStorage implements StorageImplementation {
         //  Open Bukkit async task
         Bukkit.getScheduler().runTaskAsynchronously(Main.getInstance(), () -> {
             //  Open Elasticsearch connection
-            try (StorageConnection connection = getConnection()) {
+            try (ElasticsearchClient esClient = connection.getEsClient(getMapper())) {
                 Main.getMileLogger().debug("[ES-aSync] prepareShopAsync - search shop with field 'name' and " +
                         "value '" + shop.getName() + "'.");
                 try {
-                    SearchResponse<Shop> searchResponse = connection.getEsClient(getMapper()).search(
+                    SearchResponse<Shop> searchResponse = esClient.search(
                             new SearchRequest.Builder()
                                     .index(INDEX_SHOPS)
-                                    .query(q -> q.match(m -> m.field("name").query(shop.getName())))
+                                    .query(q -> q.term(t -> t
+                                            .field("name.keyword")
+                                            .value(shop.getName())
+                                    ))
                                     .size(1)
                                     .build(),
                             Shop.class
@@ -138,9 +138,9 @@ public class ESStorage implements StorageImplementation {
                         //  Update existing shop
                         Main.getMileLogger().debug("[ES-aSync] asyncSaveShop - update shop " + shop.getUuid() + ".");
                         try {
-                            connection.getEsClient(getMapper()).update(u -> u
+                            esClient.update(u -> u
                                             .index(INDEX_SHOPS)
-                                            .id(searchResponse.hits().hits().get(0).id())
+                                            .id(searchResponse.hits().hits().getFirst().id())
                                             .doc(shop)
                                             .docAsUpsert(true),
                                     Shop.class);
@@ -161,7 +161,7 @@ public class ESStorage implements StorageImplementation {
                         //  Save new shop
                         Main.getMileLogger().debug("[ES-aSync] asyncSaveShop - index new shop " + shop.getUuid() + ".");
                         try {
-                            connection.getEsClient(getMapper()).index(i -> i
+                            esClient.index(i -> i
                                     .index(INDEX_SHOPS)
                                     .document(shop));
                             Main.getMileLogger().info("New shop created with name " + shop.getName());
@@ -180,6 +180,11 @@ public class ESStorage implements StorageImplementation {
                     Main.getMileLogger().stack(exception.getStackTrace());
                     shop.getNpc().remove();
                 }
+            } catch (IOException exception) {
+                Main.message(sender, "&cError while trying to connect to storage.");
+                Main.getMileLogger().warning("Error while trying to connect to ElasticSearch.");
+                Main.getMileLogger().stack(exception.getStackTrace());
+                shop.getNpc().remove();
             }
         });
     }
@@ -187,7 +192,7 @@ public class ESStorage implements StorageImplementation {
     @Override
     public Shop getShop(@NotNull UUID uuid) throws StorageExecuteException {
         try {
-            return getShop("uuid", uuid.toString());
+            return getShop("uuid.keyword", uuid.toString());
         } catch (IOException e) {
             throw new StorageExecuteException(e, "Error while trying to find shop with playerUuid " + uuid);
         }
@@ -196,20 +201,23 @@ public class ESStorage implements StorageImplementation {
     @Override
     public Shop getShop(@NotNull String name) throws StorageExecuteException {
         try {
-            return getShop("name", name);
+            return getShop("name.keyword", name);
         } catch (IOException e) {
             throw new StorageExecuteException(e, "Error while trying to find shop with name " + name);
         }
     }
 
     private @Nullable Shop getShop(@NotNull String field, @NotNull String value) throws IOException {
-        try (StorageConnection connection = getConnection()) {
+        try (ElasticsearchClient esClient = connection.getEsClient(getMapper())) {
             Main.getMileLogger().debug("[ES-Sync] getShop - search shop with field '" + field +
                     "' and value '" + value + "'.");
-            SearchResponse<Shop> response = connection.getEsClient(getMapper()).search(
+            SearchResponse<Shop> response = esClient.search(
                     new SearchRequest.Builder()
                             .index(INDEX_SHOPS)
-                            .query(q -> q.match(m -> m.field(field).query(value)))
+                            .query(q -> q.term(t -> t
+                                    .field(field)
+                                    .value(value)
+                            ))
                             .size(1)
                             .build(),
                     Shop.class
@@ -225,10 +233,10 @@ public class ESStorage implements StorageImplementation {
 
     @Override
     public @NotNull List<Shop> getAllShops() throws StorageExecuteException {
-        try (StorageConnection connection = getConnection()) {
+        try (ElasticsearchClient esClient = connection.getEsClient(getMapper())) {
             try {
                 Main.getMileLogger().debug("[ES-Sync] getAllShops - Fetch all shops.");
-                SearchResponse<Shop> response = connection.getEsClient(getMapper()).search(
+                SearchResponse<Shop> response = esClient.search(
                         new SearchRequest.Builder()
                                 .index(INDEX_SHOPS)
                                 .size(1024)
@@ -243,18 +251,20 @@ public class ESStorage implements StorageImplementation {
             } catch (ElasticsearchException | IOException exception) {
                 throw new StorageExecuteException(exception, "Error while trying to fetch all shops.");
             }
+        } catch (IOException e) {
+            throw new StorageExecuteException(e, "Error while trying to connect to ElasticSearch.");
         }
     }
 
     @Override
     public void asyncDeleteShop(@NotNull Shop shop, CommandSender sender) {
         Bukkit.getScheduler().runTaskAsynchronously(Main.getInstance(), () -> {
-            try (StorageConnection connection = getConnection()) {
-                connection.getEsClient().deleteByQuery(new DeleteByQueryRequest.Builder()
+            try (ElasticsearchClient esClient = connection.getEsClient(getMapper())) {
+                esClient.deleteByQuery(new DeleteByQueryRequest.Builder()
                         .index(INDEX_TRADES)
                         .query(q -> q.match(m -> m.field("shopUuid").query(String.valueOf(shop.getUuid()))))
                         .build());
-                connection.getEsClient().deleteByQuery(new DeleteByQueryRequest.Builder()
+                esClient.deleteByQuery(new DeleteByQueryRequest.Builder()
                         .index(INDEX_SHOPS)
                         .query(q -> q.match(m -> m.field("uuid").query(String.valueOf(shop.getUuid()))))
                         .build());
@@ -272,13 +282,13 @@ public class ESStorage implements StorageImplementation {
     @Override
     public void asyncSaveShopTrades(@NotNull Shop shop, @NotNull List<Trade> trades, CommandSender sender) {
         Bukkit.getScheduler().runTaskAsynchronously(Main.getInstance(), () -> {
-            try (StorageConnection connection = getConnection()) {
+            try (ElasticsearchClient esClient = connection.getEsClient(getMapper())) {
                 List<BulkOperation> bulkDocs = new ArrayList<>();
                 trades.forEach(trade -> bulkDocs
                         .add(new BulkOperation.Builder().create(c -> c.document(trade)).build()));
                 Main.getMileLogger().debug("[ES-aSync] asyncSaveShopTrades - delete all trades for shop '" + shop.getUuid() + "'.");
                 try {
-                    connection.getEsClient(getMapper()).deleteByQuery(new DeleteByQueryRequest.Builder()
+                    esClient.deleteByQuery(new DeleteByQueryRequest.Builder()
                             .index(INDEX_TRADES)
                             .query(q -> q.match(m -> m.field("shopUuid").query(String.valueOf(shop.getUuid()))))
                             .build());
@@ -290,7 +300,7 @@ public class ESStorage implements StorageImplementation {
                 }
                 Main.getMileLogger().debug("[ES-aSync] asyncSaveShopTrades - index all trades for shop '" + shop.getUuid() + "'.");
                 try {
-                    connection.getEsClient(getMapper()).bulk(new BulkRequest.Builder()
+                    esClient.bulk(new BulkRequest.Builder()
                             .index(INDEX_TRADES)
                             .operations(bulkDocs)
                             .build());
@@ -304,19 +314,26 @@ public class ESStorage implements StorageImplementation {
                 CacheManager.addCache(Main.TRADE_CACHE, new ShopTrades(shop.getUuid(), trades));
                 Main.message(sender, "&2Trades updated !");
                 Main.getMileLogger().info("Trades from shop " + shop.getName() + " updated");
+            } catch (IOException exception) {
+                Main.message(sender, "&cError while trying to connect to storage.");
+                Main.getMileLogger().warning("Error while trying to connect to ElasticSearch.");
+                Main.getMileLogger().stack(exception.getStackTrace());
             }
         });
     }
 
     @Override
     public List<Trade> getTrades(@NotNull UUID shopUuid) throws StorageExecuteException {
-        try (StorageConnection connection = getConnection()) {
+        try (ElasticsearchClient esClient = connection.getEsClient(getMapper())) {
             try {
                 Main.getMileLogger().debug("[ES-Sync] getTrades - Get all trades of shop '" + shopUuid + "'.");
-                SearchResponse<Trade> response = connection.getEsClient(getMapper()).search(
+                SearchResponse<Trade> response = esClient.search(
                         new SearchRequest.Builder()
                                 .index(INDEX_TRADES)
-                                .query(q -> q.match(m -> m.field("shopUuid").query(String.valueOf(shopUuid))))
+                                .query(q -> q.term(t -> t
+                                        .field("shopUuid.keyword")
+                                        .value(shopUuid.toString())
+                                ))
                                 .size(64)
                                 .build(),
                         Trade.class);
@@ -329,6 +346,8 @@ public class ESStorage implements StorageImplementation {
                 throw new StorageExecuteException(exception,
                         "Error while trying to find trades for shop uuid " + shopUuid);
             }
+        } catch (IOException e) {
+            throw new StorageExecuteException(e, "Error while trying to connect to ElasticSearch.");
         }
     }
 
@@ -341,14 +360,17 @@ public class ESStorage implements StorageImplementation {
     @Override
     public void asyncSaveTradeMode(@NotNull UUID playerUuid, @NotNull TradeMode mode) {
         Bukkit.getScheduler().runTaskAsynchronously(Main.getInstance(), () -> {
-            try (StorageConnection connection = getConnection()) {
+            try (ElasticsearchClient esClient = connection.getEsClient(getMapper())) {
                 PlayerTradeMode playerMode = new PlayerTradeMode(playerUuid, mode);
                 Main.getMileLogger().debug("[ES-aSync] asyncSaveTradeMode - search users-mode");
                 try {
-                    SearchResponse<PlayerTradeMode> searchResponse = connection.getEsClient(getMapper()).search(
+                    SearchResponse<PlayerTradeMode> searchResponse = esClient.search(
                             new SearchRequest.Builder()
                                     .index(INDEX_USERS_MODES)
-                                    .query(q -> q.match(m -> m.field("playerUuid").query(playerUuid.toString())))
+                                    .query(q -> q.term(t -> t
+                                            .field("playerUuid.keyword")
+                                            .value(playerUuid.toString())
+                                    ))
                                     .size(1)
                                     .build(),
                             PlayerTradeMode.class
@@ -358,15 +380,15 @@ public class ESStorage implements StorageImplementation {
                         if (results == 0) {
                             Main.getMileLogger().debug("[ES-aSync] asyncSaveTradeMode - index users-mode");
 
-                            connection.getEsClient(getMapper()).index(c -> c
+                            esClient.index(c -> c
                                     .index(INDEX_USERS_MODES)
                                     .document(playerMode)
                             );
                         } else {
                             Main.getMileLogger().debug("[ES-aSync] asyncSaveTradeMode - update users-mode");
-                            connection.getEsClient(getMapper()).update(u -> u
+                            esClient.update(u -> u
                                             .index(INDEX_USERS_MODES)
-                                            .id(searchResponse.hits().hits().get(0).id())
+                                            .id(searchResponse.hits().hits().getFirst().id())
                                             .doc(playerMode)
                                             .docAsUpsert(true),
                                     PlayerTradeMode.class
@@ -381,6 +403,9 @@ public class ESStorage implements StorageImplementation {
                     Main.getMileLogger().warning("Error while searching TradeMode for " + playerUuid);
                     Main.getMileLogger().stack(exception.getStackTrace());
                 }
+            } catch (IOException exception) {
+                Main.getMileLogger().warning("Error while trying to connect to ElasticSearch.");
+                Main.getMileLogger().stack(exception.getStackTrace());
             }
         });
     }
@@ -388,8 +413,8 @@ public class ESStorage implements StorageImplementation {
     @NotNull
     private static TradeMode getTradeMode(@NotNull SearchResponse<PlayerTradeMode> searchResponse) {
         TradeMode tradeMode = TradeMode.INVENTORY;
-        if (!searchResponse.hits().hits().isEmpty() && searchResponse.hits().hits().get(0).source() != null) {
-            PlayerTradeMode playerTradeMode = searchResponse.hits().hits().get(0).source();
+        if (!searchResponse.hits().hits().isEmpty() && searchResponse.hits().hits().getFirst().source() != null) {
+            PlayerTradeMode playerTradeMode = searchResponse.hits().hits().getFirst().source();
             if (playerTradeMode != null) {
                 tradeMode = playerTradeMode.tradeMode();
             }
@@ -402,13 +427,16 @@ public class ESStorage implements StorageImplementation {
 
     @Override
     public TradeMode getTradeMode(@NotNull UUID playerUuid) throws StorageExecuteException {
-        try (StorageConnection connection = getConnection()) {
+        try (ElasticsearchClient esClient = connection.getEsClient(getMapper())) {
             Main.getMileLogger().debug("[ES-Sync] getTradeMode - search users-mode of '" + playerUuid + "'.");
             try {
-                SearchResponse<PlayerTradeMode> searchResponse = connection.getEsClient(getMapper()).search(
+                SearchResponse<PlayerTradeMode> searchResponse = esClient.search(
                         new SearchRequest.Builder()
                                 .index(INDEX_USERS_MODES)
-                                .query(q -> q.match(m -> m.field("playerUuid").query(playerUuid.toString())))
+                                .query(q -> q.term(t -> t
+                                        .field("playerUuid.keyword")
+                                        .value(playerUuid.toString())
+                                ))
                                 .size(1)
                                 .build(),
                         PlayerTradeMode.class);
@@ -419,6 +447,8 @@ public class ESStorage implements StorageImplementation {
                 throw new StorageExecuteException(exception,
                         "Error while trying to fetch trade mode of player " + playerUuid);
             }
+        } catch (IOException e) {
+            throw new StorageExecuteException(e, "Error while trying to connect to ElasticSearch.");
         }
     }
 
@@ -426,7 +456,7 @@ public class ESStorage implements StorageImplementation {
     public int getTradeUses(@NotNull Map<String, Object> tags, @NotNull Trade trade) {
         if (!trade.isUsageLimited()) return 0;
         try {
-            try (StorageConnection connection = getConnection()) {
+            try (ElasticsearchClient esClient = connection.getEsClient(getMapper())) {
                 Main.getMileLogger().debug("[ES-Sync] getTradeUses - search trades uses for trade '" +
                         trade.getShopUuid().toString() + "-" + trade.getTradePosition() +
                         "' with tags '" + tags + "'.");
@@ -447,7 +477,7 @@ public class ESStorage implements StorageImplementation {
                         return q.bool(boolQueryBuilder.build());
                     })
                     .build();
-                CountResponse response = connection.getEsClient(getMapper()).count(countRequest);
+                CountResponse response = esClient.count(countRequest);
                 return Math.round(response.count());
             }
         } catch (ElasticsearchException | IOException exception) {
@@ -478,8 +508,8 @@ public class ESStorage implements StorageImplementation {
             List<BulkOperation> processing = new ArrayList<>(logToProcess);
             logToProcess.clear();
             if (!processing.isEmpty()) {
-                try (StorageConnection connection = getConnection()) {
-                    connection.getEsClient(getMapper()).bulk(new BulkRequest.Builder().operations(processing).build());
+                try (ElasticsearchClient esClient = connection.getEsClient(getMapper())) {
+                    esClient.bulk(new BulkRequest.Builder().operations(processing).build());
                     Main.getMileLogger().debug("'" + processing.size() + "' log trades saved.");
                 } catch (ElasticsearchException | IOException exception) {
                     logToProcess.addAll(processing);

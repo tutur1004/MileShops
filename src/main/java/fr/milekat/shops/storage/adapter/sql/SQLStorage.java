@@ -6,7 +6,6 @@ import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.storage.StorageImplementation;
 import fr.milekat.shops.workers.utils.TradeMode;
 import fr.milekat.utils.Configs;
-import fr.milekat.utils.storage.StorageConnection;
 import fr.milekat.utils.storage.adapter.sql.connection.SQLConnection;
 import fr.milekat.utils.storage.adapter.sql.connection.SQLDataBaseClient;
 import fr.milekat.utils.storage.adapter.sql.utils.Schema;
@@ -33,7 +32,7 @@ public class SQLStorage implements StorageImplementation {
     private final String DatabaseName;
     private final String PREFIX = Main.getConfigs().getString("storage.sql.prefix");
     private final List<String> TABLES = List.of("TBD");
-    private final StorageConnection connection;
+    private final SQLDataBaseClient sqlDataBaseClient;
 
     /*
         SQL Queries definition
@@ -52,18 +51,20 @@ public class SQLStorage implements StorageImplementation {
     public SQLStorage(@NotNull Configs config) throws StorageLoadException {
         this.config = config;
         DatabaseName = config.getString("storage.sql.database");
-        connection = new SQLConnection(config);
+        sqlDataBaseClient = new SQLConnection(config, Main.getMileLogger()).getSQLClient();
         ensureSchema();
     }
 
+
+
     private void ensureSchema() throws StorageLoadException {
-        try (SQLDataBaseClient client = this.connection.getSQLClient()) {
+        try {
             if (!checkStorages()) {
                 try (InputStream schemaFile = this.getClass().getResourceAsStream(SCHEMA_FILE)) {
                     if (schemaFile == null) {
                         throw new StorageLoadException("Missing schema file");
                     } else {
-                        new Schema(client, schemaFile, PREFIX);
+                        new Schema(sqlDataBaseClient, schemaFile, PREFIX);
                     }
                 }
             }
@@ -87,7 +88,7 @@ public class SQLStorage implements StorageImplementation {
      */
     @Override
     public void disconnect() {
-        connection.close();
+        sqlDataBaseClient.close();
     }
 
     /**
@@ -97,8 +98,7 @@ public class SQLStorage implements StorageImplementation {
      */
     @Override
     public boolean checkStorages() throws StorageExecuteException {
-        try (SQLDataBaseClient client = this.connection.getSQLClient();
-             Connection connection = client.getConnection()) {
+        try (Connection connection = this.sqlDataBaseClient.getConnection()) {
             for (String table : TABLES) {
                 try (PreparedStatement q = connection.prepareStatement(formatQuery(CHECK_TABLE))) {
                     q.setString(1, DatabaseName);
@@ -113,7 +113,7 @@ public class SQLStorage implements StorageImplementation {
                 }
             }
             return true;
-        } catch (SQLException exception) {
+        } catch (StorageLoadException | SQLException exception) {
             throw new StorageExecuteException(exception, "Missing schema file");
         }
     }

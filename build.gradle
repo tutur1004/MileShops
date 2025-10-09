@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'com.gradleup.shadow' version '9.2.0'
 }
 
 allprojects {
@@ -65,21 +65,30 @@ shadowJar {
     getArchiveClassifier().set(null)
 
     relocate 'fr.mrmicky' , 'fr.milekat.shops.libs.fastinv'
+
+    //  Storage clients
+    relocate 'com.fasterxml.jackson', 'fr.milekat.shops.libs.jackson'
+    relocate 'co.elastic.clients', 'fr.milekat.shops.libs.elasticsearch'
+    relocate ('fr.milekat.utils' , 'fr.milekat.shops.libs.milekatutils') {
+        include 'fr.milekat.utils.storage.adapter.elasticsearch.mappers.**'
+    }
 }
 
 dependencies {
-    implementation project('shops-api')
+    implementation project('mile-shops-api')
 
     //  Utils
-    compileOnly group: 'fr.milekat', name: 'milekat-utils', version: '1.3.0'
+    implementation group: 'fr.milekat', name: 'milekat-utils', version: '1.7.0'
     implementation group: 'fr.mrmicky', name: 'FastInv', version: '3.0.4'
-    compileOnly group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.17.2'
-    compileOnly group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.17.2'
 
     //  Storage clients
     compileOnly group: 'com.zaxxer', name: 'HikariCP', version: '4.0.3'
     compileOnly group: 'mysql', name: 'mysql-connector-java', version: '8.0.33'
     compileOnly group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '3.1.2'
     compileOnly group: 'org.postgresql', name: 'postgresql', version: '42.5.4'
-    compileOnly group: 'co.elastic.clients', name: 'elasticsearch-java', version: '8.14.3'
+
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.18.3'
+    implementation group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.18.3'
+    implementation group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.18.3'
+    implementation group: 'co.elastic.clients', name: 'elasticsearch-java', version: '9.1.4'
 }
