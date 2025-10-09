@@ -17,6 +17,10 @@ allprojects {
         maven { url = "https://jitpack.io" }
         maven { url = "https://repo.ranull.com/maven/external/" }
         maven {
+            name = 'papermc'
+            url = 'https://repo.papermc.io/repository/maven-public/'
+        }
+        maven {
             url = uri("https://maven.pkg.github.com/tutur1004/MileNpc")
             credentials {
                 username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
@@ -31,8 +35,7 @@ allprojects {
         compileOnly group: 'org.jetbrains', name: 'annotations', version: '24.0.1'
 
         //  Minecraft
-        compileOnly group: 'org.spigotmc', name: 'spigot-api', version: '1.21-R0.1-SNAPSHOT'
-        compileOnly group: 'com.mojang', name: 'authlib', version: '6.0.54'
+        compileOnly 'io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT'
 
         //  Milekat
         compileOnly group: 'fr.milekat', name: 'npc-api', version: '1.0.0-SNAPSHOT'
