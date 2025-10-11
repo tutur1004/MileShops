@@ -9,10 +9,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("unused")
-public record InventoryStorage(@NotNull Inventory inventory, @Nullable ItemStack itemStack,
+public record InventoryStorage(@NotNull Inventory inventory, int size, @Nullable ItemStack itemStack,
                                @Nullable BlockStateMeta blockStateMeta, @Nullable ShulkerBox shulkerBox) {
-    public InventoryStorage(@NotNull Inventory inventory) {
-        this(inventory, null, null, null);
+    public InventoryStorage(@NotNull Inventory inventory, int size) {
+        this(inventory, size, null, null, null);
     }
 
     @Contract(pure = true)

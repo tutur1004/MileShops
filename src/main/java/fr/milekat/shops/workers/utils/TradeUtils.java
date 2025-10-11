@@ -19,6 +19,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 public class TradeUtils {
+    private static final int maxStackSize = 64;
+
     public static @NotNull String getMaterial(@NotNull Material material) {
         return Main.getConfigs().getString("materials-font." + material, material.toString());
     }
@@ -76,10 +78,10 @@ public class TradeUtils {
                                       TradeMode tradeMode) {
         //  List of all inventories to check
         List<InventoryStorage> inventories = new ArrayList<>();
-        inventories.add(new InventoryStorage(player.getInventory()));
+        inventories.add(new InventoryStorage(player.getInventory(), 4 * 9));
         if (tradeMode == TradeMode.ENDER_CHEST || tradeMode == TradeMode.END_SHULKER) {
             //  Add ender chest to the list
-            inventories.add(new InventoryStorage(player.getEnderChest()));
+            inventories.add(new InventoryStorage(player.getEnderChest(), 3 * 9));
         }
         if (tradeMode == TradeMode.SHULKER || tradeMode == TradeMode.END_SHULKER) {
             //  Add shulkers from player inventory
@@ -101,7 +103,8 @@ public class TradeUtils {
         //  Check how many items can be removed and added per inventories
         int doAbleTrade = 0;
         for (Inventory virtualInv : virtualInventories) {
-            while (true) {
+            int maxInvItemAmount = virtualInv.getSize() * maxStackSize;
+            for (int i = 0; i < maxInvItemAmount; i++) {
                 if (requiredItems.stream().anyMatch(item -> !virtualInv.containsAtLeast(item, item.getAmount()))) {
                     Main.getMileLogger().debug("Inventory doesn't have one of the required items");
                     break;
@@ -139,10 +142,10 @@ public class TradeUtils {
                                     TradeMode tradeMode) {
         //  List of all inventories to proceed
         List<InventoryStorage> inventories = new ArrayList<>();
-        inventories.add(new InventoryStorage(player.getInventory()));
+        inventories.add(new InventoryStorage(player.getInventory(), 4 * 9));
         if (tradeMode == TradeMode.ENDER_CHEST || tradeMode == TradeMode.END_SHULKER) {
             //  Add ender chest to the list
-            inventories.add(new InventoryStorage(player.getEnderChest()));
+            inventories.add(new InventoryStorage(player.getEnderChest(), 3 * 9));
         }
         if (tradeMode == TradeMode.SHULKER || tradeMode == TradeMode.END_SHULKER) {
             //  Add shulkers from player inventory
@@ -156,22 +159,23 @@ public class TradeUtils {
         //  Remove all required items from the inventories
         for (ItemStack item : requiredItems) {
             int toRemove = trades;
-            for (InventoryStorage storage : inventories) {
-                while (true) {
+            for (InventoryStorage inventory : inventories) {
+                int maxInvItemAmount = inventory.size() * maxStackSize;
+                for (int i = 0; i < maxInvItemAmount; i++) {
                     if (toRemove <= 0) break;
-                    if (storage.inventory().containsAtLeast(item.clone(), item.getAmount())) {
-                        storage.inventory().removeItem(item.clone());
+                    if (inventory.inventory().containsAtLeast(item.clone(), item.getAmount())) {
+                        inventory.inventory().removeItem(item.clone());
                         toRemove--;
                     } else {
                         break;
                     }
                 }
-                if (storage.isShulkerBox()) {
-                    assert storage.blockStateMeta() != null;
-                    assert storage.shulkerBox() != null;
-                    assert storage.itemStack() != null;
-                    storage.blockStateMeta().setBlockState(storage.shulkerBox());
-                    storage.itemStack().setItemMeta(storage.blockStateMeta());
+                if (inventory.isShulkerBox()) {
+                    assert inventory.blockStateMeta() != null;
+                    assert inventory.shulkerBox() != null;
+                    assert inventory.itemStack() != null;
+                    inventory.blockStateMeta().setBlockState(inventory.shulkerBox());
+                    inventory.itemStack().setItemMeta(inventory.blockStateMeta());
                 }
             }
             if (toRemove > 0) {
@@ -182,7 +186,8 @@ public class TradeUtils {
         //  Add the result items to the inventories
         int given = 0;
         for (InventoryStorage storage : inventories) {
-            while (true) {
+            int maxInvItemAmount = storage.size() * maxStackSize;
+            for (int i = 0; i < maxInvItemAmount; i++) {
                 if (given >= trades) break;
                 Map<Integer, ItemStack> leftOver = storage.inventory().addItem(resultItem.clone());
                 if (leftOver.isEmpty()) {
@@ -201,53 +206,14 @@ public class TradeUtils {
         }
     }
 
-    public static int getStackRemoved(@NotNull Inventory inventory, @NotNull ItemStack itemToRemove) {
-        ItemStack item = itemToRemove.clone();
-        HashMap<Integer, ItemStack> leftOver = inventory.removeItem(item);
-        if (leftOver.isEmpty()) {
-            return item.getAmount();
-        } else {
-            item.setAmount(1);
-            int removed = 0;
-            while (true) {
-                leftOver = inventory.removeItem(item);
-                if (leftOver.isEmpty()) {
-                    removed++;
-                } else {
-                    break;
-                }
-            }
-            return removed;
-        }
-    }
-
-    public static @NotNull List<ItemStack> getAllByStacks(@NotNull ItemStack item, int trades) {
-        List<ItemStack> output = new ArrayList<>();
-        int totalAmount = item.getAmount() * trades;
-        while (true) {
-            if (totalAmount <= 0) break;
-            if (totalAmount >= item.getMaxStackSize()) {
-                ItemStack itemToAdd = item.clone();
-                itemToAdd.setAmount(item.getMaxStackSize());
-                output.add(itemToAdd);
-                totalAmount -= item.getMaxStackSize();
-            } else {
-                ItemStack itemToAdd = item.clone();
-                itemToAdd.setAmount(totalAmount);
-                output.add(itemToAdd);
-                break;
-            }
-        }
-        return output;
-    }
-
     public static @NotNull List<InventoryStorage> getShulkersFromInventory(@NotNull Inventory inventory) {
         List<InventoryStorage> shulkers = new ArrayList<>();
         for (ItemStack loopItem : inventory.getStorageContents()) {
             if (loopItem != null) {
                 if (loopItem.getItemMeta() instanceof BlockStateMeta stateMeta) {
                     if (stateMeta.getBlockState() instanceof ShulkerBox shulkerBox) {
-                        shulkers.add(new InventoryStorage(shulkerBox.getInventory(), loopItem, stateMeta, shulkerBox));
+                        shulkers.add(new InventoryStorage(shulkerBox.getInventory(),
+                                3 * 9, loopItem, stateMeta, shulkerBox));
                     }
                 }
             }
