@@ -214,6 +214,13 @@ public class InventoryShop extends FastInv {
         int maxDoAbleTrades = TradeUtils.maxDoAbleTrades(this.player, tradeItems,
                 trade.getResultItem().clone(), fullInventories, tradeMode);
 
+        //  If no trades can be done, return 0
+        if (maxDoAbleTrades <= 0) {
+            Main.message(player, Main.getConfigs().getMessage("messages.gui.chest-shop.messages.no-trade",
+                    "&cYou don't have the required items to trade, or your inventory is full"));
+            return 0;
+        }
+
         //  Trade usage limitation
         if (trade.isUsageLimited()) {
             try {
@@ -237,13 +244,6 @@ public class InventoryShop extends FastInv {
                     }
                 }
             } catch (ApiUnavailable ignore) {}
-        }
-
-        //  If no trades can be done, return 0
-        if (maxDoAbleTrades <= 0) {
-            Main.message(player, Main.getConfigs().getMessage("messages.gui.chest-shop.messages.no-trade",
-                            "&cYou don't have the required items to trade, or your inventory is full"));
-            return 0;
         }
 
         //  Execute the trade
