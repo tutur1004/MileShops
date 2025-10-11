@@ -74,7 +74,7 @@ public class TradeUtils {
 
         List<Inventory> virtualInventories = new ArrayList<>();
         for (InventoryStorage inventory : inventories) {
-            int size = (inventory.inventory().getSize() == 41) ? 36 : inventory.inventory().getSize();
+            int size = (inventory.inventory().getSize() == 43) ? 36 : inventory.inventory().getSize();
             Inventory virtualInventory = Bukkit.createInventory(null, size, UUID.randomUUID().toString());
             virtualInventory.setContents(inventory.inventory().getStorageContents());
             virtualInventories.add(virtualInventory);
