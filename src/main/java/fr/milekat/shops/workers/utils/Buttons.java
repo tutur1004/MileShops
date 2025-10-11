@@ -40,7 +40,7 @@ public enum Buttons {
             .addLore(Main.getConfigs().getMessages("messages.gui.chest-shop.buttons.mode-shulker.lore"))
             .build()),
     MODE_END_SHULKER(new ItemBuilder(Material.NETHER_STAR)
-            .name(Main.getConfigs().getMessage("messages.gui.chest-shop.buttons.mode-end-end-shulker.title",
+            .name(Main.getConfigs().getMessage("messages.gui.chest-shop.buttons.mode-end-shulker.title",
                     "God mode"))
             .addLore(Main.getConfigs().getMessages("messages.gui.chest-shop.buttons.mode-end-shulker.lore"))
             .build()),
