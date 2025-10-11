@@ -27,7 +27,7 @@ public enum InventoryShopShape {
                             Map.of(31, Buttons.HEAD_LEFT.get())),
                     new TradeSlots(38, null, 42,
                             Map.of(40, Buttons.HEAD_LEFT.get()))),
-            45, 53, 0, 49,
+            45, 53, 4, 49,
             true
     ),
 
