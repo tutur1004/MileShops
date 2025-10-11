@@ -47,7 +47,7 @@ public class ShopSerializer extends StdSerializer<Shop> {
         }
         gen.writeStringField("type", String.valueOf(value.getType()));
 
-        if (value.isTimed() && value.getSpawnIn() != null && value.getSpawnOut() != null) {
+        if (value.isTimed()) {
             gen.writeStringField("spawnIn", DateMileKat.getDateEs(value.getSpawnIn()));
             gen.writeStringField("spawnOut", DateMileKat.getDateEs(value.getSpawnOut()));
         }

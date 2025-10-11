@@ -1,12 +1,13 @@
 package fr.milekat.shops;
 
-import fr.milekat.milenpc.api.classes.NPC;
 import fr.milekat.shops.api.MileShopsIAPI;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.exceptions.StorageException;
 import fr.milekat.shops.workers.listeners.LogTrade;
+import fr.milekat.shops.workers.utils.ShopActions;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -18,6 +19,15 @@ public class API implements MileShopsIAPI {
     @Override
     public boolean isDebug() {
         return Main.DEBUG;
+    }
+
+    @Override
+    public @NotNull List<Shop> getShops() throws StorageException {
+        try {
+            return Main.getStorage().getAllShops();
+        } catch (StorageExecuteException exception) {
+            throw new StorageException(exception, exception.getMessage());
+        }
     }
 
     @Override
@@ -44,16 +54,31 @@ public class API implements MileShopsIAPI {
     }
 
     @Override
-    public @NotNull List<Trade> getNpcShopTrades(@NotNull UUID uuid) throws StorageException {
-        try {
-            NPC npc = Main.getNpcManager().getNpc(uuid);
-            if (npc == null) {
-                throw new StorageException(new Exception(), "NPC not found.");
+    public boolean openShop(@NotNull UUID uuid, @NotNull Shop shop) {
+        Player player = Main.getInstance().getServer().getPlayer(uuid);
+        if (player != null) {
+            try {
+                ShopActions.openShop(player, shop);
+                return true;
+            } catch (Exception e) {
+                if (isDebug()) Main.getMileLogger().stack(e.getStackTrace());
             }
-            return Main.getStorage().getCacheTrades(npc.getName());
-        } catch (StorageExecuteException exception) {
-            throw new StorageException(exception, exception.getMessage());
         }
+        return false;
+    }
+
+    @Override
+    public boolean openAdminShop(@NotNull UUID uuid, @NotNull Shop shop) {
+        Player player = Main.getInstance().getServer().getPlayer(uuid);
+        if (player != null) {
+            try {
+                ShopActions.openAdminShop(player, shop);
+                return true;
+            } catch (Exception e) {
+                if (isDebug()) Main.getMileLogger().stack(e.getStackTrace());
+            }
+        }
+        return false;
     }
 
     @Override

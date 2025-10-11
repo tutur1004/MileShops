@@ -42,11 +42,14 @@ public class ShopDeserializer extends StdDeserializer<Shop> {
 
         UUID shopUuid = UUID.fromString(node.get("uuid").asText());
         String shopName = node.get("name").asText();
-        NPC npc = mapper.treeToValue(node.get("npc"), NPC.class);
-        if (npc == null) return null;
+        NPC npc = null;
+        if (node.has("npc")) {
+            npc = mapper.treeToValue(node.get("npc"), NPC.class);
+            if (npc == null) return null;
+        }
         ShopType shopType = ShopType.valueOf(node.get("type").asText());
 
-        if (node.has("spawnIn") && node.has("spawnOut")) {
+        if (npc != null && node.has("spawnIn") && node.has("spawnOut")) {
             try {
                 Date spawnIn = DateMileKat.getESStringDate(node.get("spawnIn").asText());
                 Date spawnOut = DateMileKat.getESStringDate(node.get("spawnOut").asText());

@@ -5,6 +5,7 @@ import fr.milekat.shops.api.MileShopsAPI;
 import fr.milekat.shops.api.exceptions.ApiUnavailable;
 import fr.milekat.shops.api.exceptions.StorageException;
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import java.util.Date;
 import java.util.List;
@@ -27,10 +28,10 @@ public class Shop {
      *
      * @param uuid The UUID of the shop.
      * @param name The name of the shop.
-     * @param npc  The UUID of the NPC associated with the shop.
+     * @param npc  The UUID of the NPC associated with the shop, or null if no NPC is associated.
      * @param type The type of the shop.
      */
-    public Shop(UUID uuid, String name, NPC npc, ShopType type) {
+    public Shop(@NotNull UUID uuid, @NotNull String name, @Nullable NPC npc, @NotNull ShopType type) {
         this.uuid = uuid;
         this.name = name;
         this.npc = npc;
@@ -47,7 +48,8 @@ public class Shop {
      * @param spawnIn The date when the shop will spawn in.
      * @param spawnOut The date when the shop will spawn out.
      */
-    public Shop(UUID uuid, String name, NPC npc, ShopType type, Date spawnIn, Date spawnOut) {
+    public Shop(@NotNull UUID uuid, @NotNull String name, @NotNull NPC npc, @NotNull ShopType type,
+                @NotNull Date spawnIn, @NotNull Date spawnOut) {
         this.uuid = uuid;
         this.name = name;
         this.npc = npc;
@@ -88,6 +90,7 @@ public class Shop {
      *
      * @return The UUID of the NPC associated with the shop.
      */
+    @Nullable
     public NPC getNpc() {
         return npc;
     }
@@ -97,8 +100,15 @@ public class Shop {
      *
      * @param npc The new UUID of the NPC associated with the shop.
      */
-    public void setNpc(NPC npc) {
+    public void setNpc(@Nullable NPC npc) {
         this.npc = npc;
+    }
+
+    /**
+     * Removes the NPC associated with the shop, if any.
+     */
+    public void removeNpc() {
+        if (npc != null) npc.remove();
     }
 
     /**
@@ -106,6 +116,7 @@ public class Shop {
      *
      * @return The type of the shop.
      */
+    @NotNull
     public ShopType getType() {
         return type;
     }
@@ -115,7 +126,7 @@ public class Shop {
      *
      * @param type The new type of the shop.
      */
-    public void setType(ShopType type) {
+    public void setType(@NotNull ShopType type) {
         this.type = type;
     }
 
@@ -136,7 +147,7 @@ public class Shop {
      * @return Whether the shop is timed.
      */
     public boolean isTimed() {
-        return spawnIn != null && spawnOut != null;
+        return npc != null && spawnIn != null && spawnOut != null;
     }
 
     /**

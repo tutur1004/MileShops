@@ -23,6 +23,15 @@ public interface MileShopsIAPI {
     boolean isDebug();
 
     /**
+     * Retrieves a list of all shops.
+     *
+     * @return The list of shops.
+     * @throws StorageException if there is an error accessing the storage.
+     */
+    @NotNull
+    List<Shop> getShops() throws StorageException;
+
+    /**
      * Retrieves a list of trades associated with the specified shop.
      *
      * @param shop The shop to retrieve trades for.
@@ -49,15 +58,19 @@ public interface MileShopsIAPI {
      */
     @NotNull
     List<Trade> getShopTrades(@NotNull String name) throws StorageException;
+
     /**
-     * Retrieves a list of trades associated with the NPC shop identified by UUID.
+     * Opens the shop interface for the player identified by UUID.
      *
-     * @param uuid The UUID of the NPC shop.
-     * @return The list of trades for the NPC shop.
-     * @throws StorageException if there is an error accessing the storage.
+     * @param uuid The UUID of the player.
      */
-    @NotNull
-    List<Trade> getNpcShopTrades(@NotNull UUID uuid) throws StorageException;
+    boolean openShop(@NotNull UUID uuid, @NotNull Shop shop);
+    /**
+     * Opens the admin shop interface for the player identified by UUID.
+     *
+     * @param uuid The UUID of the player.
+     */
+    boolean openAdminShop(@NotNull UUID uuid, @NotNull Shop shop);
 
     /**
      * Retrieves the tags associated with a player identified by UUID.

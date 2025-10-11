@@ -150,12 +150,12 @@ public class ESStorage implements StorageImplementation {
                             Main.message(sender, "&cError while trying to update shop " + shop.getName());
                             Main.getMileLogger().warning("Error while trying to update shop with uuid " + shop.getUuid());
                             Main.getMileLogger().stack(exception.getStackTrace());
-                            shop.getNpc().remove();
+                            shop.removeNpc();
                         }
                     } else {
                         if (!createIfNotExist) {
                             Main.message(sender, "&cShop with name '" + shop.getName() + "' do not exist.");
-                            shop.getNpc().remove();
+                            shop.removeNpc();
                             return;
                         }
                         //  Save new shop
@@ -170,7 +170,7 @@ public class ESStorage implements StorageImplementation {
                             Main.message(sender, "&cError while trying to create shop " + shop.getName());
                             Main.getMileLogger().warning("Error while trying to index shop with uuid " + shop.getUuid());
                             Main.getMileLogger().stack(exception.getStackTrace());
-                            shop.getNpc().remove();
+                            shop.removeNpc();
                         }
                     }
 
@@ -178,13 +178,13 @@ public class ESStorage implements StorageImplementation {
                     Main.message(sender, "&cError while trying to save shop " + shop.getName());
                     Main.getMileLogger().warning("Error while trying to fetch shop with uuid " + shop.getName());
                     Main.getMileLogger().stack(exception.getStackTrace());
-                    shop.getNpc().remove();
+                    shop.removeNpc();
                 }
             } catch (IOException exception) {
                 Main.message(sender, "&cError while trying to connect to storage.");
                 Main.getMileLogger().warning("Error while trying to connect to ElasticSearch.");
                 Main.getMileLogger().stack(exception.getStackTrace());
-                shop.getNpc().remove();
+                shop.removeNpc();
             }
         });
     }

@@ -43,6 +43,8 @@ public class NPCDeserializer extends StdDeserializer<NPC> {
         String name = node.get("name").asText();
         Location location = mapper.treeToValue(node, Location.class);
 
+        if (!Main.IS_NPC_LIB_LOADED) return new NPC(uuid, name);
+
         NPC npc = Main.getNpc(uuid);
         if (npc == null) {
             NPCUtils.create(uuid, name, location);

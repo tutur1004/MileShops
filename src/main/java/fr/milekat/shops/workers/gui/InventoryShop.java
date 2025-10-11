@@ -22,10 +22,7 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
@@ -67,8 +64,9 @@ public class InventoryShop extends FastInv {
         } catch (Exception ignore) {
             this.tradeMode = TradeMode.INVENTORY;
         }
-        //  Trades
+        //  Get trades for this shop
         List<Trade> trades = Main.getStorage().getCacheTrades(shop.getUuid());
+        //  Sort trades per pages
         this.pagesTrades = sortTradesPerPages(trades);
 
         //  Create the inventory
@@ -91,6 +89,8 @@ public class InventoryShop extends FastInv {
         int page = 1;
         // Temporary list of trades for the current page
         List<Trade> tradesLoop = new LinkedList<>();
+        //  Sort trades by trade positions
+        trades.sort(Comparator.comparingInt(Trade::getTradePosition));
 
         for (Trade trade : trades) {
             tradesLoop.add(trade);
