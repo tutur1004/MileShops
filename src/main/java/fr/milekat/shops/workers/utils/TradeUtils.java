@@ -181,7 +181,7 @@ public class TradeUtils {
 
         // If unlimited trades are enabled, allow up to inventory size * max stack size iterations
         // Otherwise, only simulate a single trade
-        int maxIterations = unlimitedTrades ? virtualInv.getSize() * MAX_STACK_SIZE : 1;
+        int maxIterations = unlimitedTrades ? storage.size() * MAX_STACK_SIZE : 1;
 
         for (int i = 0; i < maxIterations; i++) {
             // Check if the virtual inventory has all required items
@@ -271,28 +271,40 @@ public class TradeUtils {
      *     <li>Shulker boxes in ender chest (if applicable)</li>
      * </ol>
      *
+     * <p><b>Important:</b> The method removes items based on the item's amount per trade multiplied by the number of trades.
+     * For example: If trading 1 ore per trade for 64 trades, this will remove 64 ore total.</p>
+     *
      * @param inventories the list of inventories to remove items from
      * @param requiredItems the list of items required for the trades
-     * @param trades the number of trades (affects total items to remove)
+     * @param trades the number of trades (not the number of item stacks, but actual trade operations)
      */
     private static void removeItemsFromInventories(@NotNull List<InventoryStorage> inventories,
                                                    @NotNull List<ItemStack> requiredItems,
                                                    int trades) {
         // Process each required item type
-        for (ItemStack item : requiredItems) {
-            int toRemove = trades; // Total amount to remove (total items = amount per trade × trades)
+        for (ItemStack requiredItem : requiredItems) {
+            // Calculate total items to remove: amount per trade × number of trades
+            int totalItemsToRemove = requiredItem.getAmount() * trades;
+            int itemsRemoved = 0;
 
             // Iterate through all inventories
             for (InventoryStorage storage : inventories) {
-                if (toRemove <= 0) break; // All items removed
+                if (itemsRemoved >= totalItemsToRemove) break; // All items removed
 
-                ItemStack clonedItem = item.clone();
                 Inventory inventory = storage.inventory();
+                ItemStack clonedItem = requiredItem.clone();
 
-                // Remove items from this specific inventory until we have removed enough or run out
-                while (toRemove > 0 && inventory.containsAtLeast(clonedItem, clonedItem.getAmount())) {
+                // Keep removing items until we've removed enough or inventory runs out
+                while (itemsRemoved < totalItemsToRemove && inventory.containsAtLeast(clonedItem, clonedItem.getAmount())) {
+                    // Set the amount to remove for this iteration
+                    int remainingToRemove = totalItemsToRemove - itemsRemoved;
+                    clonedItem.setAmount(Math.min(clonedItem.getAmount(), remainingToRemove));
+
                     inventory.removeItem(clonedItem);
-                    toRemove--;
+                    itemsRemoved += clonedItem.getAmount();
+
+                    // Reset amount for next iteration
+                    clonedItem.setAmount(requiredItem.getAmount());
                 }
 
                 // If this inventory is a shulker box, update its metadata
@@ -300,8 +312,9 @@ public class TradeUtils {
             }
 
             // Log warning if we couldn't remove all required items
-            if (toRemove > 0) {
-                Main.getMileLogger().warning("Not enough items to remove from the inventories");
+            if (itemsRemoved < totalItemsToRemove) {
+                Main.getMileLogger().warning("Not enough items to remove from the inventories. "
+                        + "Expected to remove: " + totalItemsToRemove + ", but only removed: " + itemsRemoved);
             }
         }
     }
@@ -309,7 +322,7 @@ public class TradeUtils {
     /**
      * Adds result items to player inventories.
      * Items are distributed across all available inventories in order until the specified number of trades is reached.
-     * If no more space is available in any inventory, the process stops.
+     * This method uses Bukkit's addItem() which handles stack merging and slot management automatically.
      *
      * <p>Addition order (same as removal):</p>
      * <ol>
@@ -318,6 +331,9 @@ public class TradeUtils {
      *     <li>Shulker boxes in main inventory (if applicable)</li>
      *     <li>Shulker boxes in ender chest (if applicable)</li>
      * </ol>
+     *
+     * <p><b>Important:</b> Bukkit's addItem() method handles stack consolidation automatically.
+     * We add items one by one and track successfully added items until we reach the trade count.</p>
      *
      * @param inventories the list of inventories to add items to
      * @param resultItem the item to add to the inventories
@@ -333,16 +349,20 @@ public class TradeUtils {
             if (given >= trades) break; // All items have been added
 
             Inventory inventory = storage.inventory();
-            int maxSlots = inventory.getSize();
 
-            // Attempt to add items to each slot in the inventory
-            for (int i = 0; i < maxSlots && given < trades; i++) {
-                Map<Integer, ItemStack> leftOver = inventory.addItem(resultItem.clone());
+            // Continue adding items until we reach the trade count or run out of space
+            while (given < trades) {
+                // Create a fresh clone for each addition
+                ItemStack itemToAdd = resultItem.clone();
+
+                // Bukkit's addItem() merges into existing stacks and creates new ones as needed
+                Map<Integer, ItemStack> leftOver = inventory.addItem(itemToAdd);
+
                 if (leftOver.isEmpty()) {
-                    // Successfully added the item
+                    // Successfully added the entire item
                     given++;
                 } else {
-                    // Inventory is full, move to next inventory
+                    // Item couldn't be added - inventory full or other constraint
                     break;
                 }
             }
@@ -417,14 +437,6 @@ public class TradeUtils {
                                                                       @NotNull TradeMode tradeMode) {
         List<InventoryStorage> inventories = new ArrayList<>();
 
-        // Always include the main inventory
-        inventories.add(new InventoryStorage(player.getInventory(), INVENTORY_SIZE));
-
-        // Add ender chest if trade mode allows it
-        if (tradeMode == TradeMode.ENDER_CHEST || tradeMode == TradeMode.END_SHULKER) {
-            inventories.add(new InventoryStorage(player.getEnderChest(), ENDER_CHEST_SIZE));
-        }
-
         // Add shulker boxes from main inventory if trade mode allows it
         if (tradeMode == TradeMode.SHULKER || tradeMode == TradeMode.END_SHULKER) {
             inventories.addAll(getShulkersFromInventory(player.getInventory()));
@@ -434,6 +446,14 @@ public class TradeUtils {
         if (tradeMode == TradeMode.END_SHULKER) {
             inventories.addAll(getShulkersFromInventory(player.getEnderChest()));
         }
+
+        // Add ender chest if trade mode allows it
+        if (tradeMode == TradeMode.ENDER_CHEST || tradeMode == TradeMode.END_SHULKER) {
+            inventories.add(new InventoryStorage(player.getEnderChest(), ENDER_CHEST_SIZE));
+        }
+
+        // Always include the main inventory
+        inventories.add(new InventoryStorage(player.getInventory(), INVENTORY_SIZE));
 
         return inventories;
     }
