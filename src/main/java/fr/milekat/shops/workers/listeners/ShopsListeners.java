@@ -4,7 +4,7 @@ import fr.milekat.milenpc.api.classes.NpcClickType;
 import fr.milekat.milenpc.api.events.PlayerNpcInteractEvent;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
-import fr.milekat.shops.workers.utils.ShopActions;
+import fr.milekat.shops.workers.utils.ShopUtils;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -26,7 +26,7 @@ public class ShopsListeners implements Listener {
         Shop shop = Main.getStorage().getCacheShop(event.getNpc().getUuid());
         if (shop == null) return;
         //  Open shop
-        ShopActions.openShop(event.getPlayer(), shop);
+        ShopUtils.openShop(event.getPlayer(), shop);
         event.setCancelled(true);
     }
 
@@ -41,7 +41,7 @@ public class ShopsListeners implements Listener {
             Shop shop = Main.getStorage().getCacheShop(event.getNpc().getUuid());
             if (shop == null) return;
             //  Open admin editor
-            ShopActions.openAdminShop(player, shop);
+            ShopUtils.openAdminShop(player, shop);
             event.setCancelled(true);
         }
     }

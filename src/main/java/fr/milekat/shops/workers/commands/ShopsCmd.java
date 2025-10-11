@@ -5,7 +5,7 @@ import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.ShopType;
 import fr.milekat.shops.workers.utils.NPCUtils;
-import fr.milekat.shops.workers.utils.ShopActions;
+import fr.milekat.shops.workers.utils.ShopUtils;
 import fr.milekat.utils.McTools;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import org.bukkit.command.Command;
@@ -71,7 +71,7 @@ public class ShopsCmd implements TabExecutor {
                         Main.message(player, "&cShop not found.");
                         return true;
                     }
-                    ShopActions.openShop(player, shop);
+                    ShopUtils.openShop(player, shop);
 
                 } catch (StorageExecuteException e) {
                     Main.message(player, "&cStorage error");
@@ -88,7 +88,7 @@ public class ShopsCmd implements TabExecutor {
                         Main.message(player, "&cShop not found.");
                         return true;
                     }
-                    ShopActions.openAdminShop(player, shop);
+                    ShopUtils.openAdminShop(player, shop);
                 } catch (StorageExecuteException e) {
                     Main.message(player, "&cStorage error");
                 }

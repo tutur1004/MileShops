@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 
 @SuppressWarnings("unused")
-public class ShopActions {
+public class ShopUtils {
 
     public static void openShop(@NotNull Player player, @NotNull Shop shop) throws StorageExecuteException {
         if (shop.getType().isShaped()) {

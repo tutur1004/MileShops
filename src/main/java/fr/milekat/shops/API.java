@@ -5,7 +5,7 @@ import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.exceptions.StorageException;
 import fr.milekat.shops.workers.listeners.LogTrade;
-import fr.milekat.shops.workers.utils.ShopActions;
+import fr.milekat.shops.workers.utils.ShopUtils;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -58,7 +58,7 @@ public class API implements MileShopsIAPI {
         Player player = Main.getInstance().getServer().getPlayer(uuid);
         if (player != null) {
             try {
-                ShopActions.openShop(player, shop);
+                ShopUtils.openShop(player, shop);
                 return true;
             } catch (Exception e) {
                 if (isDebug()) Main.getMileLogger().stack(e.getStackTrace());
@@ -72,7 +72,7 @@ public class API implements MileShopsIAPI {
         Player player = Main.getInstance().getServer().getPlayer(uuid);
         if (player != null) {
             try {
-                ShopActions.openAdminShop(player, shop);
+                ShopUtils.openAdminShop(player, shop);
                 return true;
             } catch (Exception e) {
                 if (isDebug()) Main.getMileLogger().stack(e.getStackTrace());
