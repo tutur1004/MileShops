@@ -31,6 +31,16 @@ storage:
     # Cache time in seconds (Recommended 300s = 5min)
     time: 300
 
+# Shop settings
+settings:
+  # Default trade mode for players when they open a shop
+    # Available modes:
+    #   inventory           |=>  Trade items only from player inventory
+    #   ender|ender_chest   |=>  Trade items from player inventory and EnderChest
+    #   shulker             |=>  Trade items from player inventory and Shulkers
+    #   end-shulker         |=>  Trade items from player inventory, EnderChest and Shulkers
+  default-trade-mode: "inventory"
+
 # Messages
 messages:
   prefix: "&6[MileShops] "

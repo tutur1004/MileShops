@@ -31,6 +31,17 @@ public class TradeUtils {
         return found;
     }
 
+    public static TradeMode getDefaultTradeMode() {
+        String mode = Main.getConfigs().getString("settings.default-trade-mode", "INVENTORY").toUpperCase();
+        try {
+            return TradeMode.valueOf(mode);
+        } catch (IllegalArgumentException e) {
+            Main.getMileLogger().warning("Invalid default trade mode in config '"
+                    + mode + "' Using INVENTORY instead.");
+            return TradeMode.INVENTORY;
+        }
+    }
+
     /**
      * Method to replace all trade placeholders
      *

@@ -62,7 +62,7 @@ public class InventoryShop extends FastInv {
         try {
             this.tradeMode = Main.getStorage().getCacheTradeMode(player.getUniqueId());
         } catch (Exception ignore) {
-            this.tradeMode = TradeMode.INVENTORY;
+            this.tradeMode = TradeUtils.getDefaultTradeMode();
         }
         //  Get trades for this shop
         List<Trade> trades = Main.getStorage().getCacheTrades(shop.getUuid());
