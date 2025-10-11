@@ -26,6 +26,7 @@ import fr.milekat.utils.storage.exceptions.StorageLoadException;
 import fr.mrmicky.fastinv.FastInvManager;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
@@ -45,6 +46,7 @@ public class Main extends JavaPlugin {
     private static Configs config;
     public static Boolean DEBUG = false;
     public static String PREFIX;
+    public static boolean IS_NPC_LIB_LOADED = false;
     private static StorageImplementation STORAGE;
     public static final Map<String, Class<?>> TAGS = new HashMap<>();
     public static final Map<UUID, Map<String, Object>> PLAYER_TAGS = new HashMap<>();
@@ -63,6 +65,10 @@ public class Main extends JavaPlugin {
     public void onEnable() {
         plugin = this;
         logger = new MileLogger(this.getLogger());
+        IS_NPC_LIB_LOADED = Bukkit.getPluginManager().getPlugin("MileNPC") != null;
+        if (IS_NPC_LIB_LOADED) {
+            logger.info("MileNPC detected, hooking into it..");
+        }
         //  Load configs
         try {
             reloadConfigs();
@@ -81,15 +87,6 @@ public class Main extends JavaPlugin {
             logger.warning("Error: " + exception.getLocalizedMessage());
             logger.stack(exception.getStackTrace());
             logger.warning("Storage load failed, disabling plugin..");
-            this.onDisable();
-            return;
-        }
-        //  Ensure NPC API is loaded
-        try {
-            MileNpcAPI.getAPI().isDebug();
-        } catch (ApiUnavailable exception) {
-            logger.warning("Error: " + exception.getLocalizedMessage());
-            logger.warning("NPC API is not loaded, disabling plugin..");
             this.onDisable();
             return;
         }

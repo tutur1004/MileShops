@@ -38,7 +38,7 @@ allprojects {
         compileOnly 'io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT'
 
         //  Milekat
-        compileOnly group: 'fr.milekat', name: 'npc-api', version: '1.0.0-SNAPSHOT'
+        compileOnly group: 'fr.milekat', name: 'mile-npc-api', version: '1.0.0'
     }
 
     processResources {

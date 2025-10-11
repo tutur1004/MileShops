@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public class NPCUtils {
     public static @NotNull NPC create(UUID uuid, String name, Location location) {
+        if (!Main.IS_NPC_LIB_LOADED) return new NPC(uuid, name);
         NPC npc = Main.getNpcManager().create(uuid, name);
         npc.teleport(location);
         npc.show();
@@ -16,6 +17,7 @@ public class NPCUtils {
     }
 
     public static void teleport(@NotNull UUID uuid, Location location) {
+        if (!Main.IS_NPC_LIB_LOADED) return;
         NPC npc = Main.getNpc(uuid);
         if (npc != null) {
             npc.teleport(location);
@@ -23,6 +25,7 @@ public class NPCUtils {
     }
 
     public static void updateSkin(@NotNull UUID uuid, String texture, String signature) {
+        if (!Main.IS_NPC_LIB_LOADED) return;
         NPC npc = Main.getNpc(uuid);
         if (npc != null) {
             npc.updateSkin(texture, signature);
@@ -30,6 +33,7 @@ public class NPCUtils {
     }
 
     public static void ensureVisible(@NotNull UUID uuid) {
+        if (!Main.IS_NPC_LIB_LOADED) return;
         NPC npc = Main.getNpc(uuid);
         if (npc != null) {
             npc.show();
@@ -37,6 +41,7 @@ public class NPCUtils {
     }
 
     public static void ensureInvisible(@NotNull UUID uuid) {
+        if (!Main.IS_NPC_LIB_LOADED) return;
         NPC npc = Main.getNpc(uuid);
         if (npc != null) {
             npc.hide();
@@ -44,6 +49,7 @@ public class NPCUtils {
     }
 
     public static void destroy(@NotNull UUID uuid) {
+        if (!Main.IS_NPC_LIB_LOADED) return;
         NPC npc = Main.getNpc(uuid);
         if (npc != null) {
             npc.remove();
