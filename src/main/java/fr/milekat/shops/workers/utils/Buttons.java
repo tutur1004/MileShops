@@ -24,15 +24,25 @@ public enum Buttons {
 
     //  ChestShop
     HEAD_LEFT(new ItemBuilder(HeadsUtils.ARROW_LEFT.getItem().clone()).name(" ").build()),
-    MODE_CHEST(new ItemBuilder(Material.CHEST)
-            .name(Main.getConfigs().getMessage("messages.gui.chest-shop.buttons.mode-chest.title",
-                    "Mode chest"))
-            .addLore(Main.getConfigs().getMessages("messages.gui.chest-shop.buttons.mode-chest.lore"))
+    MODE_INVENTORY(new ItemBuilder(Material.CHEST)
+            .name(Main.getConfigs().getMessage("messages.gui.chest-shop.buttons.mode-inventory.title",
+                    "Mode Inventory"))
+            .addLore(Main.getConfigs().getMessages("messages.gui.chest-shop.buttons.mode-inventory.lore"))
+            .build()),
+    MODE_ENDER_CHEST(new ItemBuilder(Material.ENDER_CHEST)
+            .name(Main.getConfigs().getMessage("messages.gui.chest-shop.buttons.mode-ender.title",
+                    "Mode EnderChest"))
+            .addLore(Main.getConfigs().getMessages("messages.gui.chest-shop.buttons.mode-ender.lore"))
             .build()),
     MODE_SHULKER(new ItemBuilder(Material.SHULKER_BOX)
             .name(Main.getConfigs().getMessage("messages.gui.chest-shop.buttons.mode-shulker.title",
-                    "Mode chest"))
+                    "Mode Shulker"))
             .addLore(Main.getConfigs().getMessages("messages.gui.chest-shop.buttons.mode-shulker.lore"))
+            .build()),
+    MODE_END_SHULKER(new ItemBuilder(Material.NETHER_STAR)
+            .name(Main.getConfigs().getMessage("messages.gui.chest-shop.buttons.mode-end-end-shulker.title",
+                    "God mode"))
+            .addLore(Main.getConfigs().getMessages("messages.gui.chest-shop.buttons.mode-end-shulker.lore"))
             .build()),
 
     //  Panes

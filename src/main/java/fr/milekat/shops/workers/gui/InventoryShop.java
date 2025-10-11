@@ -129,18 +129,39 @@ public class InventoryShop extends FastInv {
     }
 
     private void updateTradeModeButton() {
-        if (tradeMode.equals(TradeMode.INVENTORY)) {
-            setItem(this.inventoryModeSlot, Buttons.MODE_CHEST.get(), event -> {
-                tradeMode = TradeMode.SHULKER;
-                Main.getStorage().asyncSaveTradeMode(player.getUniqueId(), tradeMode);
-                updateTradeModeButton();
-            });
-        } else if (tradeMode.equals(TradeMode.SHULKER)) {
-            setItem(this.inventoryModeSlot, Buttons.MODE_SHULKER.get(), event -> {
-                tradeMode = TradeMode.INVENTORY;
-                Main.getStorage().asyncSaveTradeMode(player.getUniqueId(), tradeMode);
-                updateTradeModeButton();
-            });
+        switch (tradeMode) {
+            case INVENTORY -> setItem(this.inventoryModeSlot, Buttons.MODE_INVENTORY.get(),
+                    event -> {
+                        tradeMode = TradeMode.ENDER_CHEST;
+                        try {
+                            Main.getStorage().asyncSaveTradeMode(player.getUniqueId(), tradeMode);
+                        } catch (Exception ignore) {}
+                        updateTradeModeButton();
+                    });
+            case ENDER_CHEST -> setItem(this.inventoryModeSlot, Buttons.MODE_ENDER_CHEST.get(),
+                    event -> {
+                        tradeMode = TradeMode.SHULKER;
+                        try {
+                            Main.getStorage().asyncSaveTradeMode(player.getUniqueId(), tradeMode);
+                        } catch (Exception ignore) {}
+                        updateTradeModeButton();
+                    });
+            case SHULKER -> setItem(this.inventoryModeSlot, Buttons.MODE_SHULKER.get(),
+                    event -> {
+                        tradeMode = TradeMode.END_SHULKER;
+                        try {
+                            Main.getStorage().asyncSaveTradeMode(player.getUniqueId(), tradeMode);
+                        } catch (Exception ignore) {}
+                        updateTradeModeButton();
+                    });
+            case END_SHULKER -> setItem(this.inventoryModeSlot, Buttons.MODE_END_SHULKER.get(),
+                    event -> {
+                        tradeMode = TradeMode.INVENTORY;
+                        try {
+                            Main.getStorage().asyncSaveTradeMode(player.getUniqueId(), tradeMode);
+                        } catch (Exception ignore) {}
+                        updateTradeModeButton();
+                    });
         }
     }
 
