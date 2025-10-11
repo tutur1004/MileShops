@@ -66,21 +66,28 @@ public class TradeUtils {
      * @param requiredItems   the list of items required for the trade
      * @param resultItem      the item that will be given to the player
      * @param unlimitedTrades if it needs to check for unlimited trades
-     * @param shulkerMode     if it needs to check for shulker boxes
+     * @param tradeMode       the trade mode to use
      * @return the maximum amount of trades that can be done
      */
     public static int maxDoAbleTrades(@NotNull Player player,
                                       @NotNull List<ItemStack> requiredItems,
                                       @NotNull ItemStack resultItem,
                                       boolean unlimitedTrades,
-                                      boolean shulkerMode) {
+                                      TradeMode tradeMode) {
         //  List of all inventories to check
         List<InventoryStorage> inventories = new ArrayList<>();
         inventories.add(new InventoryStorage(player.getInventory()));
-        if (shulkerMode) {
-            //  Add shulkers from player inventory and ender chest to the list
+        if (tradeMode == TradeMode.ENDER_CHEST || tradeMode == TradeMode.END_SHULKER) {
+            //  Add ender chest to the list
+            inventories.add(new InventoryStorage(player.getEnderChest()));
+        }
+        if (tradeMode == TradeMode.SHULKER || tradeMode == TradeMode.END_SHULKER) {
+            //  Add shulkers from player inventory
             inventories.addAll(getShulkersFromInventory(player.getInventory()));
-//            inventories.addAll(getShulkersFromInventory(player.getEnderChest()));
+        }
+        if (tradeMode == TradeMode.END_SHULKER) {
+            //  Add shulkers from ender chest
+            inventories.addAll(getShulkersFromInventory(player.getEnderChest()));
         }
 
         List<Inventory> virtualInventories = new ArrayList<>();
@@ -123,26 +130,28 @@ public class TradeUtils {
      * @param requiredItems the list of items required for the trade
      * @param resultItem    the item that will be given to the player
      * @param trades        the amount of trades to do
-     * @param shulkerMode   if it needs to include player's shulker boxes
+     * @param tradeMode     the trade mode to use
      */
     public static void executeTrade(@NotNull Player player,
                                     @NotNull List<ItemStack> requiredItems,
                                     @NotNull ItemStack resultItem,
                                     int trades,
-                                    boolean shulkerMode) {
+                                    TradeMode tradeMode) {
         //  List of all inventories to proceed
         List<InventoryStorage> inventories = new ArrayList<>();
         inventories.add(new InventoryStorage(player.getInventory()));
-        if (shulkerMode) {
-            //  Add shulkers from player inventory and ender chest to the list
-            inventories.addAll(getShulkersFromInventory(player.getInventory()));
-//            inventories.addAll(getShulkersFromInventory(player.getEnderChest()));
+        if (tradeMode == TradeMode.ENDER_CHEST || tradeMode == TradeMode.END_SHULKER) {
+            //  Add ender chest to the list
+            inventories.add(new InventoryStorage(player.getEnderChest()));
         }
-
-        //  List all items to remove and add by stacks (Performances improvement)
-//        List<ItemStack> requestItemsToRemove = new ArrayList<>();
-//        requiredItems.forEach(item -> requestItemsToRemove.addAll(getAllByStacks(item, trades)));
-        List<ItemStack> resultItemsToAdd = getAllByStacks(resultItem, trades);
+        if (tradeMode == TradeMode.SHULKER || tradeMode == TradeMode.END_SHULKER) {
+            //  Add shulkers from player inventory
+            inventories.addAll(getShulkersFromInventory(player.getInventory()));
+        }
+        if (tradeMode == TradeMode.END_SHULKER) {
+            //  Add shulkers from ender chest
+            inventories.addAll(getShulkersFromInventory(player.getEnderChest()));
+        }
 
         //  Remove all required items from the inventories
         for (ItemStack item : requiredItems) {
