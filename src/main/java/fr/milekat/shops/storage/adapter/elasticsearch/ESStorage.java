@@ -18,6 +18,7 @@ import fr.milekat.shops.storage.StorageImplementation;
 import fr.milekat.shops.storage.utils.PlayerTradeMode;
 import fr.milekat.shops.storage.utils.ShopTrades;
 import fr.milekat.shops.workers.utils.TradeMode;
+import fr.milekat.shops.workers.utils.TradeUtils;
 import fr.milekat.utils.Configs;
 import fr.milekat.utils.DateMileKat;
 import fr.milekat.utils.storage.adapter.elasticsearch.connection.ESConnection;
@@ -412,7 +413,7 @@ public class ESStorage implements StorageImplementation {
 
     @NotNull
     private static TradeMode getTradeMode(@NotNull SearchResponse<PlayerTradeMode> searchResponse) {
-        TradeMode tradeMode = TradeMode.INVENTORY;
+        TradeMode tradeMode = TradeUtils.getDefaultTradeMode();
         if (!searchResponse.hits().hits().isEmpty() && searchResponse.hits().hits().getFirst().source() != null) {
             PlayerTradeMode playerTradeMode = searchResponse.hits().hits().getFirst().source();
             if (playerTradeMode != null) {
@@ -420,7 +421,7 @@ public class ESStorage implements StorageImplementation {
             }
         }
         if (tradeMode == null) {
-            tradeMode = TradeMode.INVENTORY;
+            tradeMode = TradeUtils.getDefaultTradeMode();
         }
         return tradeMode;
     }

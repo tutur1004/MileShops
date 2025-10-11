@@ -34,12 +34,12 @@ storage:
 # Shop settings
 settings:
   # Default trade mode for players when they open a shop
-    # Available modes:
-    #   inventory           |=>  Trade items only from player inventory
-    #   ender|ender_chest   |=>  Trade items from player inventory and EnderChest
-    #   shulker             |=>  Trade items from player inventory and Shulkers
-    #   end-shulker         |=>  Trade items from player inventory, EnderChest and Shulkers
-  default-trade-mode: "inventory"
+  # Available modes:
+  #   INVENTORY           |=>  Trade items only from player inventory
+  #   ENDER_CHEST         |=>  Trade items from player inventory and EnderChest
+  #   SHULKER             |=>  Trade items from player inventory and Shulkers
+  #   END_SHULKER         |=>  Trade items from player inventory, EnderChest and Shulkers
+  default-trade-mode: "INVENTORY"
 
 # Messages
 messages:
