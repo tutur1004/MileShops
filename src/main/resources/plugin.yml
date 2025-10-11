@@ -2,7 +2,7 @@ name: MileShops
 author: MileKat
 main: fr.milekat.shops.Main
 version: ${pluginVersion}
-api-version: '1.20'
+api-version: '1.21'
 description: "API/Plugin to create trading shops"
 website: https://github.com/tutur1004/MileShops
 depend:
