@@ -359,56 +359,54 @@ public class ESStorage implements StorageImplementation {
     }
 
     @Override
-    public void asyncSaveTradeMode(@NotNull UUID playerUuid, @NotNull TradeMode mode) {
-        Bukkit.getScheduler().runTaskAsynchronously(Main.getInstance(), () -> {
-            try (ElasticsearchClient esClient = connection.getEsClient(getMapper())) {
-                PlayerTradeMode playerMode = new PlayerTradeMode(playerUuid, mode);
-                Main.getMileLogger().debug("[ES-aSync] asyncSaveTradeMode - search users-mode");
+    public void saveTradeMode(@NotNull UUID playerUuid, @NotNull TradeMode mode) {
+        try (ElasticsearchClient esClient = connection.getEsClient(getMapper())) {
+            PlayerTradeMode playerMode = new PlayerTradeMode(playerUuid, mode);
+            Main.getMileLogger().debug("[ES-aSync] saveTradeMode - search users-mode");
+            try {
+                SearchResponse<PlayerTradeMode> searchResponse = esClient.search(
+                        new SearchRequest.Builder()
+                                .index(INDEX_USERS_MODES)
+                                .query(q -> q.term(t -> t
+                                        .field("playerUuid.keyword")
+                                        .value(playerUuid.toString())
+                                ))
+                                .size(1)
+                                .build(),
+                        PlayerTradeMode.class
+                );
+                int results = searchResponse.hits().hits().size();
                 try {
-                    SearchResponse<PlayerTradeMode> searchResponse = esClient.search(
-                            new SearchRequest.Builder()
-                                    .index(INDEX_USERS_MODES)
-                                    .query(q -> q.term(t -> t
-                                            .field("playerUuid.keyword")
-                                            .value(playerUuid.toString())
-                                    ))
-                                    .size(1)
-                                    .build(),
-                            PlayerTradeMode.class
-                    );
-                    int results = searchResponse.hits().hits().size();
-                    try {
-                        if (results == 0) {
-                            Main.getMileLogger().debug("[ES-aSync] asyncSaveTradeMode - index users-mode");
+                    if (results == 0) {
+                        Main.getMileLogger().debug("[ES-aSync] saveTradeMode - index users-mode");
 
-                            esClient.index(c -> c
-                                    .index(INDEX_USERS_MODES)
-                                    .document(playerMode)
-                            );
-                        } else {
-                            Main.getMileLogger().debug("[ES-aSync] asyncSaveTradeMode - update users-mode");
-                            esClient.update(u -> u
-                                            .index(INDEX_USERS_MODES)
-                                            .id(searchResponse.hits().hits().getFirst().id())
-                                            .doc(playerMode)
-                                            .docAsUpsert(true),
-                                    PlayerTradeMode.class
-                            );
-                        }
-                        CacheManager.addCache(Main.TRADE_MODE_CACHE, playerMode);
-                    } catch (ElasticsearchException | IOException exception) {
-                        Main.getMileLogger().warning("Error while saving TradeMode for " + playerUuid);
-                        Main.getMileLogger().stack(exception.getStackTrace());
+                        esClient.index(c -> c
+                                .index(INDEX_USERS_MODES)
+                                .document(playerMode)
+                        );
+                    } else {
+                        Main.getMileLogger().debug("[ES-aSync] saveTradeMode - update users-mode");
+                        esClient.update(u -> u
+                                        .index(INDEX_USERS_MODES)
+                                        .id(searchResponse.hits().hits().getFirst().id())
+                                        .doc(playerMode)
+                                        .docAsUpsert(true),
+                                PlayerTradeMode.class
+                        );
                     }
+                    CacheManager.addCache(Main.TRADE_MODE_CACHE, playerMode);
                 } catch (ElasticsearchException | IOException exception) {
-                    Main.getMileLogger().warning("Error while searching TradeMode for " + playerUuid);
+                    Main.getMileLogger().warning("Error while saving TradeMode for " + playerUuid);
                     Main.getMileLogger().stack(exception.getStackTrace());
                 }
-            } catch (IOException exception) {
-                Main.getMileLogger().warning("Error while trying to connect to ElasticSearch.");
+            } catch (ElasticsearchException | IOException exception) {
+                Main.getMileLogger().warning("Error while searching TradeMode for " + playerUuid);
                 Main.getMileLogger().stack(exception.getStackTrace());
             }
-        });
+        } catch (IOException exception) {
+            Main.getMileLogger().warning("Error while trying to connect to ElasticSearch.");
+            Main.getMileLogger().stack(exception.getStackTrace());
+        }
     }
 
     @NotNull

@@ -66,7 +66,7 @@ public interface StorageImplementation extends CacheManager {
     /*
         TradeMode
      */
-    void asyncSaveTradeMode(@NotNull UUID playerUuid, @NotNull TradeMode mode);
+    void saveTradeMode(@NotNull UUID playerUuid, @NotNull TradeMode mode);
 
     TradeMode getTradeMode(@NotNull UUID playerUuid) throws StorageExecuteException;
 

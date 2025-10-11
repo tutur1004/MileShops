@@ -162,7 +162,7 @@ public class SQLStorage implements StorageImplementation {
     }
 
     @Override
-    public void asyncSaveTradeMode(@NotNull UUID playerUuid, @NotNull TradeMode mode) {
+    public void saveTradeMode(@NotNull UUID playerUuid, @NotNull TradeMode mode) {
 
     }
 

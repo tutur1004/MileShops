@@ -134,7 +134,7 @@ public class InventoryShop extends FastInv {
                     event -> {
                         tradeMode = TradeMode.ENDER_CHEST;
                         try {
-                            Main.getStorage().asyncSaveTradeMode(player.getUniqueId(), tradeMode);
+                            Main.getStorage().saveTradeMode(player.getUniqueId(), tradeMode);
                         } catch (Exception ignore) {}
                         updateTradeModeButton();
                     });
@@ -142,7 +142,7 @@ public class InventoryShop extends FastInv {
                     event -> {
                         tradeMode = TradeMode.SHULKER;
                         try {
-                            Main.getStorage().asyncSaveTradeMode(player.getUniqueId(), tradeMode);
+                            Main.getStorage().saveTradeMode(player.getUniqueId(), tradeMode);
                         } catch (Exception ignore) {}
                         updateTradeModeButton();
                     });
@@ -150,7 +150,7 @@ public class InventoryShop extends FastInv {
                     event -> {
                         tradeMode = TradeMode.END_SHULKER;
                         try {
-                            Main.getStorage().asyncSaveTradeMode(player.getUniqueId(), tradeMode);
+                            Main.getStorage().saveTradeMode(player.getUniqueId(), tradeMode);
                         } catch (Exception ignore) {}
                         updateTradeModeButton();
                     });
@@ -158,7 +158,7 @@ public class InventoryShop extends FastInv {
                     event -> {
                         tradeMode = TradeMode.INVENTORY;
                         try {
-                            Main.getStorage().asyncSaveTradeMode(player.getUniqueId(), tradeMode);
+                            Main.getStorage().saveTradeMode(player.getUniqueId(), tradeMode);
                         } catch (Exception ignore) {}
                         updateTradeModeButton();
                     });
