@@ -141,86 +141,84 @@ public class TradeUtils {
                                       TradeMode tradeMode) {
         List<InventoryStorage> inventories = buildInventoryList(player, tradeMode);
 
-        int doAbleTrade = 0;
+        int maxTrades = 1;
+        if (unlimitedTrades) {
+            for (InventoryStorage storage : inventories) {
+                maxTrades += storage.size() * MAX_STACK_SIZE;
+            }
+        }
+
+        return calculateMaxTrades(inventories, requiredItems, resultItem, maxTrades);
+    }
+
+    /**
+    * Calculates the maximum number of possible trades by simulating real exchanges.
+    * This method creates virtual copies of all inventories and progressively performs
+    * trades (removing requiredItems and adding the resultItem) until no further trade can be made.
+    *
+    * @param inventories list of all available inventories
+    * @param requiredItems items required per trade
+    * @param resultItem item given per trade
+    * @param maxTrades upper limit (for single trade mode)
+    * @return maximum number of possible trades
+    */
+    private static int calculateMaxTrades(@NotNull List<InventoryStorage> inventories,
+                                          @NotNull List<ItemStack> requiredItems,
+                                          @NotNull ItemStack resultItem,
+                                          int maxTrades) {
+        List<Inventory> virtualStorages = new ArrayList<>();
         for (InventoryStorage storage : inventories) {
-            int traded = simulateTrades(storage, requiredItems, resultItem, unlimitedTrades);
-            doAbleTrade += traded;
-
-            // If unlimited trades is disabled, stop after the first inventory has contributed
-            if (!unlimitedTrades && doAbleTrade > 0) break;
+            virtualStorages.add(createVirtualInventory(storage));
         }
-        return doAbleTrade;
-    }
 
-    /**
-     * Simulates trades in a virtual copy of the given inventory storage.
-     * This method does not modify the actual inventory; instead, it creates a virtual inventory
-     * and performs repeated trade simulations to determine the maximum possible trades.
-     *
-     * <p>The simulation process:</p>
-     * <ol>
-     *     <li>Creates a virtual inventory copy</li>
-     *     <li>Checks if required items are available</li>
-     *     <li>Removes required items from the virtual inventory</li>
-     *     <li>Attempts to add result items</li>
-     *     <li>Repeats until items are insufficient or inventory is full</li>
-     * </ol>
-     *
-     * @param storage the inventory storage to simulate trades in
-     * @param requiredItems the list of items required per trade
-     * @param resultItem the item given as a result per trade
-     * @param unlimitedTrades if true, simulate as many trades as possible; if false, simulate only one trade
-     * @return the number of trades that can be performed in this inventory
-     */
-    private static int simulateTrades(@NotNull InventoryStorage storage,
-                                      @NotNull List<ItemStack> requiredItems,
-                                      @NotNull ItemStack resultItem,
-                                      boolean unlimitedTrades) {
-        Inventory virtualInv = createVirtualInventory(storage);
-        int traded = 0;
+        int totalDoAbleTrades = 0;
 
-        // If unlimited trades are enabled, allow up to inventory size * max stack size iterations
-        // Otherwise, only simulate a single trade
-        int maxIterations = unlimitedTrades ? storage.size() * MAX_STACK_SIZE : 1;
-
-        for (int i = 0; i < maxIterations; i++) {
-            // Check if the virtual inventory has all required items
-            if (!hasAllItems(virtualInv, requiredItems)) {
+        // Loop until we reach the maximum trades or can no longer trade
+        while (totalDoAbleTrades < maxTrades) {
+            // Phase 1 : Check and remove all requiredItems
+            List<ItemStack> itemsToRemove = new ArrayList<>();
+            for (ItemStack required : requiredItems) {
+                ItemStack toRemove = required.clone();
+                itemsToRemove.add(toRemove);
+            }
+            boolean canRemoveAll = true;
+            for (ItemStack itemToRemove : itemsToRemove) {
+                boolean found = false;
+                for (Inventory vInv : virtualStorages) {
+                    if (vInv.containsAtLeast(itemToRemove, itemToRemove.getAmount())) {
+                        vInv.removeItem(itemToRemove.clone());
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    canRemoveAll = false;
+                    break;
+                }
+            }
+            if (!canRemoveAll) {
+                // Cannot remove all required items, stop trading
                 break;
             }
 
-            // Remove all required items from the virtual inventory
-            requiredItems.forEach(virtualInv::removeItem);
-
-            // Attempt to add the result item to the virtual inventory
-            Map<Integer, ItemStack> leftOver = virtualInv.addItem(resultItem.clone());
-            if (leftOver.isEmpty()) {
-                // Trade successful - increment counter
-                traded++;
-            } else {
-                // Not enough space for result item - stop simulation
+            // Phase 2 : Add the resultItem
+            ItemStack toAdd = resultItem.clone();
+            boolean added = false;
+            for (Inventory vInv : virtualStorages) {
+                Map<Integer, ItemStack> leftover = vInv.addItem(toAdd.clone());
+                if (leftover.isEmpty()) {
+                    added = true;
+                    totalDoAbleTrades++;
+                    break;
+                }
+            }
+            if (!added) {
+                // All inventories are full, cannot add the result item, stop trading
                 break;
             }
         }
 
-        return traded;
-    }
-
-    /**
-     * Checks if the inventory contains at least one of each required item (with their respective amounts).
-     * This is a helper method used for verifying trade prerequisites.
-     *
-     * @param inventory the inventory to check
-     * @param requiredItems the list of required items with their amounts
-     * @return true if the inventory contains all required items, false otherwise
-     */
-    private static boolean hasAllItems(@NotNull Inventory inventory, @NotNull List<ItemStack> requiredItems) {
-        for (ItemStack item : requiredItems) {
-            if (!inventory.containsAtLeast(item, item.getAmount())) {
-                return false;
-            }
-        }
-        return true;
+        return totalDoAbleTrades;
     }
 
     /**
@@ -270,9 +268,6 @@ public class TradeUtils {
      *     <li>Shulker boxes in main inventory (if applicable)</li>
      *     <li>Shulker boxes in ender chest (if applicable)</li>
      * </ol>
-     *
-     * <p><b>Important:</b> The method removes items based on the item's amount per trade multiplied by the number of trades.
-     * For example: If trading 1 ore per trade for 64 trades, this will remove 64 ore total.</p>
      *
      * @param inventories the list of inventories to remove items from
      * @param requiredItems the list of items required for the trades
