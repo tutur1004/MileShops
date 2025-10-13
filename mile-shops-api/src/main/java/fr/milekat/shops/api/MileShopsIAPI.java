@@ -63,12 +63,18 @@ public interface MileShopsIAPI {
      * Opens the shop interface for the player identified by UUID.
      *
      * @param uuid The UUID of the player.
+     * @param shop The shop to open.
+     *
+     * @return true if the shop was successfully opened, false otherwise.
      */
     boolean openShop(@NotNull UUID uuid, @NotNull Shop shop);
     /**
      * Opens the admin shop interface for the player identified by UUID.
      *
      * @param uuid The UUID of the player.
+     * @param shop The shop to open in admin mode.
+     *
+     * @return true if the admin shop was successfully opened, false otherwise.
      */
     boolean openAdminShop(@NotNull UUID uuid, @NotNull Shop shop);
 
