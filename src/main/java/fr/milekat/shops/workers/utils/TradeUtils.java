@@ -407,6 +407,7 @@ public class TradeUtils {
      * @param storage the inventory storage to create a virtual copy of
      * @return a new virtual Inventory with the same contents as the storage
      */
+    @SuppressWarnings("deprecation")
     private static @NotNull Inventory createVirtualInventory(@NotNull InventoryStorage storage) {
         Inventory virtualInventory = Bukkit.createInventory(
                 null,

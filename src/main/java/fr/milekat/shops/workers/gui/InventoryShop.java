@@ -259,6 +259,7 @@ public class InventoryShop extends FastInv {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     protected void onClose(InventoryCloseEvent event) {
         super.onClose(event);
         if (!player.hasPermission("shops.admin")) return;
