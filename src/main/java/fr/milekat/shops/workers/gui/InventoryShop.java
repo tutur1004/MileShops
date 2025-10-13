@@ -43,6 +43,7 @@ public class InventoryShop extends FastInv {
     private final Map<Trade, Integer> tradeCompleted = new HashMap<>();
     private TradeMode tradeMode;
     private int currentPage = 1;
+    private boolean isProcessingTrade = false;
 
     public InventoryShop(@NotNull InventoryShopShape inventoryShopShape, @NotNull Shop shop, @NotNull Player player)
             throws StorageExecuteException {
@@ -196,6 +197,13 @@ public class InventoryShop extends FastInv {
     }
 
     private void requestTrade(@NotNull Trade trade, @NotNull ClickType click) {
+        //  Check if a trade is already being processed
+        if (isProcessingTrade) {
+            Main.message(player, Main.getConfigs().getMessage("messages.gui.chest-shop.messages.trade-processing",
+                    "&cA trade is already being processed, please wait..."));
+            return;
+        }
+
         int processedTrades = processedTrades(trade, click.isShiftClick());
         if (processedTrades > 0) {
             tradeCompleted.put(trade, tradeCompleted.getOrDefault(trade, 0) + processedTrades);
@@ -203,59 +211,67 @@ public class InventoryShop extends FastInv {
     }
 
     private int processedTrades(@NotNull Trade trade, boolean fullInventories) {
-        //  Set the trade items
-        List<ItemStack> tradeItems = new LinkedList<>();
-        tradeItems.add(trade.getFirstItem().clone());
-        if (trade.getSecondItem() != null) {
-            tradeItems.add(trade.getSecondItem().clone());
-        }
+        //  Lock the trade processing
+        isProcessingTrade = true;
 
-        //  Calculate the max doable trades
-        int maxDoAbleTrades = TradeUtils.maxDoAbleTrades(this.player, tradeItems,
-                trade.getResultItem().clone(), fullInventories, tradeMode);
+        try {
+            //  Set the trade items
+            List<ItemStack> tradeItems = new LinkedList<>();
+            tradeItems.add(trade.getFirstItem().clone());
+            if (trade.getSecondItem() != null) {
+                tradeItems.add(trade.getSecondItem().clone());
+            }
 
-        //  If no trades can be done, return 0
-        if (maxDoAbleTrades <= 0) {
-            Main.message(player, Main.getConfigs().getMessage("messages.gui.chest-shop.messages.no-trade",
-                    "&cYou don't have the required items to trade, or your inventory is full"));
-            return 0;
-        }
+            //  Calculate the max doable trades
+            int maxDoAbleTrades = TradeUtils.maxDoAbleTrades(this.player, tradeItems,
+                    trade.getResultItem().clone(), fullInventories, tradeMode);
 
-        //  Trade usage limitation
-        if (trade.isUsageLimited()) {
-            try {
-                Map<String, Object> playerTags = MileShopsAPI.getAPI().getPlayerTags(player.getUniqueId());
-                if (playerTags != null && !playerTags.isEmpty()) {
-                    Map<String, Object> playerTradeTags = new HashMap<>();
-                    trade.getMaxTradeTagsNames().stream()
-                            .filter(playerTags::containsKey)
-                            .forEach(tag -> playerTradeTags.put(tag, playerTags.get(tag)));
-                    if (!playerTradeTags.isEmpty()) {
-                        int tradeUses = Main.getStorage().getTradeUses(playerTradeTags, trade);
-                        int maxDoAllowedTrades = trade.getMaxTradeUse() - tradeUses;
-                        if (maxDoAllowedTrades < maxDoAbleTrades) {
-                            Main.message(player, Main.getConfigs().getMessage(
-                                    "messages.gui.chest-shop.messages.max-trade",
-                                    "&cYou have reached the maximum number of uses for this trade(<trade_limit>).")
-                                    .replace("<trade_limit>", String.valueOf(tradeUses)));
-                            if (maxDoAllowedTrades <= 0) return 0;
-                            maxDoAbleTrades = maxDoAllowedTrades;
+            //  If no trades can be done, return 0
+            if (maxDoAbleTrades <= 0) {
+                Main.message(player, Main.getConfigs().getMessage("messages.gui.chest-shop.messages.no-trade",
+                        "&cYou don't have the required items to trade, or your inventory is full"));
+                return 0;
+            }
+
+            //  Trade usage limitation
+            if (trade.isUsageLimited()) {
+                try {
+                    Map<String, Object> playerTags = MileShopsAPI.getAPI().getPlayerTags(player.getUniqueId());
+                    if (playerTags != null && !playerTags.isEmpty()) {
+                        Map<String, Object> playerTradeTags = new HashMap<>();
+                        trade.getMaxTradeTagsNames().stream()
+                                .filter(playerTags::containsKey)
+                                .forEach(tag -> playerTradeTags.put(tag, playerTags.get(tag)));
+                        if (!playerTradeTags.isEmpty()) {
+                            int tradeUses = Main.getStorage().getTradeUses(playerTradeTags, trade);
+                            int maxDoAllowedTrades = trade.getMaxTradeUse() - tradeUses;
+                            if (maxDoAllowedTrades < maxDoAbleTrades) {
+                                Main.message(player, Main.getConfigs().getMessage(
+                                                "messages.gui.chest-shop.messages.max-trade",
+                                                "&cYou have reached the maximum number of uses for this trade(<trade_limit>).")
+                                        .replace("<trade_limit>", String.valueOf(tradeUses)));
+                                if (maxDoAllowedTrades <= 0) return 0;
+                                maxDoAbleTrades = maxDoAllowedTrades;
+                            }
                         }
                     }
-                }
-            } catch (ApiUnavailable ignore) {}
-        }
+                } catch (ApiUnavailable ignore) {}
+            }
 
-        //  Execute the trade
-        TradeUtils.executeTrade(this.player, tradeItems, trade.getResultItem().clone(),
-                maxDoAbleTrades, tradeMode);
+            //  Execute the trade
+            TradeUtils.executeTrade(this.player, tradeItems, trade.getResultItem().clone(),
+                    maxDoAbleTrades, tradeMode);
 
-        //  Call the TradeCompleteEvent
-        for (int i = 0; i < maxDoAbleTrades; i++) {
-            TradeCompleteEvent event = new TradeCompleteEvent(player, shop, trade);
-            Main.getInstance().getServer().getPluginManager().callEvent(event);
+            //  Call the TradeCompleteEvent
+            for (int i = 0; i < maxDoAbleTrades; i++) {
+                TradeCompleteEvent event = new TradeCompleteEvent(player, shop, trade);
+                Main.getInstance().getServer().getPluginManager().callEvent(event);
+            }
+            return maxDoAbleTrades;
+        } finally {
+            //  Unlock the trade processing
+            isProcessingTrade = false;
         }
-        return maxDoAbleTrades;
     }
 
     @Override
