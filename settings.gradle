@@ -1,2 +1,2 @@
-rootProject.name = 'MilekatShops'
-include 'shops-api'
+rootProject.name = 'MileShops'
+include 'mile-shops-api'

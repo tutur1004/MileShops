@@ -1,18 +1,58 @@
 package fr.milekat.shops.workers.utils;
 
-import dev.sergiferry.playernpc.api.NPC;
+import fr.milekat.milenpc.api.classes.NPC;
 import fr.milekat.shops.Main;
+import org.bukkit.Location;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 
 public class NPCUtils {
-    public static void syncDestroy(UUID uuid) {
-        NPC.Global npc = Main.getNpc(uuid);
-        if (npc!=null) Main.bukkitSync(npc::destroy);
+    public static @NotNull NPC create(UUID uuid, String name, Location location) {
+        if (!Main.IS_NPC_LIB_LOADED) return new NPC(uuid, name);
+        NPC npc = Main.getNpcManager().create(uuid, name);
+        npc.teleport(location);
+        npc.show();
+        return npc;
     }
 
-    public static void forceUpdate(UUID uuid) {
-        NPC.Global npc = Main.getNpc(uuid);
-        if (npc!=null) npc.forceUpdate();
+    public static void teleport(@NotNull UUID uuid, Location location) {
+        if (!Main.IS_NPC_LIB_LOADED) return;
+        NPC npc = Main.getNpc(uuid);
+        if (npc != null) {
+            npc.teleport(location);
+        }
+    }
+
+    public static void updateSkin(@NotNull UUID uuid, String texture, String signature) {
+        if (!Main.IS_NPC_LIB_LOADED) return;
+        NPC npc = Main.getNpc(uuid);
+        if (npc != null) {
+            npc.updateSkin(texture, signature);
+        }
+    }
+
+    public static void ensureVisible(@NotNull UUID uuid) {
+        if (!Main.IS_NPC_LIB_LOADED) return;
+        NPC npc = Main.getNpc(uuid);
+        if (npc != null) {
+            npc.show();
+        }
+    }
+
+    public static void ensureInvisible(@NotNull UUID uuid) {
+        if (!Main.IS_NPC_LIB_LOADED) return;
+        NPC npc = Main.getNpc(uuid);
+        if (npc != null) {
+            npc.hide();
+        }
+    }
+
+    public static void destroy(@NotNull UUID uuid) {
+        if (!Main.IS_NPC_LIB_LOADED) return;
+        NPC npc = Main.getNpc(uuid);
+        if (npc != null) {
+            npc.remove();
+        }
     }
 }

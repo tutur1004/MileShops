@@ -4,10 +4,13 @@ import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.storage.StorageImplementation;
-import fr.milekat.shops.storage.exceptions.StorageExecuteException;
-import fr.milekat.shops.storage.exceptions.StorageLoaderException;
 import fr.milekat.shops.workers.utils.TradeMode;
 import fr.milekat.utils.Configs;
+import fr.milekat.utils.storage.adapter.sql.connection.SQLConnection;
+import fr.milekat.utils.storage.adapter.sql.connection.SQLDataBaseClient;
+import fr.milekat.utils.storage.adapter.sql.utils.Schema;
+import fr.milekat.utils.storage.exceptions.StorageExecuteException;
+import fr.milekat.utils.storage.exceptions.StorageLoadException;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -18,19 +21,18 @@ import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @SuppressWarnings({"FieldCanBeLocal", "unused"})
 public class SQLStorage implements StorageImplementation {
+    private final Configs config;
     private final String SCHEMA_FILE = "shop_schema.sql";
-    private final SQLDataBaseConnection DB;
     private final String DatabaseName;
     private final String PREFIX = Main.getConfigs().getString("storage.sql.prefix");
     private final List<String> TABLES = List.of("TBD");
+    private final SQLDataBaseClient sqlDataBaseClient;
 
     /*
         SQL Queries definition
@@ -46,15 +48,30 @@ public class SQLStorage implements StorageImplementation {
     /*
         Main DB
      */
-    public SQLStorage(@NotNull Configs config) throws StorageLoaderException {
+    public SQLStorage(@NotNull Configs config) throws StorageLoadException {
+        this.config = config;
         DatabaseName = config.getString("storage.sql.database");
-        DB = new SQLConnection(config).getSqlDataBaseConnection();
+        sqlDataBaseClient = new SQLConnection(config, Main.getMileLogger()).getSQLClient();
+        ensureSchema();
+    }
+
+
+
+    private void ensureSchema() throws StorageLoadException {
         try {
             if (!checkStorages()) {
-                applySchema();
+                try (InputStream schemaFile = this.getClass().getResourceAsStream(SCHEMA_FILE)) {
+                    if (schemaFile == null) {
+                        throw new StorageLoadException("Missing schema file");
+                    } else {
+                        new Schema(sqlDataBaseClient, schemaFile, PREFIX);
+                    }
+                }
             }
-        } catch (StorageExecuteException | IOException exception) {
-            throw new StorageLoaderException("Unsupported database type");
+        } catch (StorageExecuteException exception) {
+            throw new StorageLoadException("Unsupported database type");
+        } catch (IOException exception) {
+            throw new StorageLoadException("Error while loading schema file");
         }
     }
 
@@ -66,55 +83,22 @@ public class SQLStorage implements StorageImplementation {
         return query.replaceAll("\\{prefix}", PREFIX);
     }
 
-    @Override
-    public String getImplementationName() {
-        return DB.getImplementationName();
-    }
-
     /**
      * Disconnect from HikariCP pool
      */
     @Override
     public void disconnect() {
-        DB.close();
-    }
-
-    /**
-     * Apply SQL Default schema with shop_schema.sql dump
-     */
-    private void applySchema() throws IOException, StorageLoaderException {
-        List<String> statements;
-        //  Read schema file
-        try (InputStream schemaFileIS = this.getClass().getResourceAsStream(SCHEMA_FILE)) {
-            if (schemaFileIS == null) {
-                throw new StorageLoaderException("Missing schema file");
-            }
-            statements = SQLUtils.getQueries(schemaFileIS).stream()
-                    .map(this::formatQuery)
-                    .collect(Collectors.toList());
-        }
-        //  Apply Schema
-        try (Connection connection = DB.getConnection();
-             Statement s = connection.createStatement()) {
-            connection.setAutoCommit(false);
-            for (String query : statements) {
-                s.addBatch(query);
-            }
-            s.executeBatch();
-        } catch (Exception exception) {
-            if (!exception.getMessage().contains("already exists") && Main.DEBUG) {
-                exception.printStackTrace();
-            }
-        }
+        sqlDataBaseClient.close();
     }
 
     /**
      * Check if all tables are created
+     *
      * @return true if all tables are created
      */
     @Override
     public boolean checkStorages() throws StorageExecuteException {
-        try (Connection connection = DB.getConnection()) {
+        try (Connection connection = this.sqlDataBaseClient.getConnection()) {
             for (String table : TABLES) {
                 try (PreparedStatement q = connection.prepareStatement(formatQuery(CHECK_TABLE))) {
                     q.setString(1, DatabaseName);
@@ -122,14 +106,14 @@ public class SQLStorage implements StorageImplementation {
                     q.execute();
                     if (!q.getResultSet().next()) {
                         if (Main.DEBUG) {
-                            Main.warning("Table: " + table + " not found in " + DatabaseName);
+                            Main.getMileLogger().warning("Table: " + table + " not found in " + DatabaseName);
                         }
                         return false;
                     }
                 }
             }
             return true;
-        } catch (SQLException exception) {
+        } catch (StorageLoadException | SQLException exception) {
             throw new StorageExecuteException(exception, "Missing schema file");
         }
     }
@@ -138,7 +122,7 @@ public class SQLStorage implements StorageImplementation {
         SQL Queries execution
      */
     @Override
-    public void asyncSaveShop(@NotNull Shop shop, CommandSender sender, boolean createIfNotExist) {
+    public void asyncSaveShop(@NotNull Shop shop, boolean createIfNotExist, CommandSender sender) {
 
     }
 
@@ -153,13 +137,13 @@ public class SQLStorage implements StorageImplementation {
     }
 
     @Override
-    public Shop getShopNpc(@NotNull UUID shopNpcUuid) throws StorageExecuteException {
+    public @NotNull List<Shop> getAllShops() {
         return null;
     }
 
     @Override
-    public List<Shop> getAllShops() {
-        return null;
+    public void asyncDeleteShop(@NotNull Shop shop, CommandSender sender) {
+
     }
 
     @Override
@@ -178,7 +162,7 @@ public class SQLStorage implements StorageImplementation {
     }
 
     @Override
-    public void asyncSaveTradeMode(@NotNull UUID playerUuid, @NotNull TradeMode mode) {
+    public void saveTradeMode(@NotNull UUID playerUuid, @NotNull TradeMode mode) {
 
     }
 
@@ -188,12 +172,12 @@ public class SQLStorage implements StorageImplementation {
     }
 
     @Override
-    public int getTradeUses(@NotNull UUID player, @NotNull UUID tradeUuid) {
+    public int getTradeUses(@NotNull Map<String, Object> tags, @NotNull Trade trade) {
         return 0;
     }
 
     @Override
-    public void logTrade(@NotNull UUID player, @Nullable Map<String, Object> tags, @NotNull Trade trade) {
+    public void logTrade(@Nullable Map<String, Object> tags, @NotNull Trade trade) {
 
     }
 

@@ -1,24 +1,32 @@
 package fr.milekat.shops;
 
-import fr.milekat.shops.api.MilekatShopsIAPI;
+import fr.milekat.shops.api.MileShopsIAPI;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.exceptions.StorageException;
-import fr.milekat.shops.storage.exceptions.StorageExecuteException;
-import fr.milekat.shops.workers.ShopsManager;
-import fr.milekat.shops.workers.listeners.LogTrade;
+import fr.milekat.shops.workers.utils.ShopUtils;
+import fr.milekat.utils.storage.exceptions.StorageExecuteException;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
-public class API implements MilekatShopsIAPI {
+public class API implements MileShopsIAPI {
     @Override
     public boolean isDebug() {
         return Main.DEBUG;
+    }
+
+    @Override
+    public @NotNull List<Shop> getShops() throws StorageException {
+        try {
+            return Main.getStorage().getAllShops();
+        } catch (StorageExecuteException exception) {
+            throw new StorageException(exception, exception.getMessage());
+        }
     }
 
     @Override
@@ -29,7 +37,7 @@ public class API implements MilekatShopsIAPI {
     @Override
     public @NotNull List<Trade> getShopTrades(@NotNull UUID uuid) throws StorageException {
         try {
-            return Main.getStorage().getTrades(uuid);
+            return Main.getStorage().getCacheTrades(uuid);
         } catch (StorageExecuteException exception) {
             throw new StorageException(exception, exception.getMessage());
         }
@@ -38,36 +46,52 @@ public class API implements MilekatShopsIAPI {
     @Override
     public @NotNull List<Trade> getShopTrades(@NotNull String name) throws StorageException {
         try {
-            return Main.getStorage().getTrades(name);
+            return Main.getStorage().getCacheTrades(name);
         } catch (StorageExecuteException exception) {
             throw new StorageException(exception, exception.getMessage());
         }
     }
 
     @Override
-    public @NotNull List<Trade> getNpcShopTrades(@NotNull UUID uuid) throws StorageException {
-        try {
-            Map.Entry<Shop, List<Trade>> shop = ShopsManager.getShop(uuid);
-            return Objects.requireNonNull(shop).getValue();
-        } catch (StorageExecuteException exception) {
-            throw new StorageException(exception, exception.getMessage());
-        } catch (NullPointerException exception) {
-            throw new StorageException(exception, "NPC trades not found");
+    public boolean openShop(@NotNull UUID uuid, @NotNull Shop shop) {
+        Player player = Main.getInstance().getServer().getPlayer(uuid);
+        if (player != null) {
+            try {
+                ShopUtils.openShop(player, shop);
+                return true;
+            } catch (Exception e) {
+                if (isDebug()) Main.getMileLogger().stack(e.getStackTrace());
+            }
         }
+        return false;
+    }
+
+    @Override
+    public boolean openAdminShop(@NotNull UUID uuid, @NotNull Shop shop) {
+        Player player = Main.getInstance().getServer().getPlayer(uuid);
+        if (player != null) {
+            try {
+                ShopUtils.openAdminShop(player, shop);
+                return true;
+            } catch (Exception e) {
+                if (isDebug()) Main.getMileLogger().stack(e.getStackTrace());
+            }
+        }
+        return false;
     }
 
     @Override
     public @Nullable Map<String, Object> getPlayerTags(@NotNull UUID uuid) {
-        return LogTrade.playerTags.getOrDefault(uuid, null);
+        return Main.PLAYER_TAGS.getOrDefault(uuid, null);
     }
 
     @Override
     public void removePlayerTags(@NotNull UUID uuid) {
-        LogTrade.playerTags.remove(uuid);
+        Main.PLAYER_TAGS.remove(uuid);
     }
 
     @Override
     public void setPlayerTags(@NotNull UUID uuid, @NotNull Map<String, Object> tags) {
-        LogTrade.playerTags.put(uuid, tags);
+        Main.PLAYER_TAGS.put(uuid, tags);
     }
 }

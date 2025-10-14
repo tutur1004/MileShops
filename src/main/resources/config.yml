@@ -1,7 +1,6 @@
 # Debug mode
 debug: false
-# If false, you will have to set players tags alone
-default_tags: true
+
 # Storage system
 storage:
   #   Available storage type (Please fill related connection section)
@@ -23,9 +22,25 @@ storage:
     port: "9200"
     username: "user"
     password: "pass"
+  cache:
+    # Enable or disable cache (Recommended)
+    enabled: true
+    # Cache time in seconds (Recommended 300s = 5min)
+    time: 300
+
+# Shop settings
+settings:
+  # Default trade mode for players when they open a shop
+  # Available modes:
+  #   INVENTORY           |=>  Trade items only from player inventory
+  #   ENDER_CHEST         |=>  Trade items from player inventory and EnderChest
+  #   SHULKER             |=>  Trade items from player inventory and Shulkers
+  #   END_SHULKER         |=>  Trade items from player inventory, EnderChest and Shulkers
+  default-trade-mode: "INVENTORY"
+
 # Messages
 messages:
-  prefix: "&6[CustomShop] "
+  prefix: "&6[MileShops] "
   gui:
     commons:
       buttons:
@@ -41,30 +56,74 @@ messages:
             - "&6previous page"
         exit:
           title: "&cClose"
-          lore: []
+          lore: [ ]
     chest-shop:
       title: "&3Shop <shop_name>"
       buttons:
-        mode-chest:
-          title: "&eInventory mode"
+        mode-inventory:
+          title: "&fInventory mode"
           lore:
-            - "&6This mode only trade items"
-            - "&6from your inventory"
-            - "&6Click to switch to"
+            - ""
+            - "&fThis mode only trade items"
+            - "&efrom your inventory"
+            - ""
+            - "&eClick to switch to"
+            - "&aEnderChest mode"
+        mode-ender:
+          title: "&aEnderChest mode"
+          lore:
+            - ""
+            - "&eThis mode trade items from"
+            - "&eInventory and EnderChest"
+            - ""
+            - "&eClick to switch to"
             - "&5Shulker mode"
         mode-shulker:
           title: "&5Inventory mode"
           lore:
-            - "&6This mode trade items from"
-            - "&6Inventory, EnderChest and Shulkers"
-            - "&6Click to switch to"
-            - "&eInventory mode"
+            - ""
+            - "&fThis mode trade items from"
+            - "&eInventory and Shulkers from inventory"
+            - ""
+            - "&fClick to switch to"
+            - "&6God mode"
+        mode-end-shulker:
+          title: "&6God mode"
+          lore:
+            - ""
+            - "&fThis mode trade items from"
+            - "&eInventory, EnderChest and Shulkers"
+            - "&ein inventory and EnderChest"
+            - ""
+            - "&fClick to switch to"
+            - "&fInventory mode"
       messages:
         inventory-space: "&cNot enough space in inventory to receive result"
         no-item: "&cNot enough items"
+        no-trade: "&cYou don't have the required items to trade, or your inventory is full"
+        max-trade: "&cYou have reached the maximum number of uses for this trade (<trade_limit>)."
+        trade-processing: "&cA trade is already being processed, please wait..."
         trade-result: "&2You trade <first_total_amount>x<first_material>, for <result_total_amount>x<result_material>."
         trade-result-hover:
           - "&6You do this trade <count> times"
           - "&6Trade was <first_amount>x<first_material> for <result_amount>x<result_material>"
     admin-shop:
       title: "&3Editing <shop_name>"
+
+# Tags feature (Advanced users)
+tags:
+  # If false, you will have to set players tags alone
+  enable_builtin_tags: true
+  ##############################
+  # Advanced users ONLY (This section require a plugin who set tags for players)
+  # Need 'enable_builtin_tags' to false
+  # Tags must be lowercase and without spaces, only letters and dashes are allowed
+  # Tags names length must be between 3 and 16 characters
+  ##############################
+  custom:
+    string: [ "player-name", "player-uuid" ]
+    integer: [ ]
+    long: [ ]
+    double: [ ]
+    boolean: [ ]
+  ##############################
