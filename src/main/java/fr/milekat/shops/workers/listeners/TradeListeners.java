@@ -17,6 +17,9 @@ public class TradeListeners implements Listener {
                     Main.PLAYER_TAGS.get(event.getPlayer().getUniqueId()),
                     event.getTrade()
             );
+        } else {
+            Main.getMileLogger().warning("No tags found for player " + event.getPlayer().getName() + " (" +
+                    event.getPlayer().getUniqueId() + "), cannot log trade.");
         }
     }
 }
