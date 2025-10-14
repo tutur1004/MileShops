@@ -1,9 +1,6 @@
 # Debug mode
 debug: false
 
-# If false, you will have to set players tags alone
-default_tags: true
-
 # Storage system
 storage:
   #   Available storage type (Please fill related connection section)

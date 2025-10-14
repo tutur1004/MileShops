@@ -13,16 +13,14 @@ public class DefaultTags implements Listener {
 
     @EventHandler
     public void setPlayerTags(@NotNull PlayerJoinEvent event) {
-        if (Main.getConfigs().getBoolean("default_tags", true)) {
-            Main.PLAYER_TAGS.put(event.getPlayer().getUniqueId(), Map.of("player-name", event.getPlayer().getName(),
-                    "player-uuid", event.getPlayer().getUniqueId().toString()));
-        }
+        Main.PLAYER_TAGS.put(event.getPlayer().getUniqueId(), Map.of(
+                "player-name", event.getPlayer().getName(),
+                "player-uuid", event.getPlayer().getUniqueId().toString())
+        );
     }
 
     @EventHandler
     public void removePlayerTags(@NotNull PlayerQuitEvent event) {
-        if (Main.getConfigs().getBoolean("default_tags", true)) {
-            Main.PLAYER_TAGS.remove(event.getPlayer().getUniqueId());
-        }
+        Main.PLAYER_TAGS.remove(event.getPlayer().getUniqueId());
     }
 }

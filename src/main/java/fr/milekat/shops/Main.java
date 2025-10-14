@@ -6,6 +6,7 @@ import fr.milekat.milenpc.api.classes.NPC;
 import fr.milekat.milenpc.api.exceptions.ApiUnavailable;
 import fr.milekat.shops.api.MileShopsAPI;
 import fr.milekat.shops.api.classes.Shop;
+import fr.milekat.shops.listeners.DefaultTags;
 import fr.milekat.shops.storage.StorageImplementation;
 import fr.milekat.shops.storage.adapter.elasticsearch.ESStorage;
 import fr.milekat.shops.storage.adapter.sql.SQLStorage;
@@ -96,6 +97,9 @@ public class Main extends JavaPlugin {
         //  Load plugin workers
         plugin.getServer().getPluginManager().registerEvents(new ShopsListeners(), this);
         plugin.getServer().getPluginManager().registerEvents(new TradeListeners(), this);
+        if (config.getBoolean("tags.enable_builtin_tags", true)) {
+            plugin.getServer().getPluginManager().registerEvents(new DefaultTags(), this);
+        }
         timedShops = new TimedShops();
         PluginCommand shopCommand = plugin.getCommand("shop");
         if (shopCommand != null) {
