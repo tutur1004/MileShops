@@ -43,7 +43,7 @@ public class ESStorage implements StorageImplementation {
     private final String INDEX_SHOPS;
     private final String INDEX_USER_MODES;
     private final String INDEX_TRADE_LOGS;
-    private final Map<String, Class<?>> history_fields = new HashMap<>();
+    private final Map<String, Class<?>> trade_logs_fields = new HashMap<>();
     private final List<BulkOperation> logToProcess = new ArrayList<>();
 
     /*
@@ -61,9 +61,8 @@ public class ESStorage implements StorageImplementation {
         this.INDEX_USER_MODES = prefix + "user-modes";
         this.INDEX_TRADE_LOGS = prefix + "trade-logs";
         this.numberOfReplicas = config.getString("storage.elasticsearch.replicas", "0");
-        history_fields.put("trade", Trade.class);
-        history_fields.put("@timestamp", Date.class);
-        history_fields.putAll(Main.TAGS);
+        trade_logs_fields.put("trade", Trade.class);
+        trade_logs_fields.put("@timestamp", Date.class);
         try (ElasticsearchClient esClient = connection.getEsClient(getMapper())) {
             Main.getMileLogger().debug(esClient.cluster().health().toString());
             logPool();
@@ -96,7 +95,7 @@ public class ESStorage implements StorageImplementation {
                 }
             }
             new Index(esClient, INDEX_TRADE_LOGS, numberOfReplicas,
-                    history_fields, Main.TAGS, "tags");
+                    trade_logs_fields, Main.TAGS, "tags");
             Main.getMileLogger().debug("Storage is ready.");
             return true;
         } catch (StorageLoadException | IOException exception) {
