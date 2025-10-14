@@ -41,8 +41,8 @@ public class ESStorage implements StorageImplementation {
     // Indexes settings
     private final String INDEX_TRADES;
     private final String INDEX_SHOPS;
-    private final String INDEX_USERS_MODES;
-    private final String INDEX_HISTORY;
+    private final String INDEX_USER_MODES;
+    private final String INDEX_TRADE_LOGS;
     private final Map<String, Class<?>> history_fields = new HashMap<>();
     private final List<BulkOperation> logToProcess = new ArrayList<>();
 
@@ -58,8 +58,8 @@ public class ESStorage implements StorageImplementation {
         }
         this.INDEX_TRADES = prefix + "trades";
         this.INDEX_SHOPS = prefix + "shops";
-        this.INDEX_USERS_MODES = prefix + "users-mode";
-        this.INDEX_HISTORY = prefix + "history";
+        this.INDEX_USER_MODES = prefix + "user-modes";
+        this.INDEX_TRADE_LOGS = prefix + "trade-logs";
         this.numberOfReplicas = config.getString("storage.elasticsearch.replicas", "0");
         history_fields.put("trade", Trade.class);
         history_fields.put("@timestamp", Date.class);
@@ -83,7 +83,7 @@ public class ESStorage implements StorageImplementation {
         Main.getMileLogger().debug("Check if storage is ready...");
         try (ElasticsearchClient esClient = connection.getEsClient(getMapper())) {
             Main.getMileLogger().debug("Check indices...");
-            for (String index : List.of(INDEX_TRADES, INDEX_SHOPS, INDEX_USERS_MODES)) {
+            for (String index : List.of(INDEX_TRADES, INDEX_SHOPS, INDEX_USER_MODES)) {
                 //  Check if index exist, otherwise create it
                 if (!esClient
                         .indices()
@@ -95,7 +95,7 @@ public class ESStorage implements StorageImplementation {
                     Main.getMileLogger().debug("Index '" + index + "' found !");
                 }
             }
-            new Index(esClient, INDEX_HISTORY, numberOfReplicas,
+            new Index(esClient, INDEX_TRADE_LOGS, numberOfReplicas,
                     history_fields, Main.TAGS, "tags");
             Main.getMileLogger().debug("Storage is ready.");
             return true;
@@ -366,7 +366,7 @@ public class ESStorage implements StorageImplementation {
             try {
                 SearchResponse<PlayerTradeMode> searchResponse = esClient.search(
                         new SearchRequest.Builder()
-                                .index(INDEX_USERS_MODES)
+                                .index(INDEX_USER_MODES)
                                 .query(q -> q.term(t -> t
                                         .field("playerUuid.keyword")
                                         .value(playerUuid.toString())
@@ -381,13 +381,13 @@ public class ESStorage implements StorageImplementation {
                         Main.getMileLogger().debug("[ES-aSync] saveTradeMode - index users-mode");
 
                         esClient.index(c -> c
-                                .index(INDEX_USERS_MODES)
+                                .index(INDEX_USER_MODES)
                                 .document(playerMode)
                         );
                     } else {
                         Main.getMileLogger().debug("[ES-aSync] saveTradeMode - update users-mode");
                         esClient.update(u -> u
-                                        .index(INDEX_USERS_MODES)
+                                        .index(INDEX_USER_MODES)
                                         .id(searchResponse.hits().hits().getFirst().id())
                                         .doc(playerMode)
                                         .docAsUpsert(true),
@@ -431,7 +431,7 @@ public class ESStorage implements StorageImplementation {
             try {
                 SearchResponse<PlayerTradeMode> searchResponse = esClient.search(
                         new SearchRequest.Builder()
-                                .index(INDEX_USERS_MODES)
+                                .index(INDEX_USER_MODES)
                                 .query(q -> q.term(t -> t
                                         .field("playerUuid.keyword")
                                         .value(playerUuid.toString())
@@ -460,7 +460,7 @@ public class ESStorage implements StorageImplementation {
                         trade.getShopUuid().toString() + "-" + trade.getTradePosition() +
                         "' with tags '" + tags + "'.");
                 CountRequest countRequest = new CountRequest.Builder()
-                    .index(INDEX_HISTORY)
+                    .index(INDEX_TRADE_LOGS)
                     .query(q -> {
                         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
                         boolQueryBuilder.filter(f -> f.term(t -> t
@@ -495,7 +495,7 @@ public class ESStorage implements StorageImplementation {
         logToProcess.add(
                 new BulkOperation.Builder().create(
                         new CreateOperation.Builder<>()
-                                .index(INDEX_HISTORY)
+                                .index(INDEX_TRADE_LOGS)
                                 .document(log)
                                 .build()
                 ).build()
