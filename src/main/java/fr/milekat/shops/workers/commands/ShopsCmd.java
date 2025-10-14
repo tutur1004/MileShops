@@ -8,6 +8,10 @@ import fr.milekat.shops.workers.utils.NPCUtils;
 import fr.milekat.shops.workers.utils.ShopUtils;
 import fr.milekat.utils.McTools;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -27,6 +31,8 @@ public class ShopsCmd implements TabExecutor {
             .map(String::toLowerCase)
             .toList();
 
+    private static final int SHOPS_PER_PAGE = 8;
+
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
                              @NotNull String label, @NotNull String @NotNull [] args) {
@@ -44,21 +50,7 @@ public class ShopsCmd implements TabExecutor {
             }
             //  List shops
             if (args[0].equalsIgnoreCase("list") && player.hasPermission("shops.list")) {
-                try {
-                    List<Shop> shops = Main.getStorage().getAllShops();
-                    if (shops.isEmpty()) {
-                        Main.message(player, "&cNo shop found.");
-                        return true;
-                    }
-                    Main.message(player, "&6--- Shops list (" + shops.size() + ") ---");
-                    for (Shop shop : shops) {
-                        Main.message(player, "&e- " + shop.getName() + " &7(" +
-                                shop.getType().name().toLowerCase() + ")");
-                    }
-                } catch (StorageExecuteException exception) {
-                    Main.getMileLogger().warning("Storage error while trying to fetch shops list.");
-                    Main.message(player, "&cStorage error while trying to fetch shops list.");
-                }
+                displayShopsList(player, 1, label);
             }
             return true;
 
@@ -91,6 +83,21 @@ public class ShopsCmd implements TabExecutor {
                     ShopUtils.openAdminShop(player, shop);
                 } catch (StorageExecuteException e) {
                     Main.message(player, "&cStorage error");
+                }
+                return true;
+            }
+
+            //  List shop page
+            if (args[0].equalsIgnoreCase("list") && player.hasPermission("shops.list")) {
+                try {
+                    int page = Integer.parseInt(args[1]);
+                    if (page < 1) {
+                        Main.message(player, "&cPage must be greater than 0.");
+                        return true;
+                    }
+                    displayShopsList(player, page, label);
+                } catch (NumberFormatException e) {
+                    Main.message(player, "&cPage must be a valid number.");
                 }
                 return true;
             }
@@ -159,10 +166,133 @@ public class ShopsCmd implements TabExecutor {
         return true;
     }
 
+    private void displayShopsList(@NotNull Player player, int page, String label) {
+        try {
+            List<Shop> allShops = Main.getStorage().getAllShops();
+            if (allShops.isEmpty()) {
+                Main.message(player, "&cNo shop found.");
+                return;
+            }
+
+            int totalPages = (int) Math.ceil((double) allShops.size() / SHOPS_PER_PAGE);
+            if (page > totalPages) {
+                Main.message(player, "&cPage " + page + " does not exist. Max pages: " + totalPages);
+                return;
+            }
+
+            int startIndex = (page - 1) * SHOPS_PER_PAGE;
+            int endIndex = Math.min(startIndex + SHOPS_PER_PAGE, allShops.size());
+            List<Shop> pageShops = allShops.subList(startIndex, endIndex);
+
+            Main.message(player, "&6--- Shops list (" + allShops.size() + ") --- Page " + page + "/" + totalPages + " ---");
+
+            for (Shop shop : pageShops) {
+                TextComponent line = Component.text("");
+
+                // Open button
+                line = line.append(Component.text("[")
+                                .color(NamedTextColor.DARK_AQUA))
+                        .append(Component.text("open")
+                                .color(NamedTextColor.GREEN)
+                                .clickEvent(ClickEvent.runCommand("/" + label + " open " + shop.getName()))
+                                .hoverEvent(Component.text("Click to open"))
+                        )
+                        .append(Component.text("] ")
+                                .color(NamedTextColor.DARK_AQUA));
+
+                // Edit button
+                line = line.append(Component.text("[")
+                                .color(NamedTextColor.DARK_AQUA))
+                        .append(Component.text("edit")
+                                .color(NamedTextColor.GREEN)
+                                .clickEvent(ClickEvent.runCommand("/" + label + " edit " + shop.getName()))
+                                .hoverEvent(Component.text("Click to edit"))
+                        )
+                        .append(Component.text("] ")
+                                .color(NamedTextColor.DARK_AQUA));
+
+                // Shop name and type
+                line = line.append(Component.text(shop.getName())
+                                .color(NamedTextColor.YELLOW))
+                        .append(Component.text(" (" + shop.getType().name().toLowerCase() + ")")
+                                .color(NamedTextColor.DARK_GRAY));
+
+                player.sendMessage(line);
+            }
+
+            // Navigation buttons
+            if (totalPages > 1) {
+                TextComponent nav = Component.text("");
+
+                // Previous button
+                if (page > 1) {
+                    nav = nav.append(Component.text("[")
+                                    .color(NamedTextColor.DARK_AQUA))
+                            .append(Component.text("<===")
+                                    .color(NamedTextColor.GREEN)
+                                    .clickEvent(ClickEvent.runCommand("/" + label + " list " + (page - 1))))
+                            .append(Component.text("] ")
+                                    .color(NamedTextColor.DARK_AQUA));
+                } else {
+                    nav = nav.append(Component.text("[")
+                                    .color(NamedTextColor.DARK_AQUA))
+                            .append(Component.text("<===")
+                                    .color(NamedTextColor.RED))
+                            .append(Component.text("] ")
+                                    .color(NamedTextColor.DARK_AQUA));
+                }
+
+                // Page numbers
+                for (int pageNum = 1; pageNum <= totalPages; pageNum++) {
+                    if (pageNum == page) {
+                        nav = nav.append(Component.text("[")
+                                        .color(NamedTextColor.DARK_AQUA))
+                                .append(Component.text(String.valueOf(pageNum))
+                                        .color(NamedTextColor.GOLD))
+                                .append(Component.text("] ")
+                                        .color(NamedTextColor.DARK_AQUA));
+                    } else {
+                        nav = nav.append(Component.text("[")
+                                        .color(NamedTextColor.DARK_AQUA))
+                                .append(Component.text(String.valueOf(pageNum))
+                                        .color(NamedTextColor.GREEN)
+                                        .clickEvent(ClickEvent.runCommand("/" + label + " list " + pageNum)))
+                                .append(Component.text("] ")
+                                        .color(NamedTextColor.DARK_AQUA));
+                    }
+                }
+
+                // Next button
+                if (page < totalPages) {
+                    nav = nav.append(Component.text("[")
+                                    .color(NamedTextColor.DARK_AQUA))
+                            .append(Component.text("===>")
+                                    .color(NamedTextColor.GREEN)
+                                    .clickEvent(ClickEvent.runCommand("/" + label + " list " + (page + 1))))
+                            .append(Component.text("]")
+                                    .color(NamedTextColor.DARK_AQUA));
+                } else {
+                    nav = nav.append(Component.text("[")
+                                    .color(NamedTextColor.DARK_AQUA))
+                            .append(Component.text("===>")
+                                    .color(NamedTextColor.RED))
+                            .append(Component.text("]")
+                                    .color(NamedTextColor.DARK_AQUA));
+                }
+
+                player.sendMessage(nav);
+            }
+
+        } catch (StorageExecuteException exception) {
+            Main.getMileLogger().warning("Storage error while trying to fetch shops list.");
+            Main.message(player, "&cStorage error while trying to fetch shops list.");
+        }
+    }
+
     private void sendHelp(@NotNull CommandSender sender, String lbl) {
         Main.message(sender, "&6/" + lbl + " create <name> <type>");
         Main.message(sender, "&6/" + lbl + " remove <name>");
-        Main.message(sender, "&6/" + lbl + " list");
+        Main.message(sender, "&6/" + lbl + " list [page]");
         Main.message(sender, "&6/" + lbl + " open <name>");
         Main.message(sender, "&6/" + lbl + " edit <name>");
         Main.message(sender, "&6/" + lbl + " reload");
