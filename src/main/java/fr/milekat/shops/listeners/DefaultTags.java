@@ -14,8 +14,8 @@ public class DefaultTags implements Listener {
     @EventHandler
     public void setPlayerTags(@NotNull PlayerJoinEvent event) {
         if (Main.getConfigs().getBoolean("default_tags", true)) {
-            Main.PLAYER_TAGS.put(event.getPlayer().getUniqueId(), Map.of("name", event.getPlayer().getName(),
-                    "uuid", event.getPlayer().getUniqueId().toString()));
+            Main.PLAYER_TAGS.put(event.getPlayer().getUniqueId(), Map.of("player-name", event.getPlayer().getName(),
+                    "player-uuid", event.getPlayer().getUniqueId().toString()));
         }
     }
 
