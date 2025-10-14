@@ -12,8 +12,8 @@ import fr.milekat.shops.storage.adapter.sql.SQLStorage;
 import fr.milekat.shops.storage.utils.PlayerTradeMode;
 import fr.milekat.shops.storage.utils.ShopTrades;
 import fr.milekat.shops.workers.commands.ShopsCmd;
-import fr.milekat.shops.workers.listeners.LogTrade;
 import fr.milekat.shops.workers.listeners.ShopsListeners;
+import fr.milekat.shops.workers.listeners.TradeListeners;
 import fr.milekat.shops.workers.utils.TimedShops;
 import fr.milekat.utils.Configs;
 import fr.milekat.utils.MileLogger;
@@ -95,7 +95,7 @@ public class Main extends JavaPlugin {
         MileShopsAPI.API_READY = true;
         //  Load plugin workers
         plugin.getServer().getPluginManager().registerEvents(new ShopsListeners(), this);
-        plugin.getServer().getPluginManager().registerEvents(new LogTrade(), this);
+        plugin.getServer().getPluginManager().registerEvents(new TradeListeners(), this);
         timedShops = new TimedShops();
         PluginCommand shopCommand = plugin.getCommand("shop");
         if (shopCommand != null) {

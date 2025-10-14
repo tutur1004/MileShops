@@ -4,7 +4,6 @@ import fr.milekat.shops.api.MileShopsIAPI;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.exceptions.StorageException;
-import fr.milekat.shops.workers.listeners.LogTrade;
 import fr.milekat.shops.workers.utils.ShopUtils;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import org.bukkit.entity.Player;
@@ -83,16 +82,16 @@ public class API implements MileShopsIAPI {
 
     @Override
     public @Nullable Map<String, Object> getPlayerTags(@NotNull UUID uuid) {
-        return LogTrade.playerTags.getOrDefault(uuid, null);
+        return Main.PLAYER_TAGS.getOrDefault(uuid, null);
     }
 
     @Override
     public void removePlayerTags(@NotNull UUID uuid) {
-        LogTrade.playerTags.remove(uuid);
+        Main.PLAYER_TAGS.remove(uuid);
     }
 
     @Override
     public void setPlayerTags(@NotNull UUID uuid, @NotNull Map<String, Object> tags) {
-        LogTrade.playerTags.put(uuid, tags);
+        Main.PLAYER_TAGS.put(uuid, tags);
     }
 }
