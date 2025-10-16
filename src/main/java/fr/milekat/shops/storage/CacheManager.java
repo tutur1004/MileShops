@@ -26,11 +26,6 @@ public interface CacheManager {
         } else {
             cache.put(shop, new Date());
         }
-        //  Order by name
-        cache = cache.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey(Comparator.comparing(Shop::getName)))
-                .collect(HashMap::new, (m, e) ->
-                        m.put(e.getKey(), e.getValue()), HashMap::putAll);
         Main.SHOP_CACHE = cache;
     }
 
@@ -127,8 +122,11 @@ public interface CacheManager {
             Main.getMileLogger().debug("No up to date cache found, try to search it.");
             return Main.getStorage().getAllShops();
         } else {
-            Main.getMileLogger().debug("Found '" + Main.SHOP_CACHE.size() + "' shops in cache.");
-            return new ArrayList<>(Main.SHOP_CACHE.keySet());
+            List<Shop> cache = new ArrayList<>(Main.SHOP_CACHE.keySet());
+            Main.getMileLogger().debug("Found '" + cache.size() + "' shops in cache.");
+            //  Order by name
+            cache.sort(Comparator.comparing(Shop::getName));
+            return cache;
         }
     }
 
