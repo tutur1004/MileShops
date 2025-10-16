@@ -26,6 +26,11 @@ public interface CacheManager {
         } else {
             cache.put(shop, new Date());
         }
+        //  Order by name
+        cache = cache.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey(Comparator.comparing(Shop::getName)))
+                .collect(HashMap::new, (m, e) ->
+                        m.put(e.getKey(), e.getValue()), HashMap::putAll);
         Main.SHOP_CACHE = cache;
     }
 
