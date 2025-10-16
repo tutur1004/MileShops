@@ -143,14 +143,14 @@ public class ShopsCmd implements TabExecutor {
                 try {
                     NPC npc = null;
                     if (Main.IS_NPC_LIB_LOADED) {
-                        npc = NPCUtils.create(shopUuid, args[1], player.getLocation());
+                        npc = NPCUtils.create(shopUuid, args[2], player.getLocation());
                     }
-                    Shop shop = new Shop(shopUuid, args[1], npc, ShopType.valueOf(args[2].toUpperCase(Locale.ROOT)));
+                    Shop shop = new Shop(shopUuid, args[2], npc, ShopType.valueOf(args[1].toUpperCase(Locale.ROOT)));
                     Main.getStorage().asyncSaveShop(shop, true, player);
                 } catch (IllegalArgumentException exception) {
                     NPCUtils.destroy(shopUuid);
                     Main.message(player, "&cUnknown NPC type !");
-                    Main.getMileLogger().info("Creation cancelled, unknown NPC type " + args[2]);
+                    Main.getMileLogger().info("Creation cancelled, unknown NPC type " + args[1]);
                     Main.message(player, "&cPlease use one of " + Arrays.toString(ShopType.values()));
                 } catch (Exception exception) {
                     NPCUtils.destroy(shopUuid);
@@ -290,7 +290,7 @@ public class ShopsCmd implements TabExecutor {
     }
 
     private void sendHelp(@NotNull CommandSender sender, String lbl) {
-        Main.message(sender, "&6/" + lbl + " create <name> <type>");
+        Main.message(sender, "&6/" + lbl + " create <type> <name>");
         Main.message(sender, "&6/" + lbl + " remove <name>");
         Main.message(sender, "&6/" + lbl + " list [page]");
         Main.message(sender, "&6/" + lbl + " open <name>");
@@ -305,8 +305,8 @@ public class ShopsCmd implements TabExecutor {
                                       @NotNull String alias, String @NotNull [] args) {
         if (args.length <= 1) {
             return McTools.getTabArgs(args[0], List.of("create", "remove", "list", "open", "edit", "reload", "help"));
-        } else if (args.length >= 3 && args[0].equalsIgnoreCase("create")) {
-            return McTools.getTabArgs(args[2], shopTypes);
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("create")) {
+            return McTools.getTabArgs(args[1], shopTypes);
         }
 
         return null;
