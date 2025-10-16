@@ -131,6 +131,32 @@ public class ShopsCmd implements TabExecutor {
 
         } else if (args.length == 3) {
 
+            if (args[0].equalsIgnoreCase("type") && player.hasPermission("shops.type")) {
+                try {
+                    Shop shop = Main.getStorage().getCacheShop(args[1]);
+                    if (shop == null) {
+                        Main.message(player, "&cShop not found.");
+                        return true;
+                    }
+
+                    try {
+                        ShopType newType = ShopType.valueOf(args[2].toUpperCase(Locale.ROOT));
+                        shop.setType(newType);
+                        Main.getStorage().asyncSaveShop(shop, false, player);
+                        Main.message(player, "&2Shop type changed to " + newType.name() + " !");
+                    } catch (IllegalArgumentException exception) {
+                        Main.message(player, "&cUnknown shop type !");
+                        Main.message(player, "&cPlease use one of " + Arrays.toString(ShopType.values()));
+                    }
+                } catch (StorageExecuteException e) {
+                    Main.getMileLogger().warning(e.getMessage());
+                    Main.getMileLogger().stack(e.getStackTrace());
+                    Main.message(player, "&cStorage error");
+                }
+
+                return true;
+            }
+
             if (args[0].equalsIgnoreCase("create") && player.hasPermission("shops.create")) {
 
                 if (!shopTypes.contains(args[2].toLowerCase(Locale.ROOT))) {
@@ -291,6 +317,7 @@ public class ShopsCmd implements TabExecutor {
 
     private void sendHelp(@NotNull CommandSender sender, String lbl) {
         Main.message(sender, "&6/" + lbl + " create <type> <name>");
+        Main.message(sender, "&6/" + lbl + " type <name> <newType>");
         Main.message(sender, "&6/" + lbl + " remove <name>");
         Main.message(sender, "&6/" + lbl + " list [page]");
         Main.message(sender, "&6/" + lbl + " open <name>");
@@ -304,9 +331,20 @@ public class ShopsCmd implements TabExecutor {
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command,
                                       @NotNull String alias, String @NotNull [] args) {
         if (args.length <= 1) {
-            return McTools.getTabArgs(args[0], List.of("create", "remove", "list", "open", "edit", "reload", "help"));
+            return McTools.getTabArgs(args[0], List.of("create", "type", "remove", "list", "open", "edit", "reload", "help"));
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("type")) {
+            try {
+                return Main.getStorage().getCacheAllShops().stream()
+                        .map(Shop::getName)
+                        .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
+                        .toList();
+            } catch (StorageExecuteException e) {
+                return null;
+            }
         } else if (args.length == 2 && args[0].equalsIgnoreCase("create")) {
             return McTools.getTabArgs(args[1], shopTypes);
+        } else if (args.length == 3 && args[0].equalsIgnoreCase("type")) {
+            return McTools.getTabArgs(args[2], shopTypes);
         }
 
         return null;
