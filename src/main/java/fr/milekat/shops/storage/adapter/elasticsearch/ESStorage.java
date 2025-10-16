@@ -246,6 +246,8 @@ public class ESStorage implements StorageImplementation {
                 List<Shop> shops = new ArrayList<>();
                 response.hits().hits().forEach(hit -> shops.add(hit.source()));
                 shops.removeIf(Objects::isNull);
+                //  Order by name
+                shops.sort(Comparator.comparing(Shop::getName, String.CASE_INSENSITIVE_ORDER));
                 Main.SHOP_CACHE = shops.stream().collect(HashMap::new,
                         ((map, shop) -> map.put(shop, new Date())), Map::putAll);
                 return shops;
