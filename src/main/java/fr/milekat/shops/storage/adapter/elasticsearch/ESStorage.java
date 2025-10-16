@@ -173,8 +173,9 @@ public class ESStorage implements StorageImplementation {
                             shop.removeNpc();
                         }
                     }
-
-                } catch (ElasticsearchException | IOException exception) {
+                    //  Update cache
+                    this.getShop(shop.getName());
+                } catch (ElasticsearchException | IOException | StorageExecuteException exception) {
                     Main.message(sender, "&cError while trying to save shop " + shop.getName());
                     Main.getMileLogger().warning("Error while trying to fetch shop with uuid " + shop.getName());
                     Main.getMileLogger().stack(exception.getStackTrace());
