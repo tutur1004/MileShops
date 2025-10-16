@@ -53,6 +53,27 @@ public enum InventoryShopShape {
 
             0, 0, 0, 0,
             false
+    ),
+
+    SINGLE_ONE(InventoryType.CHEST, 27,
+            Main.getConfigs().getMessage("messages.gui.chest-shop.title", "&3Shop <shop_name>"),
+            List.of(new TradeSlots(11, null, 15, new HashMap<>())),
+            0, 0, 0, 0,
+            true
+    ),
+
+    SINGLE_SIX(InventoryType.CHEST, 54,
+            Main.getConfigs().getMessage("messages.gui.chest-shop.title", "&3Shop <shop_name>"),
+            List.of(
+                    new TradeSlots(2, null, 6, new HashMap<>()),
+                    new TradeSlots(11, null, 15, new HashMap<>()),
+                    new TradeSlots(20, null, 24, new HashMap<>()),
+                    new TradeSlots(29, null, 33, new HashMap<>()),
+                    new TradeSlots(38, null, 42, new HashMap<>()),
+                    new TradeSlots(47, null, 51, new HashMap<>())
+            ),
+            0, 0, 0, 0,
+            true
     );
 
     private final InventoryType inventoryType;

@@ -16,7 +16,16 @@ public enum ShopType {
     /**
      * A chest shop with 2 columns of 6 trades without secondary item
      */
-    DOUBLE_SIX(true);
+    DOUBLE_SIX(true),
+    /**
+     * A chest shop with 1 trade without secondary item
+     */
+    SINGLE_ONE(true),
+    /**
+     * A chest shop with 1 column of 6 trades without secondary item
+     */
+    SINGLE_SIX(true);
+
 
     private final Boolean shaped;
 
