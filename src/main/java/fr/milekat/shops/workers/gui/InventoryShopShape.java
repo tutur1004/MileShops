@@ -16,6 +16,8 @@ import java.util.function.Function;
 
 @SuppressWarnings("unused")
 public enum InventoryShopShape {
+    //  TODO - 2025/10/16 : Merge with ShopType enum
+
     //  A shop with 1 column of 4 trades without secondary item
     BASIC_FOUR(InventoryType.CHEST, 54,
             Main.getConfigs().getMessage("messages.gui.chest-shop.title", "&3Shop <shop_name>"),
