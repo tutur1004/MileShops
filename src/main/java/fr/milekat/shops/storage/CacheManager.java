@@ -122,7 +122,7 @@ public interface CacheManager {
             Main.getMileLogger().debug("No up to date cache found, try to search it.");
             return Main.getStorage().getAllShops();
         } else {
-            Main.getMileLogger().debug("Found '" + Main.SHOP_CACHE.keySet().size() + "' shops in cache.");
+            Main.getMileLogger().debug("Found '" + Main.SHOP_CACHE.size() + "' shops in cache.");
             return new ArrayList<>(Main.SHOP_CACHE.keySet());
         }
     }
