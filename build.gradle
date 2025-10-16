@@ -7,7 +7,7 @@ allprojects {
     apply plugin: 'java'
 
     group = 'fr.milekat'
-    version = '1.2.1'
+    version = '1.2.1-NPC-SHADED'
 
     repositories {
         mavenCentral()
@@ -62,7 +62,7 @@ jar {
 }
 
 shadowJar {
-    getArchiveClassifier().set("NPC-shaded")
+    getArchiveClassifier().set(null)
 
     relocate 'fr.mrmicky' , 'fr.milekat.shops.libs.fastinv'
 
