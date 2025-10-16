@@ -58,7 +58,12 @@ messages:
           title: "&cClose"
           lore: [ ]
     chest-shop:
-      title: "&3Shop <shop_name>"
+      title:
+        # Use <shop_name> to display the shop name
+        basic-four: "&3Shop <shop_name>"
+        double-six: "&3Shop <shop_name>"
+        single-one: "&3Shop <shop_name>"
+        single-six: "&3Shop <shop_name>"
       buttons:
         mode-inventory:
           title: "&fInventory mode"

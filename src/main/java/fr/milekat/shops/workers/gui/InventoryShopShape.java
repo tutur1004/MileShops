@@ -20,7 +20,7 @@ public enum InventoryShopShape {
 
     //  A shop with 1 column of 4 trades without secondary item
     BASIC_FOUR(InventoryType.CHEST, 54,
-            Main.getConfigs().getMessage("messages.gui.chest-shop.title", "&3Shop <shop_name>"),
+            Main.getConfigs().getMessage("messages.gui.chest-shop.title.basic-four", "&3Shop <shop_name>"),
             List.of(new TradeSlots(11, null, 15,
                             Map.of(13, Buttons.HEAD_LEFT.get())),
                     new TradeSlots(20, null, 24,
@@ -35,7 +35,7 @@ public enum InventoryShopShape {
 
     //  A shop with 2 columns of 6 trades without secondary item
     DOUBLE_SIX(InventoryType.CHEST, 54,
-            Main.getConfigs().getMessage("messages.gui.chest-shop.title", "&3Shop <shop_name>"),
+            Main.getConfigs().getMessage("messages.gui.chest-shop.title.double-six", "&3Shop <shop_name>"),
             List.of(
                     //  First column
                     new TradeSlots(0, null, 3, new HashMap<>()),
@@ -58,14 +58,14 @@ public enum InventoryShopShape {
     ),
 
     SINGLE_ONE(InventoryType.CHEST, 27,
-            Main.getConfigs().getMessage("messages.gui.chest-shop.title", "&3Shop <shop_name>"),
+            Main.getConfigs().getMessage("messages.gui.chest-shop.title.single-one", "&3Shop <shop_name>"),
             List.of(new TradeSlots(11, null, 15, new HashMap<>())),
             0, 0, 0, 0,
-            true
+            false
     ),
 
     SINGLE_SIX(InventoryType.CHEST, 54,
-            Main.getConfigs().getMessage("messages.gui.chest-shop.title", "&3Shop <shop_name>"),
+            Main.getConfigs().getMessage("messages.gui.chest-shop.title.single-six", "&3Shop <shop_name>"),
             List.of(
                     new TradeSlots(2, null, 6, new HashMap<>()),
                     new TradeSlots(11, null, 15, new HashMap<>()),
@@ -75,7 +75,7 @@ public enum InventoryShopShape {
                     new TradeSlots(47, null, 51, new HashMap<>())
             ),
             0, 0, 0, 0,
-            true
+            false
     );
 
     private final InventoryType inventoryType;
