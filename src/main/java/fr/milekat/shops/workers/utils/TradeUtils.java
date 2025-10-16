@@ -358,6 +358,14 @@ public class TradeUtils {
                     given++;
                 } else {
                     // Item couldn't be added - inventory full or other constraint
+
+                    // Remove the partially added item from inventory if any
+                    for (ItemStack leftoverItem : leftOver.values()) {
+                        ItemStack toRemove = leftoverItem.clone();
+                        toRemove.setAmount(resultItem.getAmount() - leftoverItem.getAmount());
+                        inventory.removeItem(toRemove);
+                    }
+
                     break;
                 }
             }
