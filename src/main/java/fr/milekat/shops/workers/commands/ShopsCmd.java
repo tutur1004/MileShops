@@ -159,24 +159,18 @@ public class ShopsCmd implements TabExecutor {
 
             if (args[0].equalsIgnoreCase("create") && player.hasPermission("shops.create")) {
 
-                if (!shopTypes.contains(args[2].toLowerCase(Locale.ROOT))) {
-                    Main.message(player, "&cUnknown shape !");
-                    Main.message(player, "&cPlease use one of " + shopTypes);
-                    return true;
-                }
-
                 UUID shopUuid = UUID.randomUUID();
                 try {
+                    ShopType type = ShopType.valueOf(args[1].toUpperCase(Locale.ROOT));
                     NPC npc = null;
                     if (Main.IS_NPC_LIB_LOADED) {
                         npc = NPCUtils.create(shopUuid, args[2], player.getLocation());
                     }
-                    Shop shop = new Shop(shopUuid, args[2], npc, ShopType.valueOf(args[1].toUpperCase(Locale.ROOT)));
+                    Shop shop = new Shop(shopUuid, args[2], npc, type);
                     Main.getStorage().asyncSaveShop(shop, true, player);
                 } catch (IllegalArgumentException exception) {
                     NPCUtils.destroy(shopUuid);
-                    Main.message(player, "&cUnknown NPC type !");
-                    Main.getMileLogger().info("Creation cancelled, unknown NPC type " + args[1]);
+                    Main.message(player, "&cUnknown NPC type '" + args[1] + "' !");
                     Main.message(player, "&cPlease use one of " + Arrays.toString(ShopType.values()));
                 } catch (Exception exception) {
                     NPCUtils.destroy(shopUuid);
