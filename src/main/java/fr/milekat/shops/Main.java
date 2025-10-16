@@ -100,7 +100,9 @@ public class Main extends JavaPlugin {
         if (config.getBoolean("tags.enable_builtin_tags", true)) {
             plugin.getServer().getPluginManager().registerEvents(new DefaultTags(), this);
         }
-        timedShops = new TimedShops();
+        if (IS_NPC_LIB_LOADED) {
+            timedShops = new TimedShops();
+        }
         PluginCommand shopCommand = plugin.getCommand("shop");
         if (shopCommand != null) {
             shopCommand.setExecutor(new ShopsCmd());
