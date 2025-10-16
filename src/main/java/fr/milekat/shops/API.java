@@ -23,7 +23,7 @@ public class API implements MileShopsIAPI {
     @Override
     public @NotNull List<Shop> getShops() throws StorageException {
         try {
-            return Main.getStorage().getAllShops();
+            return Main.getStorage().getCacheAllShops();
         } catch (StorageExecuteException exception) {
             throw new StorageException(exception, exception.getMessage());
         }

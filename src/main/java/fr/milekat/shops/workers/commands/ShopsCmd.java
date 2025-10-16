@@ -168,7 +168,7 @@ public class ShopsCmd implements TabExecutor {
 
     private void displayShopsList(@NotNull Player player, int page, String label) {
         try {
-            List<Shop> allShops = Main.getStorage().getAllShops();
+            List<Shop> allShops = Main.getStorage().getCacheAllShops();
             if (allShops.isEmpty()) {
                 Main.message(player, "&cNo shop found.");
                 return;
