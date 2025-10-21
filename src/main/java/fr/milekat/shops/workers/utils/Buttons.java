@@ -52,6 +52,13 @@ public enum Buttons {
                     "God mode"))
             .addLore(Main.getConfigs().getMessages("messages.gui.chest-shop.buttons.mode-end-shulker.lore"))
             .build()),
+    FROST_GLOW(new ItemBuilder(Material.PAPER)
+            .meta(itemMeta -> {
+                itemMeta.setCustomModelData(Main.getConfigs().getInt(
+                        "messages.gui.commons.buttons.frost-glow.custom-model-data", 1));
+                itemMeta.setHideTooltip(true);
+            })
+            .build()),
 
     //  Panes
     PANE_BLACK(new ItemBuilder(Material.BLACK_STAINED_GLASS_PANE).name(" ").build()),

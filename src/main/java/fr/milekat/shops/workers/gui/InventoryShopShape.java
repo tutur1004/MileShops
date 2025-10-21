@@ -82,7 +82,7 @@ public enum InventoryShopShape {
             Main.getConfigs().getMessage("messages.gui.chest-shop.title.compact-five", "&3Shop <shop_name>"),
             List.of(
                     new TradeSlots(5, null, 7,
-                            Map.of(6, Buttons.CUSTOM_ARROW_LEFT.get())),
+                            Map.of(6, Buttons.CUSTOM_ARROW_LEFT.get(), 19, Buttons.FROST_GLOW.get())),
                     new TradeSlots(14, null, 16,
                             Map.of(15, Buttons.CUSTOM_ARROW_LEFT.get())),
                     new TradeSlots(23, null, 25,

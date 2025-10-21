@@ -59,6 +59,8 @@ messages:
           lore: [ ]
         arrow-left:
           custom-model-data: 1
+        frost-glow:
+          custom-model-data: 1
     chest-shop:
       title:
         # Use <shop_name> to display the shop name
