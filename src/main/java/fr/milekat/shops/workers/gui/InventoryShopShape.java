@@ -81,11 +81,16 @@ public enum InventoryShopShape {
     COMPACT_FIVE(InventoryType.CHEST, 45,
             Main.getConfigs().getMessage("messages.gui.chest-shop.title.compact-five", "&3Shop <shop_name>"),
             List.of(
-                    new TradeSlots(5, null, 7, new HashMap<>()),
-                    new TradeSlots(14, null, 16, new HashMap<>()),
-                    new TradeSlots(23, null, 25, new HashMap<>()),
-                    new TradeSlots(32, null, 34, new HashMap<>()),
-                    new TradeSlots(41, null, 43, new HashMap<>())
+                    new TradeSlots(5, null, 7,
+                            Map.of(6, Buttons.CUSTOM_ARROW_LEFT.get())),
+                    new TradeSlots(14, null, 16,
+                            Map.of(15, Buttons.CUSTOM_ARROW_LEFT.get())),
+                    new TradeSlots(23, null, 25,
+                            Map.of(24, Buttons.CUSTOM_ARROW_LEFT.get())),
+                    new TradeSlots(32, null, 34,
+                            Map.of(33, Buttons.CUSTOM_ARROW_LEFT.get())),
+                    new TradeSlots(41, null, 43,
+                            Map.of(42, Buttons.CUSTOM_ARROW_LEFT.get()))
             ),
             0, 0, 0, 0,
             false

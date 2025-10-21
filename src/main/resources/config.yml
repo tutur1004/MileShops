@@ -57,6 +57,8 @@ messages:
         exit:
           title: "&cClose"
           lore: [ ]
+        arrow-left:
+          custom-model-data: 1
     chest-shop:
       title:
         # Use <shop_name> to display the shop name
@@ -64,6 +66,7 @@ messages:
         double-six: "&3Shop <shop_name>"
         single-one: "&3Shop <shop_name>"
         single-six: "&3Shop <shop_name>"
+        compact-five: "&3Shop <shop_name>"
       buttons:
         mode-inventory:
           title: "&fInventory mode"
