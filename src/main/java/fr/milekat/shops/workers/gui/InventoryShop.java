@@ -16,11 +16,16 @@ import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.chat.hover.content.Text;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -188,17 +193,12 @@ public class InventoryShop extends FastInv {
         //  Display additional trade items (Arrow, etc...)
         tradeSlots.additionalTradeItems().forEach(this::setItem);
         //  Display trade items
-        setItem(tradeSlots.firstItemSlot(), trade.getFirstItem().clone());
+        setItem(tradeSlots.firstItemSlot(), getGuiItem(trade).firstItem());
         if (trade.getSecondItem() != null && tradeSlots.secondItemSlot() != null) {
-            setItem(tradeSlots.resultItemSlot(), trade.getSecondItem().clone());
+            setItem(tradeSlots.resultItemSlot(), getGuiItem(trade).secondItem());
         }
-        setItem(tradeSlots.resultItemSlot(), trade.getResultItem().clone(),
-                event -> {
-            // Ensure the click is on the result item slot
-            if (event.getSlot() == tradeSlots.resultItemSlot()) {
-                requestTrade(trade, event.getClick());
-            }
-        });
+        setItem(tradeSlots.resultItemSlot(), getGuiItem(trade).resultItem(),
+                event -> requestTrade(trade, event.getClick()));
     }
 
     private void requestTrade(@NotNull Trade trade, @NotNull ClickType click) {
@@ -297,5 +297,35 @@ public class InventoryShop extends FastInv {
                             .collect(Collectors.joining(System.lineSeparator(), "", "")))));
             Main.message(player, message);
         });
+    }
+
+    @Contract("_ -> new")
+    private @NotNull TradeGuiItems getGuiItem(@NotNull Trade trade) {
+        return new TradeGuiItems(trade.getFirstItem(), trade.getSecondItem(), trade.getResultItem());
+    }
+
+    private record TradeGuiItems(@NotNull ItemStack firstItem,
+                                 @Nullable ItemStack secondItem,
+                                 @NotNull ItemStack resultItem) {
+        static NamespacedKey key = new NamespacedKey(Main.getInstance(), "mile_shops_gui_item");
+
+        public TradeGuiItems {
+            firstItem = getItem(firstItem);
+            if (secondItem != null) {
+                secondItem = getItem(secondItem);
+            }
+            resultItem = getItem(resultItem);
+        }
+
+        private @NotNull ItemStack getItem(@NotNull ItemStack item) {
+            ItemStack guiItem = item.clone();
+            ItemMeta meta = guiItem.getItemMeta();
+            if (meta != null) {
+                meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, UUID.randomUUID().toString());
+            }
+            guiItem.setItemMeta(meta);
+
+            return guiItem;
+        }
     }
 }
