@@ -23,11 +23,14 @@ public enum Buttons {
             .build()),
 
     //  ChestShop
-    HEAD_LEFT(new ItemBuilder(HeadsUtils.ARROW_LEFT.getItem().clone()).name(" ").build()),
+    HEAD_LEFT(new ItemBuilder(HeadsUtils.ARROW_LEFT.getItem().clone())
+            .meta(m -> m.setHideTooltip(true)).build()),
     CUSTOM_ARROW_LEFT(new ItemBuilder(Material.PAPER)
-            .name(" ")
-            .meta(itemMeta -> itemMeta.setCustomModelData(
-                    Main.getConfigs().getInt("messages.gui.commons.buttons.arrow-left.custom-model-data", 1)))
+            .meta(itemMeta -> {
+                itemMeta.setCustomModelData(Main.getConfigs().getInt(
+                        "messages.gui.commons.buttons.arrow-left.custom-model-data", 1));
+                itemMeta.setHideTooltip(true);
+            })
             .build()),
     MODE_INVENTORY(new ItemBuilder(Material.CHEST)
             .name(Main.getConfigs().getMessage("messages.gui.chest-shop.buttons.mode-inventory.title",
