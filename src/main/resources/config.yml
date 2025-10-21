@@ -68,6 +68,7 @@ messages:
         double-six: "&3Shop <shop_name>"
         single-one: "&3Shop <shop_name>"
         single-six: "&3Shop <shop_name>"
+        compact-one: "&3Shop <shop_name>"
         compact-five: "&3Shop <shop_name>"
       buttons:
         mode-inventory:

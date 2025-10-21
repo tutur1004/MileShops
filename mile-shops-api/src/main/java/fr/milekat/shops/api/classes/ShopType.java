@@ -26,6 +26,10 @@ public enum ShopType {
      */
     SINGLE_SIX(true),
     /**
+     * A chest shop with 1 column (Centred left) of 1 trade without secondary item
+     */
+    COMPACT_ONE(true),
+    /**
      * A chest shop with 1 column (Centred right) of 5 trades without secondary item
      */
     COMPACT_FIVE(true);
