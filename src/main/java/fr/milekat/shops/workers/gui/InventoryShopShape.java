@@ -81,8 +81,8 @@ public enum InventoryShopShape {
 
     COMPACT_ONE(InventoryType.CHEST, 45,
             Main.getConfigs().getMessage("messages.gui.chest-shop.title.compact-one", "&3Shop <shop_name>"),
-            List.of(new TradeSlots(11, null, 15,
-                            Map.of(15, Buttons.CUSTOM_ARROW_LEFT.get(), 19, Buttons.FROST_GLOW.get()))),
+            List.of(new TradeSlots(23, null, 25,
+                    Map.of(24, Buttons.CUSTOM_ARROW_LEFT.get(), 28, Buttons.FROST_GLOW.get()))),
                     0, 0, 0, 0,
                     false
             ),
@@ -91,7 +91,7 @@ public enum InventoryShopShape {
             Main.getConfigs().getMessage("messages.gui.chest-shop.title.compact-five", "&3Shop <shop_name>"),
             List.of(
                     new TradeSlots(5, null, 7,
-                            Map.of(6, Buttons.CUSTOM_ARROW_LEFT.get(), 19, Buttons.FROST_GLOW.get())),
+                            Map.of(6, Buttons.CUSTOM_ARROW_LEFT.get(), 28, Buttons.FROST_GLOW.get())),
                     new TradeSlots(14, null, 16,
                             Map.of(15, Buttons.CUSTOM_ARROW_LEFT.get())),
                     new TradeSlots(23, null, 25,
