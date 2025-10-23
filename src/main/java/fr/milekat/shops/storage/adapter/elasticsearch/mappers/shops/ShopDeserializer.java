@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import fr.milekat.milenpc.api.classes.NPC;
+import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.ShopType;
 import fr.milekat.utils.DateMileKat;
@@ -47,7 +48,15 @@ public class ShopDeserializer extends StdDeserializer<Shop> {
             npc = mapper.treeToValue(node.get("npc"), NPC.class);
             if (npc == null) return null;
         }
-        ShopType shopType = ShopType.valueOf(node.get("type").asText());
+
+        ShopType shopType;
+        try {
+            shopType = ShopType.valueOf(node.get("type").asText());
+        } catch (IllegalArgumentException e) {
+            Main.getMileLogger().warning("Shop " + shopUuid + " has an invalid shop type: " +
+                    node.get("type").asText());
+            return null;
+        }
 
         if (npc != null && node.has("spawnIn") && node.has("spawnOut")) {
             try {
