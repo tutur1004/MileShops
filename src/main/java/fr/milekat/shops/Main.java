@@ -15,6 +15,7 @@ import fr.milekat.shops.storage.utils.ShopTrades;
 import fr.milekat.shops.workers.commands.ShopsCmd;
 import fr.milekat.shops.workers.listeners.ShopsListeners;
 import fr.milekat.shops.workers.listeners.TradeListeners;
+import fr.milekat.shops.workers.utils.ColorStyles;
 import fr.milekat.shops.workers.utils.TimedShops;
 import fr.milekat.utils.Configs;
 import fr.milekat.utils.MileLogger;
@@ -25,6 +26,7 @@ import fr.milekat.utils.storage.adapter.elasticsearch.connection.ESConnection;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import fr.milekat.utils.storage.exceptions.StorageLoadException;
 import fr.mrmicky.fastinv.FastInvManager;
+import net.kyori.adventure.text.Component;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
@@ -40,6 +42,8 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+
+import static net.kyori.adventure.text.Component.text;
 
 public class Main extends JavaPlugin {
     private static JavaPlugin plugin;
@@ -137,18 +141,15 @@ public class Main extends JavaPlugin {
      * Send a formatted message to sender
      */
     public static void message(@NotNull Player player, @NotNull String message) {
-        player.sendMessage(Main.getConfigs().getMessage("messages.prefix") + ChatColor.RESET +
-                ChatColor.translateAlternateColorCodes('&', message));
+        Component messageComponent = text(message, ColorStyles.INFO_VALUE);
+        player.sendMessage(messageComponent);
     }
 
     /**
      * Send a formatted BaseComponent message to sender
      */
     public static void message(@NotNull Player player, @NotNull BaseComponent message) {
-        BaseComponent prefixedMessage = new TextComponent(Main.getConfigs().getMessage("messages.prefix") +
-                ChatColor.RESET);
-        prefixedMessage.addExtra(message.duplicate());
-        player.spigot().sendMessage(prefixedMessage);
+        message(player, TextComponent.toPlainText(message));
     }
 
     /**
