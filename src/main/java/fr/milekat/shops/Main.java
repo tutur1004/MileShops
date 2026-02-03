@@ -49,6 +49,7 @@ public class Main extends JavaPlugin {
     public static Boolean DEBUG = false;
     public static String PREFIX;
     public static boolean IS_NPC_LIB_LOADED = false;
+    public static boolean IS_BANKS_LIB_LOADED = false;
     private static StorageImplementation STORAGE;
     public static final Map<String, Class<?>> TAGS = new HashMap<>();
     public static final Map<UUID, Map<String, Object>> PLAYER_TAGS = new HashMap<>();
@@ -77,6 +78,10 @@ public class Main extends JavaPlugin {
             } catch (RuntimeException exception) {
                 logger.warning("Failed to hook into MileNPC, NPC features will be unavailable !");
             }
+        }
+        IS_BANKS_LIB_LOADED = Bukkit.getPluginManager().getPlugin("MileBanks") != null;
+        if (IS_BANKS_LIB_LOADED) {
+            logger.info("MileBanks detected, hooking into it..");
         }
         //  Load configs
         try {
