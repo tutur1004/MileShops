@@ -27,10 +27,9 @@ import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import fr.milekat.utils.storage.exceptions.StorageLoadException;
 import fr.mrmicky.fastinv.FastInvManager;
 import net.kyori.adventure.text.Component;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
@@ -42,8 +41,6 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-
-import static net.kyori.adventure.text.Component.text;
 
 public class Main extends JavaPlugin {
     private static JavaPlugin plugin;
@@ -141,15 +138,15 @@ public class Main extends JavaPlugin {
      * Send a formatted message to sender
      */
     public static void message(@NotNull Player player, @NotNull String message) {
-        Component messageComponent = text(message, ColorStyles.INFO_VALUE);
+        Component messageComponent = Component.text(message, ColorStyles.INFO_VALUE);
         player.sendMessage(messageComponent);
     }
 
     /**
      * Send a formatted BaseComponent message to sender
      */
-    public static void message(@NotNull Player player, @NotNull BaseComponent message) {
-        message(player, TextComponent.toPlainText(message));
+    public static void message(@NotNull Player player, @NotNull Component message) {
+        message(player, PlainTextComponentSerializer.plainText().serialize(message));
     }
 
     /**
@@ -213,8 +210,8 @@ public class Main extends JavaPlugin {
         }
         DEBUG = config.getBoolean("debug", false);
         logger.setDebug(DEBUG);
-        PREFIX = ChatColor.translateAlternateColorCodes('&',
-                config.getString("messages.prefix", "[" + plugin.getName() + "] "));
+        PREFIX = PlainTextComponentSerializer.plainText().serialize(LegacyComponentSerializer.legacyAmpersand()
+                .deserialize(config.getString("messages.prefix", "[" + plugin.getName() + "] ")));
         logger.debug("Debug enable");
         logger.info("Config loaded");
     }

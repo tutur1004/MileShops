@@ -12,10 +12,8 @@ import fr.milekat.shops.workers.utils.TradeMode;
 import fr.milekat.shops.workers.utils.TradeUtils;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import fr.mrmicky.fastinv.FastInv;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.chat.hover.content.Text;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.HoverEvent;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -285,12 +283,11 @@ public class InventoryShop extends FastInv {
         super.onClose(event);
         if (!player.hasPermission("shops.admin")) return;
         this.tradeCompleted.forEach((trade, count) -> {
-            BaseComponent message = new TextComponent(TradeUtils.tradeFormatting(Main.getConfigs()
+            Component message = Component.text(TradeUtils.tradeFormatting(Main.getConfigs()
                     .getMessage("messages.gui.chest-shop.messages.trade-result",
                             "&2You trade <first_amount>x<first_material>, " +
-                                    "for <result_amount>x<result_material>."), shop, trade, count));
-            message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                    new Text(Main.getConfigs()
+                                    "for <result_amount>x<result_material>."), shop, trade, count))
+            .hoverEvent(HoverEvent.showText(Component.text(Main.getConfigs()
                             .getMessages("messages.gui.chest-shop.messages.trade-result-hover")
                             .stream()
                             .map(line -> TradeUtils.tradeFormatting(line, shop, trade, count))
