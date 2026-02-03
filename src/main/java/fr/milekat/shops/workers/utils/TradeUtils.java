@@ -312,19 +312,21 @@ public class TradeUtils {
      * @param resultItem the item to add to the player's inventories
      * @param trades the number of trades to execute
      * @param tradeMode the trade mode determining which inventories to access
+     * @param giveItems if true, result items are added; if false, only required items are removed
      */
     public static void executeTrade(@NotNull Player player,
                                     @NotNull List<ItemStack> requiredItems,
                                     @NotNull ItemStack resultItem,
                                     int trades,
-                                    TradeMode tradeMode) {
+                                    TradeMode tradeMode,
+                                    boolean giveItems) {
         List<InventoryStorage> inventories = buildInventoryList(player, tradeMode);
 
         // First, remove all required items from inventories
         removeItemsFromInventories(inventories, requiredItems, trades);
 
         // Then, add result items to inventories
-        addItemsToInventories(inventories, resultItem, trades);
+        if (giveItems) addItemsToInventories(inventories, resultItem, trades);
     }
 
     /**

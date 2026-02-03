@@ -24,6 +24,7 @@ public class Trade {
     private int maxTradeUse;
     private List<String> maxTradeTagsNames;
     private boolean enabled; // TODO implement
+    private boolean moneyTrade;
 
     /**
      * Constructs a new Trade instance with the specified parameters.
@@ -42,7 +43,8 @@ public class Trade {
                  @NotNull ItemStack firstItem, @Nullable Tag<Material> firstItemTag,
                  @Nullable ItemStack secondItem, @Nullable Tag<Material> secondItemTag,
                  @NotNull ItemStack resultItem,
-                 int maxTradeUse, @Nullable List<String> maxTradeTagsNames) {
+                 int maxTradeUse, @Nullable List<String> maxTradeTagsNames,
+                 boolean moneyTrade) {
         this.shopUuid = shopUuid;
         this.tradePosition = tradePosition;
         this.firstItem = firstItem;
@@ -53,6 +55,7 @@ public class Trade {
         enabled = true;
         this.maxTradeUse = maxTradeUse;
         this.maxTradeTagsNames = maxTradeTagsNames;
+        this.moneyTrade = moneyTrade;
     }
 
     /**
@@ -211,6 +214,24 @@ public class Trade {
      */
     public boolean isUsageLimited() {
         return maxTradeUse > 0 && maxTradeTagsNames != null && !maxTradeTagsNames.isEmpty();
+    }
+
+    /**
+     * Checks if the trade give money instead of items.
+     *
+     * @return true if the trade gives money, false otherwise.
+     */
+    public boolean isMoneyTrade() {
+        return moneyTrade;
+    }
+
+    /**
+     * Sets whether the trade gives money instead of items.
+     *
+     * @param moneyTrade true to make the trade give money, false otherwise.
+     */
+    public void setMoneyTrade(boolean moneyTrade) {
+        this.moneyTrade = moneyTrade;
     }
 
     /**

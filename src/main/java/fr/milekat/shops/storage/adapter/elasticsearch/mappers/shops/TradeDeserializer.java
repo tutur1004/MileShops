@@ -64,12 +64,17 @@ public class TradeDeserializer extends StdDeserializer<Trade> {
             maxTradeUse = node.get("maxTradeUse").asInt();
             maxTradeTagsNames = List.of(mapper.convertValue(node.get("maxTradeTagsNames"), String[].class));
         }
+        boolean moneyTrade = false;
+        if (node.has("moneyTrade")) {
+            moneyTrade = node.get("moneyTrade").asBoolean();
+        }
 
         return new Trade(shopUuid, tradePosition,
                 firstItem, firstItemTag,
                 secondItem, secondItemTag,
                 resultItem,
-                maxTradeUse, maxTradeTagsNames);
+                maxTradeUse, maxTradeTagsNames,
+                moneyTrade);
     }
 }
 

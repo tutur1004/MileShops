@@ -53,6 +53,9 @@ public class TradeSerializer extends StdSerializer<Trade> {
             }
             gen.writeEndArray();
         }
+        if (value.isMoneyTrade()) {
+            gen.writeBooleanField("moneyTrade", true);
+        }
         gen.writeEndObject();
     }
 }
