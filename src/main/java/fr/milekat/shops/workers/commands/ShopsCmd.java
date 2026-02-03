@@ -2,9 +2,11 @@ package fr.milekat.shops.workers.commands;
 
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.ShopNpc;
+import fr.milekat.shops.api.MileShopsAPI;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.ShopType;
 import fr.milekat.shops.hooks.MileNpc;
+import fr.milekat.shops.api.exceptions.ApiUnavailable;
 import fr.milekat.shops.workers.utils.ShopUtils;
 import fr.milekat.utils.McTools;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
@@ -12,6 +14,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -178,6 +182,17 @@ public class ShopsCmd implements TabExecutor {
                     Main.getMileLogger().stack(exception.getStackTrace());
                 }
 
+                return true;
+            }
+
+            if (args[0].equalsIgnoreCase("malus") && player.hasPermission("shops.malus")) {
+                try {
+                    OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+                    boolean malus = args[2].equalsIgnoreCase("true");
+                    MileShopsAPI.getAPI().setPlayerMalus(target.getUniqueId(), malus);
+                } catch (ApiUnavailable e) {
+                    throw new RuntimeException(e);
+                }
                 return true;
             }
 
