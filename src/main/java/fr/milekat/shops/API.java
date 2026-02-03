@@ -111,4 +111,13 @@ public class API implements MileShopsIAPI {
     public static void setPlayerTagsStatic(@NotNull UUID uuid, @NotNull Map<String, Object> tags) {
         Main.PLAYER_TAGS.put(uuid, tags);
     }
+
+    @Override
+    public void setPlayerMalus(@NotNull UUID uuid, boolean malus) {
+        if (malus) {
+            Main.PLAYER_MALUS.add(uuid);
+        } else {
+            Main.PLAYER_MALUS.remove(uuid);
+        }
+    }
 }

@@ -125,4 +125,6 @@ public interface MileShopsIAPI {
      * @param tags The tags to set for the player.
      */
     void setPlayerTags(@NotNull UUID uuid, @NotNull Map<String, Object> tags);
+
+    void setPlayerMalus(@NotNull UUID uuid, boolean malus);
 }

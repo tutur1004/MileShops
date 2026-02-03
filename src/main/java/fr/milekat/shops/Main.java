@@ -64,6 +64,8 @@ public class Main extends JavaPlugin {
     public static long TRADE_MODE_DELAY = TimeUnit.MILLISECONDS.convert(5L, TimeUnit.MINUTES);
     public static Map<PlayerTradeMode, Date> TRADE_MODE_CACHE = new HashMap<>();
 
+    public static List<UUID> PLAYER_MALUS = new ArrayList<>();
+
     @Override
     public void onEnable() {
         plugin = this;
