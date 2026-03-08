@@ -1,9 +1,7 @@
 package fr.milekat.shops;
 
-import fr.milekat.milenpc.api.MileNpcAPI;
 import fr.milekat.milenpc.api.classes.INPCManager;
 import fr.milekat.milenpc.api.classes.NPC;
-import fr.milekat.milenpc.api.exceptions.ApiUnavailable;
 import fr.milekat.shops.api.MileShopsAPI;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.listeners.DefaultTags;
@@ -33,6 +31,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -149,17 +148,23 @@ public class Main extends JavaPlugin {
         message(player, PlainTextComponentSerializer.plainText().serialize(message));
     }
 
+    private static INPCManager npcManager;
     /**
      * Get the NPC manager
      *
      * @return Loaded NPC manager
      */
     public static @NotNull INPCManager getNpcManager() {
-        try {
-            return MileNpcAPI.getAPI().getNPCManager();
-        } catch (ApiUnavailable ignored) {
+        if (npcManager != null) return npcManager;
+
+        RegisteredServiceProvider<INPCManager> provider =
+                Bukkit.getServicesManager().getRegistration(INPCManager.class);
+
+        if (provider == null)
             throw new RuntimeException("Error while trying to get NPC manager");
-        }
+
+        npcManager = provider.getProvider();
+        return npcManager;
     }
 
     /**

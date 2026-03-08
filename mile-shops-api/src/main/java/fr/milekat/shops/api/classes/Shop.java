@@ -108,7 +108,11 @@ public class Shop {
      * Removes the NPC associated with the shop, if any.
      */
     public void removeNpc() {
-        if (npc != null) npc.remove();
+        if (npc != null) {
+            try {
+                npc.remove();
+            } catch (fr.milekat.milenpc.api.exceptions.ApiUnavailable ignore) {}
+        }
     }
 
     /**

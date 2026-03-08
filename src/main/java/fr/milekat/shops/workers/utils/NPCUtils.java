@@ -11,8 +11,10 @@ public class NPCUtils {
     public static @NotNull NPC create(UUID uuid, String name, Location location) {
         if (!Main.IS_NPC_LIB_LOADED) return new NPC(uuid, name);
         NPC npc = Main.getNpcManager().create(uuid, name);
-        npc.teleport(location);
-        npc.show();
+        try {
+            npc.teleport(location);
+            npc.show();
+        } catch (fr.milekat.milenpc.api.exceptions.ApiUnavailable ignore) {}
         return npc;
     }
 
@@ -20,7 +22,9 @@ public class NPCUtils {
         if (!Main.IS_NPC_LIB_LOADED) return;
         NPC npc = Main.getNpc(uuid);
         if (npc != null) {
-            npc.teleport(location);
+            try {
+                npc.teleport(location);
+            } catch (fr.milekat.milenpc.api.exceptions.ApiUnavailable ignore) {}
         }
     }
 
@@ -28,7 +32,9 @@ public class NPCUtils {
         if (!Main.IS_NPC_LIB_LOADED) return;
         NPC npc = Main.getNpc(uuid);
         if (npc != null) {
-            npc.updateSkin(texture, signature);
+            try {
+                npc.updateSkin(texture, signature);
+            } catch (fr.milekat.milenpc.api.exceptions.ApiUnavailable ignore) {}
         }
     }
 
@@ -36,7 +42,9 @@ public class NPCUtils {
         if (!Main.IS_NPC_LIB_LOADED) return;
         NPC npc = Main.getNpc(uuid);
         if (npc != null) {
-            npc.show();
+            try {
+                npc.show();
+            } catch (fr.milekat.milenpc.api.exceptions.ApiUnavailable ignore) {}
         }
     }
 
@@ -44,7 +52,9 @@ public class NPCUtils {
         if (!Main.IS_NPC_LIB_LOADED) return;
         NPC npc = Main.getNpc(uuid);
         if (npc != null) {
-            npc.hide();
+            try {
+                npc.hide();
+            } catch (fr.milekat.milenpc.api.exceptions.ApiUnavailable ignore) {}
         }
     }
 
@@ -52,7 +62,9 @@ public class NPCUtils {
         if (!Main.IS_NPC_LIB_LOADED) return;
         NPC npc = Main.getNpc(uuid);
         if (npc != null) {
-            npc.remove();
+            try {
+                npc.remove();
+            } catch (fr.milekat.milenpc.api.exceptions.ApiUnavailable ignore) {}
         }
     }
 }

@@ -113,8 +113,10 @@ public class ShopsCmd implements TabExecutor {
                     Main.getStorage().asyncDeleteShop(shop, player);
 
                     NPC npc = shop.getNpc();
-                    if (npc != null) {
-                        npc.remove();
+                    if (Main.IS_NPC_LIB_LOADED && npc != null) {
+                        try {
+                            npc.remove();
+                        } catch (fr.milekat.milenpc.api.exceptions.ApiUnavailable ignore) {}
                     } else {
                         Main.message(player, "&cNPC not found.");
                     }
