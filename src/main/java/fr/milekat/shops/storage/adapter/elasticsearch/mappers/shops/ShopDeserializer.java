@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import fr.milekat.milenpc.api.classes.NPC;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
+import fr.milekat.shops.api.classes.ShopNpc;
 import fr.milekat.shops.api.classes.ShopType;
 import fr.milekat.utils.DateMileKat;
 
@@ -21,7 +21,7 @@ import java.util.UUID;
  *     "shop": {
  *         "uuid": {@link UUID},
  *         "name": {@link String},
- *         "npc": {@link NPC},
+ *         "npc": {@link ShopNpc},
  *         "type": {@link ShopType},
  *         "spawnIn": {@link Date},
  *         "spawnOut": {@link Date}
@@ -43,11 +43,6 @@ public class ShopDeserializer extends StdDeserializer<Shop> {
 
         UUID shopUuid = UUID.fromString(node.get("uuid").asText());
         String shopName = node.get("name").asText();
-        NPC npc = null;
-        if (node.has("npc")) {
-            npc = mapper.treeToValue(node.get("npc"), NPC.class);
-            if (npc == null) return null;
-        }
 
         ShopType shopType;
         try {
@@ -58,15 +53,24 @@ public class ShopDeserializer extends StdDeserializer<Shop> {
             return null;
         }
 
+        Shop shop = new Shop(shopUuid, shopName, shopType);
+
+        ShopNpc npc = null;
+        if (node.has("npc")) {
+            npc = mapper.treeToValue(node.get("npc"), ShopNpc.class);
+            if (npc != null) shop.setNpc(npc);
+        }
+
         if (npc != null && node.has("spawnIn") && node.has("spawnOut")) {
             try {
                 Date spawnIn = DateMileKat.getESStringDate(node.get("spawnIn").asText());
+                shop.setSpawnIn(spawnIn);
                 Date spawnOut = DateMileKat.getESStringDate(node.get("spawnOut").asText());
-                return new Shop(shopUuid, shopName, npc, shopType, spawnIn, spawnOut);
+                shop.setSpawnOut(spawnOut);
             } catch (ParseException ignored) {}
         }
 
-        return new Shop(shopUuid, shopName, npc, shopType);
+        return shop;
     }
 }
 

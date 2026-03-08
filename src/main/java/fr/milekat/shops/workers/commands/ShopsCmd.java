@@ -1,10 +1,10 @@
 package fr.milekat.shops.workers.commands;
 
-import fr.milekat.milenpc.api.classes.NPC;
 import fr.milekat.shops.Main;
+import fr.milekat.shops.api.classes.ShopNpc;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.ShopType;
-import fr.milekat.shops.workers.utils.NPCUtils;
+import fr.milekat.shops.hooks.MileNpc;
 import fr.milekat.shops.workers.utils.ShopUtils;
 import fr.milekat.utils.McTools;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
@@ -112,11 +112,9 @@ public class ShopsCmd implements TabExecutor {
 
                     Main.getStorage().asyncDeleteShop(shop, player);
 
-                    NPC npc = shop.getNpc();
-                    if (Main.IS_NPC_LIB_LOADED && npc != null) {
-                        try {
-                            npc.remove();
-                        } catch (fr.milekat.milenpc.api.exceptions.ApiUnavailable ignore) {}
+                    ShopNpc shopNpc = shop.getNpc();
+                    if (Main.IS_NPC_LIB_LOADED && shopNpc != null) {
+                        MileNpc.destroy(shopNpc.uuid());
                     } else {
                         Main.message(player, "&cNPC not found.");
                     }
@@ -164,18 +162,18 @@ public class ShopsCmd implements TabExecutor {
                 UUID shopUuid = UUID.randomUUID();
                 try {
                     ShopType type = ShopType.valueOf(args[1].toUpperCase(Locale.ROOT));
-                    NPC npc = null;
+                    ShopNpc shopNpc = null;
                     if (Main.IS_NPC_LIB_LOADED) {
-                        npc = NPCUtils.create(shopUuid, args[2], player.getLocation());
+                        shopNpc = MileNpc.create(shopUuid, args[2], player.getLocation());
                     }
-                    Shop shop = new Shop(shopUuid, args[2], npc, type);
+                    Shop shop = new Shop(shopUuid, args[2], shopNpc, type);
                     Main.getStorage().asyncSaveShop(shop, true, player);
                 } catch (IllegalArgumentException exception) {
-                    NPCUtils.destroy(shopUuid);
+                    MileNpc.destroy(shopUuid);
                     Main.message(player, "&cUnknown NPC type '" + args[1] + "' !");
                     Main.message(player, "&cPlease use one of " + Arrays.toString(ShopType.values()));
                 } catch (Exception exception) {
-                    NPCUtils.destroy(shopUuid);
+                    MileNpc.destroy(shopUuid);
                     Main.message(player, "&cError while trying to create the shop");
                     Main.getMileLogger().stack(exception.getStackTrace());
                 }

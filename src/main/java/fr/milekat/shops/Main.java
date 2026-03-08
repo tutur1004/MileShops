@@ -1,9 +1,8 @@
 package fr.milekat.shops;
 
-import fr.milekat.milenpc.api.MileNpcIAPI;
-import fr.milekat.milenpc.api.classes.NPC;
 import fr.milekat.shops.api.MileShopsAPI;
 import fr.milekat.shops.api.classes.Shop;
+import fr.milekat.shops.hooks.MileNpc;
 import fr.milekat.shops.listeners.DefaultTags;
 import fr.milekat.shops.storage.StorageImplementation;
 import fr.milekat.shops.storage.adapter.elasticsearch.ESStorage;
@@ -31,11 +30,9 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.util.*;
@@ -66,13 +63,13 @@ public class Main extends JavaPlugin {
     public void onEnable() {
         plugin = this;
         logger = new MileLogger(this.getLogger());
-        if (Bukkit.getPluginManager().getPlugin("MileNPC") != null) {
+        if (Bukkit.getPluginManager().getPlugin("MileNpc") != null) {
             logger.info("MileNPC detected, hooking into it..");
-            getNpcApi();
-            if (loadedNpcApi != null) {
+            try {
+                MileNpc.getNpcApi();
                 IS_NPC_LIB_LOADED = true;
                 logger.info("Hooked into MileNPC successfully !");
-            } else {
+            } catch (RuntimeException exception) {
                 logger.warning("Failed to hook into MileNPC, NPC features will be unavailable !");
             }
         }
@@ -152,35 +149,6 @@ public class Main extends JavaPlugin {
      */
     public static void message(@NotNull Player player, @NotNull Component message) {
         message(player, PlainTextComponentSerializer.plainText().serialize(message));
-    }
-
-    private static MileNpcIAPI loadedNpcApi = null;
-    /**
-     * Get the NPC manager
-     *
-     * @return Loaded NPC manager
-     */
-    public static @NotNull MileNpcIAPI getNpcApi() {
-        if (loadedNpcApi != null) return loadedNpcApi;
-
-        RegisteredServiceProvider<MileNpcIAPI> provider =
-                Bukkit.getServicesManager().getRegistration(MileNpcIAPI.class);
-
-        if (provider == null)
-            throw new RuntimeException("Error while trying to get NPC manager");
-
-        loadedNpcApi = provider.getProvider();
-        return loadedNpcApi;
-    }
-
-    /**
-     * Fetch a NPC
-     *
-     * @param uuid UUID of the NPC
-     * @return NPC or null if not found
-     */
-    public static @Nullable NPC getNpc(@NotNull UUID uuid) {
-        return getNpcApi().getNPCManager().getNpc(uuid);
     }
 
     /**
