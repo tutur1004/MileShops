@@ -25,15 +25,9 @@ allprojects {
             name = 'papermc'
             url = 'https://repo.papermc.io/repository/maven-public/'
         }
+        //  TODO: Remove when MileNPC is released
         maven {
             url = uri("https://maven.pkg.github.com/tutur1004/MileNpc")
-            credentials {
-                username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
-                password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
-            }
-        }
-        maven {
-            url = uri("https://maven.pkg.github.com/tutur1004/MilekatUtils")
             credentials {
                 username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
                 password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
