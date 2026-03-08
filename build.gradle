@@ -77,20 +77,13 @@ shadowJar {
     getArchiveClassifier().set(null)
 
     relocate 'fr.mrmicky' , 'fr.milekat.shops.libs.fastinv'
-
-    //  Storage clients
-    relocate 'com.fasterxml.jackson', 'fr.milekat.shops.libs.jackson'
-    relocate 'co.elastic.clients', 'fr.milekat.shops.libs.elasticsearch'
-    relocate ('fr.milekat.utils' , 'fr.milekat.shops.libs.milekatutils') {
-        include 'fr.milekat.utils.storage.adapter.elasticsearch.mappers.**'
-    }
 }
 
 dependencies {
     implementation project('mile-shops-api')
 
     //  Utils
-    compileOnly group: 'fr.milekat', name: 'milekat-utils', version: '1.7.5-SNAPSHOT'
+    compileOnly group: 'fr.milekat', name: 'milekat-utils', version: '1.8.0'
     implementation group: 'fr.mrmicky', name: 'FastInv', version: '3.0.4'
 
     //  Storage clients
