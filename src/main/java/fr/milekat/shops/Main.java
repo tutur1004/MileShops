@@ -1,6 +1,6 @@
 package fr.milekat.shops;
 
-import fr.milekat.milenpc.api.classes.INPCManager;
+import fr.milekat.milenpc.api.MileNpcIAPI;
 import fr.milekat.milenpc.api.classes.NPC;
 import fr.milekat.shops.api.MileShopsAPI;
 import fr.milekat.shops.api.classes.Shop;
@@ -66,9 +66,15 @@ public class Main extends JavaPlugin {
     public void onEnable() {
         plugin = this;
         logger = new MileLogger(this.getLogger());
-        IS_NPC_LIB_LOADED = Bukkit.getPluginManager().getPlugin("MileNPC") != null;
-        if (IS_NPC_LIB_LOADED) {
+        if (Bukkit.getPluginManager().getPlugin("MileNPC") != null) {
             logger.info("MileNPC detected, hooking into it..");
+            getNpcApi();
+            if (loadedNpcApi != null) {
+                IS_NPC_LIB_LOADED = true;
+                logger.info("Hooked into MileNPC successfully !");
+            } else {
+                logger.warning("Failed to hook into MileNPC, NPC features will be unavailable !");
+            }
         }
         //  Load configs
         try {
@@ -148,23 +154,23 @@ public class Main extends JavaPlugin {
         message(player, PlainTextComponentSerializer.plainText().serialize(message));
     }
 
-    private static INPCManager npcManager;
+    private static MileNpcIAPI loadedNpcApi = null;
     /**
      * Get the NPC manager
      *
      * @return Loaded NPC manager
      */
-    public static @NotNull INPCManager getNpcManager() {
-        if (npcManager != null) return npcManager;
+    public static @NotNull MileNpcIAPI getNpcApi() {
+        if (loadedNpcApi != null) return loadedNpcApi;
 
-        RegisteredServiceProvider<INPCManager> provider =
-                Bukkit.getServicesManager().getRegistration(INPCManager.class);
+        RegisteredServiceProvider<MileNpcIAPI> provider =
+                Bukkit.getServicesManager().getRegistration(MileNpcIAPI.class);
 
         if (provider == null)
             throw new RuntimeException("Error while trying to get NPC manager");
 
-        npcManager = provider.getProvider();
-        return npcManager;
+        loadedNpcApi = provider.getProvider();
+        return loadedNpcApi;
     }
 
     /**
@@ -174,7 +180,7 @@ public class Main extends JavaPlugin {
      * @return NPC or null if not found
      */
     public static @Nullable NPC getNpc(@NotNull UUID uuid) {
-        return getNpcManager().getNpc(uuid);
+        return getNpcApi().getNPCManager().getNpc(uuid);
     }
 
     /**

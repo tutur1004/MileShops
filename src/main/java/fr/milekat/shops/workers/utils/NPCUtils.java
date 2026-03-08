@@ -10,7 +10,7 @@ import java.util.UUID;
 public class NPCUtils {
     public static @NotNull NPC create(UUID uuid, String name, Location location) {
         if (!Main.IS_NPC_LIB_LOADED) return new NPC(uuid, name);
-        NPC npc = Main.getNpcManager().create(uuid, name);
+        NPC npc = Main.getNpcApi().getNPCManager().create(uuid, name);
         try {
             npc.teleport(location);
             npc.show();
