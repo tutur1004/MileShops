@@ -1,33 +1,25 @@
 package fr.milekat.shops.api;
 
 import fr.milekat.shops.api.exceptions.ApiUnavailable;
-import org.jetbrains.annotations.Contract;
+import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * The CustomShopsAPI class provides access to the custom shops API.
+ * The MileShopsAPI class provides access to the MileShops API via the Bukkit ServicesManager.
  */
 public class MileShopsAPI {
-    /**
-     * Indicates whether the API is ready for use.
-     */
-    public static boolean API_READY = false;
-    /**
-     * The loaded API instance.
-     */
-    public static MileShopsIAPI LOADED_API;
 
     /**
-     * Retrieves the instance of the custom shops API.
+     * Retrieves the instance of the MileShops API from the Bukkit ServicesManager.
      *
-     * @return The custom shops API instance.
-     * @throws ApiUnavailable if the API is not ready.
+     * @return The MileShops API instance.
+     * @throws ApiUnavailable if the API is not registered (plugin not loaded or not ready).
      */
-    @Contract(value = " -> new", pure = true)
     public static @NotNull MileShopsIAPI getAPI() throws ApiUnavailable {
-        if (!MileShopsAPI.API_READY) {
+        MileShopsIAPI api = Bukkit.getServicesManager().load(MileShopsIAPI.class);
+        if (api == null) {
             throw new ApiUnavailable();
         }
-        return LOADED_API;
+        return api;
     }
 }

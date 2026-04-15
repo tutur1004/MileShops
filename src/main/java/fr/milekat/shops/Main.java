@@ -1,6 +1,6 @@
 package fr.milekat.shops;
 
-import fr.milekat.shops.api.MileShopsAPI;
+import fr.milekat.shops.api.MileShopsIAPI;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.hooks.MileNpc;
 import fr.milekat.shops.listeners.DefaultTags;
@@ -30,6 +30,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
@@ -95,8 +96,7 @@ public class Main extends JavaPlugin {
             return;
         }
         //  Load API
-        MileShopsAPI.LOADED_API = new API();
-        MileShopsAPI.API_READY = true;
+        Bukkit.getServicesManager().register(MileShopsIAPI.class, new API(), this, ServicePriority.Normal);
         //  Load plugin workers
         plugin.getServer().getPluginManager().registerEvents(new ShopsListeners(), this);
         plugin.getServer().getPluginManager().registerEvents(new TradeListeners(), this);
@@ -114,6 +114,7 @@ public class Main extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        Bukkit.getServicesManager().unregisterAll(this);
         try {
             getStorage().disconnect();
             timedShops.cancel();
