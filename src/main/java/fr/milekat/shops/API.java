@@ -5,6 +5,8 @@ import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.exceptions.StorageException;
 import fr.milekat.shops.workers.utils.ShopUtils;
+import fr.milekat.shops.api.classes.TradeMode;
+import fr.milekat.shops.workers.utils.TradeUtils;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -50,6 +52,12 @@ public class API implements MileShopsIAPI {
         } catch (StorageExecuteException exception) {
             throw new StorageException(exception, exception.getMessage());
         }
+    }
+
+    @Override
+    public int processedTrades(@NotNull Player player, @NotNull TradeMode tradeMode,
+                               @NotNull Shop shop, @NotNull Trade trade, boolean multiple) {
+        return TradeUtils.processedTrades(player, tradeMode, shop, trade, multiple);
     }
 
     @Override
