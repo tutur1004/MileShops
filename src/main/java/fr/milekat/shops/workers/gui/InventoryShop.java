@@ -1,12 +1,9 @@
 package fr.milekat.shops.workers.gui;
 
 import fr.milekat.shops.Main;
-import fr.milekat.shops.api.MileShopsAPI;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.events.PlayerOpenShop;
-import fr.milekat.shops.api.events.TradeCompleteEvent;
-import fr.milekat.shops.api.exceptions.ApiUnavailable;
 import fr.milekat.shops.workers.utils.Buttons;
 import fr.milekat.shops.api.classes.TradeMode;
 import fr.milekat.shops.workers.utils.TradeUtils;
@@ -207,78 +204,22 @@ public class InventoryShop extends FastInv {
             return;
         }
 
-        int processedTrades = processedTrades(trade, click.isShiftClick());
-        if (processedTrades > 0) {
-            tradeCompleted.put(trade, tradeCompleted.getOrDefault(trade, 0) + processedTrades);
-        }
-    }
-
-    private int processedTrades(@NotNull Trade trade, boolean fullInventories) {
-        //  Lock the trade processing
-        isProcessingTrade = true;
-
         try {
-            //  Set the trade items
-            List<ItemStack> tradeItems = new LinkedList<>();
-            tradeItems.add(trade.getFirstItem().clone());
-            if (trade.getSecondItem() != null) {
-                tradeItems.add(trade.getSecondItem().clone());
+            //  Lock player from trading
+            isProcessingTrade = true;
+
+            int processedTrades = TradeUtils.processedTrades(player, tradeMode, shop, trade, click.isShiftClick());
+            if (processedTrades > 0) {
+                tradeCompleted.put(trade, tradeCompleted.getOrDefault(trade, 0) + processedTrades);
             }
 
-            //  Calculate the max doable trades
-            int maxDoAbleTrades = TradeUtils.maxDoAbleTrades(this.player, tradeItems,
-                    trade.getResultItem().clone(), fullInventories, tradeMode);
-
-            //  If no trades can be done, return 0
-            if (maxDoAbleTrades <= 0) {
-                Main.message(player, Main.getConfigs().getMessage("messages.gui.chest-shop.messages.no-trade",
-                        "&cYou don't have the required items to trade, or your inventory is full"));
-                return 0;
-            }
-
-            //  Trade usage limitation
-            if (trade.isUsageLimited()) {
-                try {
-                    Map<String, Object> playerTags = MileShopsAPI.getAPI().getPlayerTags(player.getUniqueId());
-                    if (playerTags != null && !playerTags.isEmpty()) {
-                        Map<String, Object> playerTradeTags = new HashMap<>();
-                        trade.getMaxTradeTagsNames().stream()
-                                .filter(playerTags::containsKey)
-                                .forEach(tag -> playerTradeTags.put(tag, playerTags.get(tag)));
-                        if (!playerTradeTags.isEmpty()) {
-                            int tradeUses = Main.getStorage().getTradeUses(playerTradeTags, trade);
-                            int maxDoAllowedTrades = trade.getMaxTradeUse() - tradeUses;
-                            if (maxDoAllowedTrades < maxDoAbleTrades) {
-                                Main.message(player, Main.getConfigs().getMessage(
-                                                "messages.gui.chest-shop.messages.max-trade",
-                                                "&cYou have reached the maximum number of uses for this trade(<trade_limit>).")
-                                        .replace("<trade_limit>", String.valueOf(tradeUses)));
-                                if (maxDoAllowedTrades <= 0) return 0;
-                                maxDoAbleTrades = maxDoAllowedTrades;
-                            }
-                        }
-                    }
-                } catch (ApiUnavailable ignore) {}
-            }
-
-            //  Execute the trade
-            TradeUtils.executeTrade(this.player, tradeItems, trade.getResultItem().clone(),
-                    maxDoAbleTrades, tradeMode);
-
-            //  Call the TradeCompleteEvent
-            for (int i = 0; i < maxDoAbleTrades; i++) {
-                TradeCompleteEvent event = new TradeCompleteEvent(player, shop, trade);
-                Main.getInstance().getServer().getPluginManager().callEvent(event);
-            }
-            return maxDoAbleTrades;
-        } finally {
-            //  Unlock the trade processing
+        } catch (Exception ignore) {} finally {
+            //  Unlock player for trading
             isProcessingTrade = false;
         }
     }
 
     @Override
-    @SuppressWarnings("deprecation")
     protected void onClose(InventoryCloseEvent event) {
         super.onClose(event);
         if (!player.hasPermission("shops.admin")) return;
