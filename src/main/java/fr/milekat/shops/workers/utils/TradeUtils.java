@@ -3,6 +3,7 @@ package fr.milekat.shops.workers.utils;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
+import fr.milekat.shops.api.classes.TradeMode;
 import fr.milekat.shops.workers.gui.InventoryStorage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;

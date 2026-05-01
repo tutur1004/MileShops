@@ -4,7 +4,7 @@ import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.storage.StorageImplementation;
-import fr.milekat.shops.workers.utils.TradeMode;
+import fr.milekat.shops.api.classes.TradeMode;
 import fr.milekat.utils.Configs;
 import fr.milekat.utils.storage.adapter.sql.connection.SQLConnection;
 import fr.milekat.utils.storage.adapter.sql.connection.SQLDataBaseClient;

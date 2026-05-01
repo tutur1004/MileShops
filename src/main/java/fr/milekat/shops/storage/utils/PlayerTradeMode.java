@@ -1,6 +1,6 @@
 package fr.milekat.shops.storage.utils;
 
-import fr.milekat.shops.workers.utils.TradeMode;
+import fr.milekat.shops.api.classes.TradeMode;
 
 import java.util.UUID;
 

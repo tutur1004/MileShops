@@ -18,7 +18,7 @@ import fr.milekat.shops.storage.CacheManager;
 import fr.milekat.shops.storage.StorageImplementation;
 import fr.milekat.shops.storage.utils.PlayerTradeMode;
 import fr.milekat.shops.storage.utils.ShopTrades;
-import fr.milekat.shops.workers.utils.TradeMode;
+import fr.milekat.shops.api.classes.TradeMode;
 import fr.milekat.shops.workers.utils.TradeUtils;
 import fr.milekat.utils.Configs;
 import fr.milekat.utils.DateMileKat;

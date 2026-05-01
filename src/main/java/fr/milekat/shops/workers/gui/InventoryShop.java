@@ -8,7 +8,7 @@ import fr.milekat.shops.api.events.PlayerOpenShop;
 import fr.milekat.shops.api.events.TradeCompleteEvent;
 import fr.milekat.shops.api.exceptions.ApiUnavailable;
 import fr.milekat.shops.workers.utils.Buttons;
-import fr.milekat.shops.workers.utils.TradeMode;
+import fr.milekat.shops.api.classes.TradeMode;
 import fr.milekat.shops.workers.utils.TradeUtils;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import fr.mrmicky.fastinv.FastInv;
