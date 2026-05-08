@@ -20,8 +20,10 @@ import fr.milekat.utils.storage.StorageConnection;
 import fr.milekat.utils.storage.StorageLoader;
 import fr.milekat.utils.storage.StorageVendor;
 import fr.milekat.utils.storage.adapter.elasticsearch.connection.ESConnection;
+import fr.milekat.utils.storage.adapter.sql.connection.SQLConnection;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import fr.milekat.utils.storage.exceptions.StorageLoadException;
+import fr.milekat.utils.storage.utils.StorageConfig;
 import fr.mrmicky.fastinv.FastInvManager;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -204,11 +206,12 @@ public class Main extends JavaPlugin {
         try {
             getStorage().disconnect();
         } catch (Exception ignored) {}
-        StorageConnection connection = new StorageLoader(config, logger).getLoadedConnection();
+        StorageConfig storageConfig = StorageConfig.fromConfig(config);
+        StorageConnection connection = new StorageLoader(storageConfig, logger).getLoadedConnection();
         if (Objects.requireNonNull(connection.getVendor()) == StorageVendor.ELASTICSEARCH) {
             STORAGE = new ESStorage((ESConnection) connection, config);
         } else if (Objects.requireNonNull(connection.getVendor()) == StorageVendor.MYSQL) {
-            STORAGE = new SQLStorage(config);
+            STORAGE = new SQLStorage((SQLConnection) connection, config);
         } else {
             throw new StorageLoadException("Unsupported storage type");
         }

@@ -48,10 +48,10 @@ public class SQLStorage implements StorageImplementation {
     /*
         Main DB
      */
-    public SQLStorage(@NotNull Configs config) throws StorageLoadException {
+    public SQLStorage(@NotNull SQLConnection sqlConnection, @NotNull Configs config) throws StorageLoadException {
         this.config = config;
         DatabaseName = config.getString("storage.sql.database");
-        sqlDataBaseClient = new SQLConnection(config, Main.getMileLogger()).getSQLClient();
+        sqlDataBaseClient = sqlConnection.getSQLClient();
         ensureSchema();
     }
 
