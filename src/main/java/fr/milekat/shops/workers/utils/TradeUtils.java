@@ -1,5 +1,6 @@
 package fr.milekat.shops.workers.utils;
 
+import fr.milekat.shops.API;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
@@ -151,7 +152,7 @@ public class TradeUtils {
 
         //  Trade usage limitation
         if (trade.isUsageLimited()) {
-            Map<String, Object> playerTags = Main.getAPI().getPlayerTags(player.getUniqueId());
+            Map<String, Object> playerTags = API.getPlayerTagsStatic(player.getUniqueId());
             if (playerTags != null && !playerTags.isEmpty()) {
                 Map<String, Object> playerTradeTags = new HashMap<>();
                 trade.getMaxTradeTagsNames().stream()

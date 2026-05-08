@@ -90,16 +90,25 @@ public class API implements MileShopsIAPI {
 
     @Override
     public @Nullable Map<String, Object> getPlayerTags(@NotNull UUID uuid) {
+        return getPlayerTagsStatic(uuid);
+    }
+    public static @Nullable Map<String, Object> getPlayerTagsStatic(@NotNull UUID uuid) {
         return Main.PLAYER_TAGS.getOrDefault(uuid, null);
     }
 
     @Override
     public void removePlayerTags(@NotNull UUID uuid) {
+        removePlayerTagsStatic(uuid);
+    }
+    public static void removePlayerTagsStatic(@NotNull UUID uuid) {
         Main.PLAYER_TAGS.remove(uuid);
     }
 
     @Override
     public void setPlayerTags(@NotNull UUID uuid, @NotNull Map<String, Object> tags) {
+        setPlayerTagsStatic(uuid, tags);
+    }
+    public static void setPlayerTagsStatic(@NotNull UUID uuid, @NotNull Map<String, Object> tags) {
         Main.PLAYER_TAGS.put(uuid, tags);
     }
 }
