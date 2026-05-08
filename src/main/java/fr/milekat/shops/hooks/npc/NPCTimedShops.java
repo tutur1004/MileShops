@@ -1,4 +1,4 @@
-package fr.milekat.shops.workers.utils;
+package fr.milekat.shops.hooks.npc;
 
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
@@ -9,10 +9,10 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.List;
 
-public class TimedShops {
+public class NPCTimedShops {
     private final BukkitTask task;
 
-    public TimedShops() {
+    public NPCTimedShops() {
         Main.getMileLogger().info("Starting timed shops worker...");
         task = prepareTask();
     }

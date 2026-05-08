@@ -3,6 +3,7 @@ package fr.milekat.shops;
 import fr.milekat.shops.api.MileShopsIAPI;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.hooks.MileNpc;
+import fr.milekat.shops.hooks.npc.NPCTimedShops;
 import fr.milekat.shops.listeners.DefaultTags;
 import fr.milekat.shops.storage.StorageImplementation;
 import fr.milekat.shops.storage.adapter.elasticsearch.ESStorage;
@@ -13,7 +14,6 @@ import fr.milekat.shops.workers.commands.ShopsCmd;
 import fr.milekat.shops.workers.listeners.ShopsListeners;
 import fr.milekat.shops.workers.listeners.TradeListeners;
 import fr.milekat.shops.workers.utils.ColorStyles;
-import fr.milekat.shops.workers.utils.TimedShops;
 import fr.milekat.utils.Configs;
 import fr.milekat.utils.MileLogger;
 import fr.milekat.utils.storage.StorageConnection;
@@ -51,7 +51,7 @@ public class Main extends JavaPlugin {
     private static StorageImplementation STORAGE;
     public static final Map<String, Class<?>> TAGS = new HashMap<>();
     public static final Map<UUID, Map<String, Object>> PLAYER_TAGS = new HashMap<>();
-    private TimedShops timedShops;
+    private NPCTimedShops NPCTimedShops;
     /*
         Shop cache
      */
@@ -107,7 +107,7 @@ public class Main extends JavaPlugin {
             plugin.getServer().getPluginManager().registerEvents(new DefaultTags(), this);
         }
         if (IS_NPC_LIB_LOADED) {
-            timedShops = new TimedShops();
+            NPCTimedShops = new NPCTimedShops();
         }
         PluginCommand shopCommand = plugin.getCommand("shop");
         if (shopCommand != null) {
@@ -120,7 +120,9 @@ public class Main extends JavaPlugin {
         Bukkit.getServicesManager().unregisterAll(this);
         try {
             getStorage().disconnect();
-            timedShops.cancel();
+            if (IS_NPC_LIB_LOADED) {
+                NPCTimedShops.cancel();
+            }
         } catch (Exception ignored) {}
     }
 
