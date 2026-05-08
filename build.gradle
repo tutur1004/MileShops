@@ -25,7 +25,6 @@ allprojects {
             name = 'papermc'
             url = 'https://repo.papermc.io/repository/maven-public/'
         }
-        //  TODO: Remove when MileNPC is released
         maven {
             url = uri("https://maven.pkg.github.com/tutur1004/MileNpc")
             credentials {
@@ -44,7 +43,7 @@ allprojects {
         compileOnly 'io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT'
 
         //  Milekat
-        compileOnly group: 'fr.milekat', name: 'mile-npc-api', version: '1.2.0-SNAPSHOT'
+        compileOnly group: 'fr.milekat', name: 'mile-npc-api', version: '1.2.0'
     }
 
     processResources {
