@@ -208,9 +208,9 @@ public class Main extends JavaPlugin {
         } catch (Exception ignored) {}
         StorageConfig storageConfig = StorageConfig.fromConfig(config);
         StorageConnection connection = new StorageLoader(storageConfig, logger).getLoadedConnection();
-        if (Objects.requireNonNull(connection.getVendor()) == StorageVendor.ELASTICSEARCH) {
+        if (storageConfig.type() == StorageVendor.ELASTICSEARCH) {
             STORAGE = new ESStorage((ESConnection) connection, config);
-        } else if (Objects.requireNonNull(connection.getVendor()) == StorageVendor.MYSQL) {
+        } else if (storageConfig.type() == StorageVendor.MYSQL) {
             STORAGE = new SQLStorage((SQLConnection) connection, config);
         } else {
             throw new StorageLoadException("Unsupported storage type");

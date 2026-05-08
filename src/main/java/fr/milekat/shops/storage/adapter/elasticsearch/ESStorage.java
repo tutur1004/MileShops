@@ -417,9 +417,7 @@ public class ESStorage implements StorageImplementation {
         TradeMode tradeMode = TradeUtils.getDefaultTradeMode();
         if (!searchResponse.hits().hits().isEmpty() && searchResponse.hits().hits().getFirst().source() != null) {
             PlayerTradeMode playerTradeMode = searchResponse.hits().hits().getFirst().source();
-            if (playerTradeMode != null) {
-                tradeMode = playerTradeMode.tradeMode();
-            }
+            tradeMode = playerTradeMode.tradeMode();
         }
         if (tradeMode == null) {
             tradeMode = TradeUtils.getDefaultTradeMode();
