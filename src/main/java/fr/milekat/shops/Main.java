@@ -68,6 +68,7 @@ public class Main extends JavaPlugin {
             logger.info("MileNPC detected, hooking into it..");
             try {
                 MileNpc.getNpcApi();
+                plugin.getServer().getPluginManager().registerEvents(new MileNpc(), this);
                 IS_NPC_LIB_LOADED = true;
                 logger.info("Hooked into MileNPC successfully !");
             } catch (RuntimeException exception) {
