@@ -48,6 +48,7 @@ public class Main extends JavaPlugin {
     public static Boolean DEBUG = false;
     public static String PREFIX;
     public static boolean IS_NPC_LIB_LOADED = false;
+    private static API api;
     private static StorageImplementation STORAGE;
     public static final Map<String, Class<?>> TAGS = new HashMap<>();
     public static final Map<UUID, Map<String, Object>> PLAYER_TAGS = new HashMap<>();
@@ -99,7 +100,8 @@ public class Main extends JavaPlugin {
             return;
         }
         //  Load API
-        Bukkit.getServicesManager().register(MileShopsIAPI.class, new API(), this, ServicePriority.Normal);
+        api = new API();
+        Bukkit.getServicesManager().register(MileShopsIAPI.class, api, this, ServicePriority.Normal);
         //  Load plugin workers
         plugin.getServer().getPluginManager().registerEvents(new ShopsListeners(), this);
         plugin.getServer().getPluginManager().registerEvents(new TradeListeners(), this);
@@ -153,6 +155,15 @@ public class Main extends JavaPlugin {
      */
     public static void message(@NotNull Player player, @NotNull Component message) {
         message(player, PlainTextComponentSerializer.plainText().serialize(message));
+    }
+
+    /**
+     * Get API
+     *
+     * @return API implementation
+     */
+    public static API getAPI() {
+        return api;
     }
 
     /**

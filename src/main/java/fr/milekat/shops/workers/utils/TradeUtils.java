@@ -1,12 +1,10 @@
 package fr.milekat.shops.workers.utils;
 
 import fr.milekat.shops.Main;
-import fr.milekat.shops.api.MileShopsAPI;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.classes.TradeMode;
 import fr.milekat.shops.api.events.TradeCompleteEvent;
-import fr.milekat.shops.api.exceptions.ApiUnavailable;
 import fr.milekat.shops.workers.gui.InventoryStorage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -153,27 +151,25 @@ public class TradeUtils {
 
         //  Trade usage limitation
         if (trade.isUsageLimited()) {
-            try {
-                Map<String, Object> playerTags = MileShopsAPI.getAPI().getPlayerTags(player.getUniqueId());
-                if (playerTags != null && !playerTags.isEmpty()) {
-                    Map<String, Object> playerTradeTags = new HashMap<>();
-                    trade.getMaxTradeTagsNames().stream()
-                            .filter(playerTags::containsKey)
-                            .forEach(tag -> playerTradeTags.put(tag, playerTags.get(tag)));
-                    if (!playerTradeTags.isEmpty()) {
-                        int tradeUses = Main.getStorage().getTradeUses(playerTradeTags, trade);
-                        int maxDoAllowedTrades = trade.getMaxTradeUse() - tradeUses;
-                        if (maxDoAllowedTrades < maxDoAbleTrades) {
-                            Main.message(player, Main.getConfigs().getMessage(
-                                            "messages.gui.chest-shop.messages.max-trade",
-                                            "&cYou have reached the maximum number of uses for this trade(<trade_limit>).")
-                                    .replace("<trade_limit>", String.valueOf(tradeUses)));
-                            if (maxDoAllowedTrades <= 0) return 0;
-                            maxDoAbleTrades = maxDoAllowedTrades;
-                        }
+            Map<String, Object> playerTags = Main.getAPI().getPlayerTags(player.getUniqueId());
+            if (playerTags != null && !playerTags.isEmpty()) {
+                Map<String, Object> playerTradeTags = new HashMap<>();
+                trade.getMaxTradeTagsNames().stream()
+                        .filter(playerTags::containsKey)
+                        .forEach(tag -> playerTradeTags.put(tag, playerTags.get(tag)));
+                if (!playerTradeTags.isEmpty()) {
+                    int tradeUses = Main.getStorage().getTradeUses(playerTradeTags, trade);
+                    int maxDoAllowedTrades = trade.getMaxTradeUse() - tradeUses;
+                    if (maxDoAllowedTrades < maxDoAbleTrades) {
+                        Main.message(player, Main.getConfigs().getMessage(
+                                        "messages.gui.chest-shop.messages.max-trade",
+                                        "&cYou have reached the maximum number of uses for this trade(<trade_limit>).")
+                                .replace("<trade_limit>", String.valueOf(tradeUses)));
+                        if (maxDoAllowedTrades <= 0) return 0;
+                        maxDoAbleTrades = maxDoAllowedTrades;
                     }
                 }
-            } catch (ApiUnavailable ignore) {}
+            }
         }
 
         //  Execute the trade

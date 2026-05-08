@@ -124,7 +124,7 @@ public class Shop {
      * @throws StorageException     if there is an error accessing the storage.
      */
     public List<Trade> getTrades() throws ApiUnavailable, StorageException {
-        return MileShopsAPI.getAPI().getShopTrades(this.uuid);
+        return MileShopsAPI.getShopTrades(this.uuid);
     }
 
     /**
