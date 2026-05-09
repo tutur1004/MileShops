@@ -7,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -23,8 +24,8 @@ public class Trade {
     private ItemStack resultItem;
     private int maxTradeUse;
     private List<String> maxTradeTagsNames;
+    private Map<String, Integer> moneyResult;
     private boolean enabled; // TODO implement
-    private boolean moneyTrade;
 
     /**
      * Constructs a new Trade instance with the specified parameters.
@@ -38,13 +39,15 @@ public class Trade {
      * @param resultItem        The resulting item of the trade.
      * @param maxTradeUse       The maximum number of times the trade can be used. (0 to disable limit)
      * @param maxTradeTagsNames The tags associated with the maximum trade uses.
+     * @param moneyResult       If set, the trade will give money instead of items.
+     *                          The map key is the money type and the value is the amount of money to give.
      */
     public Trade(@NotNull UUID shopUuid, int tradePosition,
                  @NotNull ItemStack firstItem, @Nullable Tag<Material> firstItemTag,
                  @Nullable ItemStack secondItem, @Nullable Tag<Material> secondItemTag,
                  @NotNull ItemStack resultItem,
                  int maxTradeUse, @Nullable List<String> maxTradeTagsNames,
-                 boolean moneyTrade) {
+                 @NotNull Map<String, Integer> moneyResult) {
         this.shopUuid = shopUuid;
         this.tradePosition = tradePosition;
         this.firstItem = firstItem;
@@ -55,7 +58,7 @@ public class Trade {
         enabled = true;
         this.maxTradeUse = maxTradeUse;
         this.maxTradeTagsNames = maxTradeTagsNames;
-        this.moneyTrade = moneyTrade;
+        this.moneyResult = moneyResult;
     }
 
     /**
@@ -222,16 +225,25 @@ public class Trade {
      * @return true if the trade gives money, false otherwise.
      */
     public boolean isMoneyTrade() {
-        return moneyTrade;
+        return !moneyResult.isEmpty();
+    }
+
+    /**
+     * Get all money results for each money types
+     *
+     * @return The map of money types and amounts to give.
+     */
+    public @NotNull Map<String, Integer> getMoneyResult() {
+        return moneyResult;
     }
 
     /**
      * Sets whether the trade gives money instead of items.
      *
-     * @param moneyTrade true to make the trade give money, false otherwise.
+     * @param moneyResult The map of money types and amounts to give. If empty, the trade will give items instead.
      */
-    public void setMoneyTrade(boolean moneyTrade) {
-        this.moneyTrade = moneyTrade;
+    public void setMoneyResult(@NotNull Map<String, Integer> moneyResult) {
+        this.moneyResult = moneyResult;
     }
 
     /**
