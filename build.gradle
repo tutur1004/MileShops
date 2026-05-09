@@ -83,7 +83,7 @@ dependencies {
     implementation project('mile-shops-api')
 
     //  Utils
-    compileOnly group: 'fr.milekat', name: 'milekat-utils', version: '1.9.0'
+    compileOnly group: 'fr.milekat', name: 'milekat-utils', version: '1.9.1'
     implementation group: 'fr.mrmicky', name: 'FastInv', version: '3.0.4'
 
     //  Storage clients

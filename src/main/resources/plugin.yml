@@ -9,7 +9,7 @@ softdepend:
   - MileNpc
 libraries:
   # Utils
-  - fr.milekat:milekat-utils:1.9.0
+  - fr.milekat:milekat-utils:1.9.1
   - com.fasterxml.jackson.core:jackson-databind:2.18.3
   - com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.18.3
   # Storage
