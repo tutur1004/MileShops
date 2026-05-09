@@ -126,5 +126,17 @@ public interface MileShopsIAPI {
      */
     void setPlayerTags(@NotNull UUID uuid, @NotNull Map<String, Object> tags);
 
+    /**
+     * Checks if the player identified by UUID has a malus.
+     * @param uuid The UUID of the player.
+     * @return true if the player has currently a malus applied
+     */
+    boolean hasPlayerMalus(@NotNull UUID uuid);
+    /**
+     * Checks if the player identified by UUID has a malus.
+     *
+     * @param uuid The UUID of the player.
+     * @return true if the player has a malus, false otherwise.
+     */
     void setPlayerMalus(@NotNull UUID uuid, boolean malus);
 }
