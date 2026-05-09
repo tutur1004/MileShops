@@ -2,6 +2,7 @@ package fr.milekat.shops;
 
 import fr.milekat.shops.api.MileShopsIAPI;
 import fr.milekat.shops.api.classes.Shop;
+import fr.milekat.shops.hooks.MileBanks;
 import fr.milekat.shops.hooks.MileNpc;
 import fr.milekat.shops.hooks.npc.NPCTimedShops;
 import fr.milekat.shops.listeners.DefaultTags;
@@ -70,6 +71,7 @@ public class Main extends JavaPlugin {
     public void onEnable() {
         plugin = this;
         logger = new MileLogger(this.getLogger());
+        //  Hook to MileNpc for NPC shops
         if (Bukkit.getPluginManager().getPlugin("MileNpc") != null) {
             logger.info("MileNPC detected, hooking into it..");
             try {
@@ -81,9 +83,16 @@ public class Main extends JavaPlugin {
                 logger.warning("Failed to hook into MileNPC, NPC features will be unavailable !");
             }
         }
-        IS_BANKS_LIB_LOADED = Bukkit.getPluginManager().getPlugin("MileBanks") != null;
-        if (IS_BANKS_LIB_LOADED) {
+        //  Hook to MileBanks for money trades
+        if (Bukkit.getPluginManager().getPlugin("MileBanks") != null) {
             logger.info("MileBanks detected, hooking into it..");
+            try {
+                MileBanks.getBankApi();
+                IS_BANKS_LIB_LOADED = true;
+                logger.info("Hooked into MileBanks successfully !");
+            } catch (RuntimeException exception) {
+                logger.warning("Failed to hook into MileBanks, money features will be unavailable !");
+            }
         }
         //  Load configs
         try {
