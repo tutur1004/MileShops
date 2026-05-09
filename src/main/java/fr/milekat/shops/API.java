@@ -113,22 +113,18 @@ public class API implements MileShopsIAPI {
     }
 
     @Override
-    public boolean hasPlayerMalus(@NotNull UUID uuid) {
-        return hasPlayerMalusStatic(uuid);
+    public double getPlayerModifier(@NotNull UUID uuid) {
+        return getPlayerModifierStatic(uuid);
     }
-    public static boolean hasPlayerMalusStatic(@NotNull UUID uuid) {
-        return Main.PLAYER_MALUS.contains(uuid);
+    public static double getPlayerModifierStatic(@NotNull UUID uuid) {
+        return Main.PLAYER_MODIFIERS.getOrDefault(uuid, 1.0);
     }
 
     @Override
-    public void setPlayerMalus(@NotNull UUID uuid, boolean malus) {
-        setPlayerMalusStatic(uuid, malus);
+    public void setPlayerModifier(@NotNull UUID uuid, double modifier) {
+        setPlayerModifierStatic(uuid, modifier);
     }
-    public static void setPlayerMalusStatic(@NotNull UUID uuid, boolean malus) {
-        if (malus) {
-            Main.PLAYER_MALUS.add(uuid);
-        } else {
-            Main.PLAYER_MALUS.remove(uuid);
-        }
+    public static void setPlayerModifierStatic(@NotNull UUID uuid, double modifier) {
+        Main.PLAYER_MODIFIERS.put(uuid, modifier);
     }
 }

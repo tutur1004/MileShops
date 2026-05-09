@@ -184,10 +184,16 @@ public class ShopsCmd implements TabExecutor {
                 return true;
             }
 
-            if (args[0].equalsIgnoreCase("malus") && player.hasPermission("shops.malus")) {
+            if (args[0].equalsIgnoreCase("modifier") && player.hasPermission("shops.modifier")) {
                 OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
-                boolean malus = args[2].equalsIgnoreCase("true");
-                API.setPlayerMalusStatic(target.getUniqueId(), malus);
+                try {
+                    double modifier = Double.parseDouble(args[2]);
+                    API.setPlayerModifierStatic(target.getUniqueId(), modifier);
+                    Main.message(player, "&2Modifier set to " + args[2] + " " +
+                            "for player " + target.getName() + " !");
+                } catch (NumberFormatException e) {
+                    Main.message(player, "&cModifier must be a valid number.");
+                }
                 return true;
             }
 

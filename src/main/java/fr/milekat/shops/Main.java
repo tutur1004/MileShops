@@ -55,6 +55,7 @@ public class Main extends JavaPlugin {
     public static final Map<String, Class<?>> TAGS = new HashMap<>();
     public static final Map<UUID, Map<String, Object>> PLAYER_TAGS = new HashMap<>();
     private NPCTimedShops NPCTimedShops;
+    public static Map<UUID, Double> PLAYER_MODIFIERS = new HashMap<>();
     /*
         Shop cache
      */
