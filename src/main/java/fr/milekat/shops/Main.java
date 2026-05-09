@@ -1,11 +1,9 @@
 package fr.milekat.shops;
 
-import fr.milekat.milenpc.api.MileNpcAPI;
-import fr.milekat.milenpc.api.classes.INPCManager;
-import fr.milekat.milenpc.api.classes.NPC;
-import fr.milekat.milenpc.api.exceptions.ApiUnavailable;
-import fr.milekat.shops.api.MileShopsAPI;
+import fr.milekat.shops.api.MileShopsIAPI;
 import fr.milekat.shops.api.classes.Shop;
+import fr.milekat.shops.hooks.MileNpc;
+import fr.milekat.shops.hooks.npc.NPCTimedShops;
 import fr.milekat.shops.listeners.DefaultTags;
 import fr.milekat.shops.storage.StorageImplementation;
 import fr.milekat.shops.storage.adapter.elasticsearch.ESStorage;
@@ -15,27 +13,30 @@ import fr.milekat.shops.storage.utils.ShopTrades;
 import fr.milekat.shops.workers.commands.ShopsCmd;
 import fr.milekat.shops.workers.listeners.ShopsListeners;
 import fr.milekat.shops.workers.listeners.TradeListeners;
-import fr.milekat.shops.workers.utils.TimedShops;
+import fr.milekat.shops.workers.utils.ColorStyles;
 import fr.milekat.utils.Configs;
+import fr.milekat.utils.McTools;
 import fr.milekat.utils.MileLogger;
 import fr.milekat.utils.storage.StorageConnection;
 import fr.milekat.utils.storage.StorageLoader;
 import fr.milekat.utils.storage.StorageVendor;
 import fr.milekat.utils.storage.adapter.elasticsearch.connection.ESConnection;
+import fr.milekat.utils.storage.adapter.sql.connection.SQLConnection;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import fr.milekat.utils.storage.exceptions.StorageLoadException;
+import fr.milekat.utils.storage.utils.StorageConfig;
 import fr.mrmicky.fastinv.FastInvManager;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.util.*;
@@ -51,7 +52,7 @@ public class Main extends JavaPlugin {
     private static StorageImplementation STORAGE;
     public static final Map<String, Class<?>> TAGS = new HashMap<>();
     public static final Map<UUID, Map<String, Object>> PLAYER_TAGS = new HashMap<>();
-    private TimedShops timedShops;
+    private NPCTimedShops NPCTimedShops;
     /*
         Shop cache
      */
@@ -66,9 +67,16 @@ public class Main extends JavaPlugin {
     public void onEnable() {
         plugin = this;
         logger = new MileLogger(this.getLogger());
-        IS_NPC_LIB_LOADED = Bukkit.getPluginManager().getPlugin("MileNPC") != null;
-        if (IS_NPC_LIB_LOADED) {
+        if (Bukkit.getPluginManager().getPlugin("MileNpc") != null) {
             logger.info("MileNPC detected, hooking into it..");
+            try {
+                MileNpc.getNpcApi();
+                plugin.getServer().getPluginManager().registerEvents(new MileNpc(), this);
+                IS_NPC_LIB_LOADED = true;
+                logger.info("Hooked into MileNPC successfully !");
+            } catch (RuntimeException exception) {
+                logger.warning("Failed to hook into MileNPC, NPC features will be unavailable !");
+            }
         }
         //  Load configs
         try {
@@ -92,15 +100,16 @@ public class Main extends JavaPlugin {
             return;
         }
         //  Load API
-        MileShopsAPI.LOADED_API = new API();
-        MileShopsAPI.API_READY = true;
+        Bukkit.getServicesManager().register(MileShopsIAPI.class, new API(), this, ServicePriority.Normal);
         //  Load plugin workers
         plugin.getServer().getPluginManager().registerEvents(new ShopsListeners(), this);
         plugin.getServer().getPluginManager().registerEvents(new TradeListeners(), this);
         if (config.getBoolean("tags.enable_builtin_tags", true)) {
             plugin.getServer().getPluginManager().registerEvents(new DefaultTags(), this);
         }
-        timedShops = new TimedShops();
+        if (IS_NPC_LIB_LOADED) {
+            NPCTimedShops = new NPCTimedShops();
+        }
         PluginCommand shopCommand = plugin.getCommand("shop");
         if (shopCommand != null) {
             shopCommand.setExecutor(new ShopsCmd());
@@ -109,9 +118,12 @@ public class Main extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        Bukkit.getServicesManager().unregisterAll(this);
         try {
             getStorage().disconnect();
-            timedShops.cancel();
+            if (IS_NPC_LIB_LOADED) {
+                NPCTimedShops.cancel();
+            }
         } catch (Exception ignored) {}
     }
 
@@ -135,41 +147,14 @@ public class Main extends JavaPlugin {
      * Send a formatted message to sender
      */
     public static void message(@NotNull Player player, @NotNull String message) {
-        player.sendMessage(Main.getConfigs().getMessage("messages.prefix") + ChatColor.RESET +
-                ChatColor.translateAlternateColorCodes('&', message));
+        message(player, Component.text(McTools.minecraftColorCodes(message)));
     }
 
     /**
      * Send a formatted BaseComponent message to sender
      */
-    public static void message(@NotNull Player player, @NotNull BaseComponent message) {
-        BaseComponent prefixedMessage = new TextComponent(Main.getConfigs().getMessage("messages.prefix") +
-                ChatColor.RESET);
-        prefixedMessage.addExtra(message.duplicate());
-        player.spigot().sendMessage(prefixedMessage);
-    }
-
-    /**
-     * Get the NPC manager
-     *
-     * @return Loaded NPC manager
-     */
-    public static @NotNull INPCManager getNpcManager() {
-        try {
-            return MileNpcAPI.getAPI().getNPCManager();
-        } catch (ApiUnavailable ignored) {
-            throw new RuntimeException("Error while trying to get NPC manager");
-        }
-    }
-
-    /**
-     * Fetch a NPC
-     *
-     * @param uuid UUID of the NPC
-     * @return NPC or null if not found
-     */
-    public static @Nullable NPC getNpc(@NotNull UUID uuid) {
-        return getNpcManager().getNpc(uuid);
+    public static void message(@NotNull Player player, @NotNull Component message) {
+        player.sendMessage(message.style(message.style().merge(ColorStyles.INFO_VALUE)));
     }
 
     /**
@@ -210,8 +195,8 @@ public class Main extends JavaPlugin {
         }
         DEBUG = config.getBoolean("debug", false);
         logger.setDebug(DEBUG);
-        PREFIX = ChatColor.translateAlternateColorCodes('&',
-                config.getString("messages.prefix", "[" + plugin.getName() + "] "));
+        PREFIX = PlainTextComponentSerializer.plainText().serialize(LegacyComponentSerializer.legacyAmpersand()
+                .deserialize(config.getString("messages.prefix", "[" + plugin.getName() + "] ")));
         logger.debug("Debug enable");
         logger.info("Config loaded");
     }
@@ -223,11 +208,12 @@ public class Main extends JavaPlugin {
         try {
             getStorage().disconnect();
         } catch (Exception ignored) {}
-        StorageConnection connection = new StorageLoader(config, logger).getLoadedConnection();
-        if (Objects.requireNonNull(connection.getVendor()) == StorageVendor.ELASTICSEARCH) {
+        StorageConfig storageConfig = StorageConfig.fromConfig(config);
+        StorageConnection connection = new StorageLoader(storageConfig, logger).getLoadedConnection();
+        if (storageConfig.type() == StorageVendor.ELASTICSEARCH) {
             STORAGE = new ESStorage((ESConnection) connection, config);
-        } else if (Objects.requireNonNull(connection.getVendor()) == StorageVendor.MYSQL) {
-            STORAGE = new SQLStorage(config);
+        } else if (storageConfig.type() == StorageVendor.MYSQL) {
+            STORAGE = new SQLStorage((SQLConnection) connection, config);
         } else {
             throw new StorageLoadException("Unsupported storage type");
         }

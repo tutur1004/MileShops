@@ -5,7 +5,7 @@ import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.storage.utils.PlayerTradeMode;
 import fr.milekat.shops.storage.utils.ShopTrades;
-import fr.milekat.shops.workers.utils.TradeMode;
+import fr.milekat.shops.api.classes.TradeMode;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import org.jetbrains.annotations.NotNull;
 
@@ -122,8 +122,11 @@ public interface CacheManager {
             Main.getMileLogger().debug("No up to date cache found, try to search it.");
             return Main.getStorage().getAllShops();
         } else {
-            Main.getMileLogger().debug("Found '" + Main.SHOP_CACHE.keySet().size() + "' shops in cache.");
-            return new ArrayList<>(Main.SHOP_CACHE.keySet());
+            List<Shop> cache = new ArrayList<>(Main.SHOP_CACHE.keySet());
+            Main.getMileLogger().debug("Found '" + cache.size() + "' shops in cache.");
+            //  Order by name
+            cache.sort(Comparator.comparing(Shop::getName));
+            return cache;
         }
     }
 

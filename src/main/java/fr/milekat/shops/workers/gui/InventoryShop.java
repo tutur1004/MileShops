@@ -1,26 +1,26 @@
 package fr.milekat.shops.workers.gui;
 
 import fr.milekat.shops.Main;
-import fr.milekat.shops.api.MileShopsAPI;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.events.PlayerOpenShop;
-import fr.milekat.shops.api.events.TradeCompleteEvent;
-import fr.milekat.shops.api.exceptions.ApiUnavailable;
 import fr.milekat.shops.workers.utils.Buttons;
-import fr.milekat.shops.workers.utils.TradeMode;
+import fr.milekat.shops.api.classes.TradeMode;
 import fr.milekat.shops.workers.utils.TradeUtils;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import fr.mrmicky.fastinv.FastInv;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.api.chat.HoverEvent;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.chat.hover.content.Text;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.HoverEvent;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -188,11 +188,11 @@ public class InventoryShop extends FastInv {
         //  Display additional trade items (Arrow, etc...)
         tradeSlots.additionalTradeItems().forEach(this::setItem);
         //  Display trade items
-        setItem(tradeSlots.firstItemSlot(), trade.getFirstItem().clone());
+        setItem(tradeSlots.firstItemSlot(), getGuiItem(trade).firstItem());
         if (trade.getSecondItem() != null && tradeSlots.secondItemSlot() != null) {
-            setItem(tradeSlots.resultItemSlot(), trade.getSecondItem().clone());
+            setItem(tradeSlots.resultItemSlot(), getGuiItem(trade).secondItem());
         }
-        setItem(tradeSlots.resultItemSlot(), trade.getResultItem().clone(),
+        setItem(tradeSlots.resultItemSlot(), getGuiItem(trade).resultItem(),
                 event -> requestTrade(trade, event.getClick()));
     }
 
@@ -204,93 +204,66 @@ public class InventoryShop extends FastInv {
             return;
         }
 
-        int processedTrades = processedTrades(trade, click.isShiftClick());
-        if (processedTrades > 0) {
-            tradeCompleted.put(trade, tradeCompleted.getOrDefault(trade, 0) + processedTrades);
-        }
-    }
-
-    private int processedTrades(@NotNull Trade trade, boolean fullInventories) {
-        //  Lock the trade processing
-        isProcessingTrade = true;
-
         try {
-            //  Set the trade items
-            List<ItemStack> tradeItems = new LinkedList<>();
-            tradeItems.add(trade.getFirstItem().clone());
-            if (trade.getSecondItem() != null) {
-                tradeItems.add(trade.getSecondItem().clone());
+            //  Lock player from trading
+            isProcessingTrade = true;
+
+            int processedTrades = TradeUtils.processedTrades(player, tradeMode, shop, trade, click.isShiftClick());
+            if (processedTrades > 0) {
+                tradeCompleted.put(trade, tradeCompleted.getOrDefault(trade, 0) + processedTrades);
             }
 
-            //  Calculate the max doable trades
-            int maxDoAbleTrades = TradeUtils.maxDoAbleTrades(this.player, tradeItems,
-                    trade.getResultItem().clone(), fullInventories, tradeMode);
-
-            //  If no trades can be done, return 0
-            if (maxDoAbleTrades <= 0) {
-                Main.message(player, Main.getConfigs().getMessage("messages.gui.chest-shop.messages.no-trade",
-                        "&cYou don't have the required items to trade, or your inventory is full"));
-                return 0;
-            }
-
-            //  Trade usage limitation
-            if (trade.isUsageLimited()) {
-                try {
-                    Map<String, Object> playerTags = MileShopsAPI.getAPI().getPlayerTags(player.getUniqueId());
-                    if (playerTags != null && !playerTags.isEmpty()) {
-                        Map<String, Object> playerTradeTags = new HashMap<>();
-                        trade.getMaxTradeTagsNames().stream()
-                                .filter(playerTags::containsKey)
-                                .forEach(tag -> playerTradeTags.put(tag, playerTags.get(tag)));
-                        if (!playerTradeTags.isEmpty()) {
-                            int tradeUses = Main.getStorage().getTradeUses(playerTradeTags, trade);
-                            int maxDoAllowedTrades = trade.getMaxTradeUse() - tradeUses;
-                            if (maxDoAllowedTrades < maxDoAbleTrades) {
-                                Main.message(player, Main.getConfigs().getMessage(
-                                                "messages.gui.chest-shop.messages.max-trade",
-                                                "&cYou have reached the maximum number of uses for this trade(<trade_limit>).")
-                                        .replace("<trade_limit>", String.valueOf(tradeUses)));
-                                if (maxDoAllowedTrades <= 0) return 0;
-                                maxDoAbleTrades = maxDoAllowedTrades;
-                            }
-                        }
-                    }
-                } catch (ApiUnavailable ignore) {}
-            }
-
-            //  Execute the trade
-            TradeUtils.executeTrade(this.player, tradeItems, trade.getResultItem().clone(),
-                    maxDoAbleTrades, tradeMode);
-
-            //  Call the TradeCompleteEvent
-            for (int i = 0; i < maxDoAbleTrades; i++) {
-                TradeCompleteEvent event = new TradeCompleteEvent(player, shop, trade);
-                Main.getInstance().getServer().getPluginManager().callEvent(event);
-            }
-            return maxDoAbleTrades;
-        } finally {
-            //  Unlock the trade processing
+        } catch (Exception ignore) {} finally {
+            //  Unlock player for trading
             isProcessingTrade = false;
         }
     }
 
     @Override
-    @SuppressWarnings("deprecation")
     protected void onClose(InventoryCloseEvent event) {
         super.onClose(event);
         if (!player.hasPermission("shops.admin")) return;
         this.tradeCompleted.forEach((trade, count) -> {
-            BaseComponent message = new TextComponent(TradeUtils.tradeFormatting(Main.getConfigs()
+            Component message = Component.text(TradeUtils.tradeFormatting(Main.getConfigs()
                     .getMessage("messages.gui.chest-shop.messages.trade-result",
                             "&2You trade <first_amount>x<first_material>, " +
-                                    "for <result_amount>x<result_material>."), shop, trade, count));
-            message.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                    new Text(Main.getConfigs()
+                                    "for <result_amount>x<result_material>."), shop, trade, count))
+            .hoverEvent(HoverEvent.showText(Component.text(Main.getConfigs()
                             .getMessages("messages.gui.chest-shop.messages.trade-result-hover")
                             .stream()
                             .map(line -> TradeUtils.tradeFormatting(line, shop, trade, count))
                             .collect(Collectors.joining(System.lineSeparator(), "", "")))));
             Main.message(player, message);
         });
+    }
+
+    @Contract("_ -> new")
+    private @NotNull TradeGuiItems getGuiItem(@NotNull Trade trade) {
+        return new TradeGuiItems(trade.getFirstItem(), trade.getSecondItem(), trade.getResultItem());
+    }
+
+    private record TradeGuiItems(@NotNull ItemStack firstItem,
+                                 @Nullable ItemStack secondItem,
+                                 @NotNull ItemStack resultItem) {
+        static NamespacedKey key = new NamespacedKey(Main.getInstance(), "mile_shops_gui_item");
+
+        public TradeGuiItems {
+            firstItem = getItem(firstItem);
+            if (secondItem != null) {
+                secondItem = getItem(secondItem);
+            }
+            resultItem = getItem(resultItem);
+        }
+
+        private @NotNull ItemStack getItem(@NotNull ItemStack item) {
+            ItemStack guiItem = item.clone();
+            ItemMeta meta = guiItem.getItemMeta();
+            if (meta != null) {
+                meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, UUID.randomUUID().toString());
+            }
+            guiItem.setItemMeta(meta);
+
+            return guiItem;
+        }
     }
 }

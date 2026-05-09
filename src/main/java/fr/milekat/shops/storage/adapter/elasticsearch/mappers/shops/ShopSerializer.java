@@ -4,8 +4,9 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
-import fr.milekat.milenpc.api.classes.NPC;
+import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
+import fr.milekat.shops.api.classes.ShopNpc;
 import fr.milekat.shops.api.classes.ShopType;
 import fr.milekat.utils.DateMileKat;
 import org.jetbrains.annotations.NotNull;
@@ -19,7 +20,7 @@ import java.util.UUID;
  *     "shop": {
  *         "uuid": {@link UUID},
  *         "name": {@link String},
- *         "npc": {@link NPC},
+ *         "npc": {@link ShopNpc},
  *         "type": {@link ShopType},
  *         "spawnIn": {@link Date},
  *         "spawnOut": {@link Date}
@@ -42,7 +43,7 @@ public class ShopSerializer extends StdSerializer<Shop> {
 
         gen.writeStringField("uuid", String.valueOf(value.getUuid()));
         gen.writeStringField("name", value.getName());
-        if (value.getNpc() != null) {
+        if (value.getNpc() != null && Main.IS_NPC_LIB_LOADED) {
             gen.writeObjectField("npc", value.getNpc());
         }
         gen.writeStringField("type", String.valueOf(value.getType()));

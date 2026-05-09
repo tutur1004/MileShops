@@ -13,11 +13,12 @@ import co.elastic.clients.json.jackson.JacksonJsonpMapper;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
+import fr.milekat.shops.hooks.MileNpc;
 import fr.milekat.shops.storage.CacheManager;
 import fr.milekat.shops.storage.StorageImplementation;
 import fr.milekat.shops.storage.utils.PlayerTradeMode;
 import fr.milekat.shops.storage.utils.ShopTrades;
-import fr.milekat.shops.workers.utils.TradeMode;
+import fr.milekat.shops.api.classes.TradeMode;
 import fr.milekat.shops.workers.utils.TradeUtils;
 import fr.milekat.utils.Configs;
 import fr.milekat.utils.DateMileKat;
@@ -150,12 +151,12 @@ public class ESStorage implements StorageImplementation {
                             Main.message(sender, "&cError while trying to update shop " + shop.getName());
                             Main.getMileLogger().warning("Error while trying to update shop with uuid " + shop.getUuid());
                             Main.getMileLogger().stack(exception.getStackTrace());
-                            shop.removeNpc();
+                            MileNpc.remove(shop.getNpc());
                         }
                     } else {
                         if (!createIfNotExist) {
                             Main.message(sender, "&cShop with name '" + shop.getName() + "' do not exist.");
-                            shop.removeNpc();
+                            MileNpc.remove(shop.getNpc());
                             return;
                         }
                         //  Save new shop
@@ -170,21 +171,22 @@ public class ESStorage implements StorageImplementation {
                             Main.message(sender, "&cError while trying to create shop " + shop.getName());
                             Main.getMileLogger().warning("Error while trying to index shop with uuid " + shop.getUuid());
                             Main.getMileLogger().stack(exception.getStackTrace());
-                            shop.removeNpc();
+                            MileNpc.remove(shop.getNpc());
                         }
                     }
-
-                } catch (ElasticsearchException | IOException exception) {
+                    //  Update cache
+                    this.getShop(shop.getName());
+                } catch (ElasticsearchException | IOException | StorageExecuteException exception) {
                     Main.message(sender, "&cError while trying to save shop " + shop.getName());
                     Main.getMileLogger().warning("Error while trying to fetch shop with uuid " + shop.getName());
                     Main.getMileLogger().stack(exception.getStackTrace());
-                    shop.removeNpc();
+                    MileNpc.remove(shop.getNpc());
                 }
             } catch (IOException exception) {
                 Main.message(sender, "&cError while trying to connect to storage.");
                 Main.getMileLogger().warning("Error while trying to connect to ElasticSearch.");
                 Main.getMileLogger().stack(exception.getStackTrace());
-                shop.removeNpc();
+                MileNpc.remove(shop.getNpc());
             }
         });
     }
@@ -245,6 +247,8 @@ public class ESStorage implements StorageImplementation {
                 List<Shop> shops = new ArrayList<>();
                 response.hits().hits().forEach(hit -> shops.add(hit.source()));
                 shops.removeIf(Objects::isNull);
+                //  Order by name
+                shops.sort(Comparator.comparing(Shop::getName, String.CASE_INSENSITIVE_ORDER));
                 Main.SHOP_CACHE = shops.stream().collect(HashMap::new,
                         ((map, shop) -> map.put(shop, new Date())), Map::putAll);
                 return shops;
@@ -413,9 +417,7 @@ public class ESStorage implements StorageImplementation {
         TradeMode tradeMode = TradeUtils.getDefaultTradeMode();
         if (!searchResponse.hits().hits().isEmpty() && searchResponse.hits().hits().getFirst().source() != null) {
             PlayerTradeMode playerTradeMode = searchResponse.hits().hits().getFirst().source();
-            if (playerTradeMode != null) {
-                tradeMode = playerTradeMode.tradeMode();
-            }
+            tradeMode = playerTradeMode.tradeMode();
         }
         if (tradeMode == null) {
             tradeMode = TradeUtils.getDefaultTradeMode();

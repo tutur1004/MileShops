@@ -1,8 +1,11 @@
 package fr.milekat.shops.workers.utils;
 
+import fr.milekat.shops.API;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
+import fr.milekat.shops.api.classes.TradeMode;
+import fr.milekat.shops.api.events.TradeCompleteEvent;
 import fr.milekat.shops.workers.gui.InventoryStorage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -112,6 +115,74 @@ public class TradeUtils {
                 .replaceAll("<result_amount>", String.valueOf(trade.getResultItem().getAmount()))
                 .replaceAll("<result_total_amount>", String.valueOf(trade.getResultItem().getAmount() * count))
                 .replaceAll("<result_material>", TradeUtils.getMaterial(trade.getResultItem().getType()));
+    }
+
+    /**
+     * Process trade(s) for a player, with the option to process multiple trades if possible.
+     *
+     * @param player performing the trade
+     * @param tradeMode the mode of trade to process, determining which inventories to consider for the trade
+     * @param shop the shop where the trade is taking place
+     * @param trade to process
+     * @param multiple if true, the method will trade as much has the player can
+     * @return the number of trade processed
+     */
+    public static int processedTrades(@NotNull Player player,
+                                @NotNull TradeMode tradeMode,
+                                @NotNull Shop shop,
+                                @NotNull Trade trade,
+                                boolean multiple) {
+        //  Set the trade items
+        List<ItemStack> tradeItems = new LinkedList<>();
+        tradeItems.add(trade.getFirstItem().clone());
+        if (trade.getSecondItem() != null) {
+            tradeItems.add(trade.getSecondItem().clone());
+        }
+
+        //  Calculate the max doable trades
+        int maxDoAbleTrades = TradeUtils.maxDoAbleTrades(player, tradeItems,
+                trade.getResultItem().clone(), multiple, tradeMode);
+
+        //  If no trades can be done, return 0
+        if (maxDoAbleTrades <= 0) {
+            Main.message(player, Main.getConfigs().getMessage("messages.gui.chest-shop.messages.no-trade",
+                    "&cYou don't have the required items to trade, or your inventory is full"));
+            return 0;
+        }
+
+        //  Trade usage limitation
+        if (trade.isUsageLimited()) {
+            Map<String, Object> playerTags = API.getPlayerTagsStatic(player.getUniqueId());
+            if (playerTags != null && !playerTags.isEmpty()) {
+                Map<String, Object> playerTradeTags = new HashMap<>();
+                trade.getMaxTradeTagsNames().stream()
+                        .filter(playerTags::containsKey)
+                        .forEach(tag -> playerTradeTags.put(tag, playerTags.get(tag)));
+                if (!playerTradeTags.isEmpty()) {
+                    int tradeUses = Main.getStorage().getTradeUses(playerTradeTags, trade);
+                    int maxDoAllowedTrades = trade.getMaxTradeUse() - tradeUses;
+                    if (maxDoAllowedTrades < maxDoAbleTrades) {
+                        Main.message(player, Main.getConfigs().getMessage(
+                                        "messages.gui.chest-shop.messages.max-trade",
+                                        "&cYou have reached the maximum number of uses for this trade(<trade_limit>).")
+                                .replace("<trade_limit>", String.valueOf(tradeUses)));
+                        if (maxDoAllowedTrades <= 0) return 0;
+                        maxDoAbleTrades = maxDoAllowedTrades;
+                    }
+                }
+            }
+        }
+
+        //  Execute the trade
+        TradeUtils.executeTrade(player, tradeItems, trade.getResultItem().clone(),
+                maxDoAbleTrades, tradeMode);
+
+        //  Call the TradeCompleteEvent
+        for (int i = 0; i < maxDoAbleTrades; i++) {
+            TradeCompleteEvent event = new TradeCompleteEvent(player, shop, trade);
+            Main.getInstance().getServer().getPluginManager().callEvent(event);
+        }
+        return maxDoAbleTrades;
     }
 
     /**
@@ -358,6 +429,13 @@ public class TradeUtils {
                     given++;
                 } else {
                     // Item couldn't be added - inventory full or other constraint
+                    // Remove the partially added item from inventory if any (left over)
+                    for (ItemStack leftoverItem : leftOver.values()) {
+                        ItemStack toRemove = leftoverItem.clone();
+                        toRemove.setAmount(resultItem.getAmount() - leftoverItem.getAmount());
+                        inventory.removeItem(toRemove);
+                    }
+
                     break;
                 }
             }

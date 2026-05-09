@@ -1,4 +1,4 @@
-package fr.milekat.shops.workers.utils;
+package fr.milekat.shops.api.classes;
 
 public enum TradeMode {
     // Trade items from player inventory

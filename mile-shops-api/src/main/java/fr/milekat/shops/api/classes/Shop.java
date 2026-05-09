@@ -1,6 +1,5 @@
 package fr.milekat.shops.api.classes;
 
-import fr.milekat.milenpc.api.classes.NPC;
 import fr.milekat.shops.api.MileShopsAPI;
 import fr.milekat.shops.api.exceptions.ApiUnavailable;
 import fr.milekat.shops.api.exceptions.StorageException;
@@ -18,44 +17,38 @@ import java.util.UUID;
 public class Shop {
     private final UUID uuid;
     private String name;
-    private NPC npc;
+    private ShopNpc shopNpc;
     private ShopType type;
     private Date spawnIn;
     private Date spawnOut;
+
+
+    /**
+     * Constructs a new Shop instance with the specified UUID, name, and shop type.
+     *
+     * @param uuid The UUID of the shop.
+     * @param name The name of the shop.
+     * @param type The type of the shop.
+     */
+    public Shop(@NotNull UUID uuid, @NotNull String name, @NotNull ShopType type) {
+        this.uuid = uuid;
+        this.name = name;
+        this.type = type;
+    }
 
     /**
      * Constructs a new Shop instance with the specified UUID, name, NPC UUID, and shop type.
      *
      * @param uuid The UUID of the shop.
      * @param name The name of the shop.
-     * @param npc  The UUID of the NPC associated with the shop, or null if no NPC is associated.
+     * @param shopNpc  The ShopNpc associated with the shop (can be null).
      * @param type The type of the shop.
      */
-    public Shop(@NotNull UUID uuid, @NotNull String name, @Nullable NPC npc, @NotNull ShopType type) {
+    public Shop(@NotNull UUID uuid, @NotNull String name, @Nullable ShopNpc shopNpc, @NotNull ShopType type) {
         this.uuid = uuid;
         this.name = name;
-        this.npc = npc;
+        this.shopNpc = shopNpc;
         this.type = type;
-    }
-
-    /**
-     * Constructs a new Shop instance with the specified UUID, name, NPC UUID, shop type, spawn in date, and spawn out date.
-     *
-     * @param uuid The UUID of the shop.
-     * @param name The name of the shop.
-     * @param npc  The UUID of the NPC associated with the shop.
-     * @param type The type of the shop.
-     * @param spawnIn The date when the shop will spawn in.
-     * @param spawnOut The date when the shop will spawn out.
-     */
-    public Shop(@NotNull UUID uuid, @NotNull String name, @NotNull NPC npc, @NotNull ShopType type,
-                @NotNull Date spawnIn, @NotNull Date spawnOut) {
-        this.uuid = uuid;
-        this.name = name;
-        this.npc = npc;
-        this.type = type;
-        this.spawnIn = spawnIn;
-        this.spawnOut = spawnOut;
     }
 
     /**
@@ -91,24 +84,17 @@ public class Shop {
      * @return The UUID of the NPC associated with the shop.
      */
     @Nullable
-    public NPC getNpc() {
-        return npc;
+    public ShopNpc getNpc() {
+        return shopNpc;
     }
 
     /**
      * Sets the UUID of the NPC associated with the shop.
      *
-     * @param npc The new UUID of the NPC associated with the shop.
+     * @param shopNpc The new UUID of the NPC associated with the shop.
      */
-    public void setNpc(@Nullable NPC npc) {
-        this.npc = npc;
-    }
-
-    /**
-     * Removes the NPC associated with the shop, if any.
-     */
-    public void removeNpc() {
-        if (npc != null) npc.remove();
+    public void setNpc(@Nullable ShopNpc shopNpc) {
+        this.shopNpc = shopNpc;
     }
 
     /**
@@ -138,7 +124,7 @@ public class Shop {
      * @throws StorageException     if there is an error accessing the storage.
      */
     public List<Trade> getTrades() throws ApiUnavailable, StorageException {
-        return MileShopsAPI.getAPI().getShopTrades(this.uuid);
+        return MileShopsAPI.getShopTrades(this.uuid);
     }
 
     /**
@@ -147,7 +133,7 @@ public class Shop {
      * @return Whether the shop is timed.
      */
     public boolean isTimed() {
-        return npc != null && spawnIn != null && spawnOut != null;
+        return shopNpc != null && spawnIn != null && spawnOut != null;
     }
 
     /**

@@ -2,7 +2,9 @@ package fr.milekat.shops.api;
 
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
+import fr.milekat.shops.api.classes.TradeMode;
 import fr.milekat.shops.api.exceptions.StorageException;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -11,7 +13,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * The CustomShopsIAPI interface provides access to the CustomShops API.
+ * The MileShopsIAPI interface provides access to the CustomShops API.
  */
 @SuppressWarnings({"unused", "UnusedReturnValue"})
 public interface MileShopsIAPI {
@@ -58,6 +60,30 @@ public interface MileShopsIAPI {
      */
     @NotNull
     List<Trade> getShopTrades(@NotNull String name) throws StorageException;
+
+    /**
+     * Process a single trade for a player, using the player's inventory for the trade.
+     *
+     * @param player performing the trade
+     * @param shop the shop where the trade is taking place
+     * @param trade to process
+     * @return true if the trade has been processed, false otherwise.
+     */
+    default boolean processedTrade(@NotNull Player player, @NotNull Shop shop, @NotNull Trade trade) {
+        return processedTrades(player, TradeMode.INVENTORY, shop, trade, false) > 0;
+    }
+    /**
+     * Process trade(s) for a player, with the option to process multiple trades if possible.
+     *
+     * @param player performing the trade
+     * @param tradeMode the mode of trade to process, determining which inventories to consider for the trade
+     * @param shop the shop where the trade is taking place
+     * @param trade to process
+     * @param multiple if true, the method will trade as much has the player can
+     * @return the number of trade processed
+     */
+    int processedTrades(@NotNull Player player, @NotNull TradeMode tradeMode,
+                        @NotNull Shop shop, @NotNull Trade trade, boolean multiple);
 
     /**
      * Opens the shop interface for the player identified by UUID.

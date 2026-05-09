@@ -1,10 +1,10 @@
 package fr.milekat.shops.workers.commands;
 
-import fr.milekat.milenpc.api.classes.NPC;
 import fr.milekat.shops.Main;
+import fr.milekat.shops.api.classes.ShopNpc;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.ShopType;
-import fr.milekat.shops.workers.utils.NPCUtils;
+import fr.milekat.shops.hooks.MileNpc;
 import fr.milekat.shops.workers.utils.ShopUtils;
 import fr.milekat.utils.McTools;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
@@ -112,9 +112,9 @@ public class ShopsCmd implements TabExecutor {
 
                     Main.getStorage().asyncDeleteShop(shop, player);
 
-                    NPC npc = shop.getNpc();
-                    if (npc != null) {
-                        npc.remove();
+                    ShopNpc shopNpc = shop.getNpc();
+                    if (Main.IS_NPC_LIB_LOADED && shopNpc != null) {
+                        MileNpc.destroy(shopNpc.uuid());
                     } else {
                         Main.message(player, "&cNPC not found.");
                     }
@@ -131,29 +131,49 @@ public class ShopsCmd implements TabExecutor {
 
         } else if (args.length == 3) {
 
-            if (args[0].equalsIgnoreCase("create") && player.hasPermission("shops.create")) {
+            if (args[0].equalsIgnoreCase("type") && player.hasPermission("shops.type")) {
+                try {
+                    Shop shop = Main.getStorage().getCacheShop(args[1]);
+                    if (shop == null) {
+                        Main.message(player, "&cShop not found.");
+                        return true;
+                    }
 
-                if (!shopTypes.contains(args[2].toLowerCase(Locale.ROOT))) {
-                    Main.message(player, "&cUnknown shape !");
-                    Main.message(player, "&cPlease use one of " + shopTypes);
-                    return true;
+                    try {
+                        ShopType newType = ShopType.valueOf(args[2].toUpperCase(Locale.ROOT));
+                        shop.setType(newType);
+                        Main.getStorage().asyncSaveShop(shop, false, player);
+                        Main.message(player, "&2Shop type changed to " + newType.name() + " !");
+                    } catch (IllegalArgumentException exception) {
+                        Main.message(player, "&cUnknown shop type !");
+                        Main.message(player, "&cPlease use one of " + Arrays.toString(ShopType.values()));
+                    }
+                } catch (StorageExecuteException e) {
+                    Main.getMileLogger().warning(e.getMessage());
+                    Main.getMileLogger().stack(e.getStackTrace());
+                    Main.message(player, "&cStorage error");
                 }
+
+                return true;
+            }
+
+            if (args[0].equalsIgnoreCase("create") && player.hasPermission("shops.create")) {
 
                 UUID shopUuid = UUID.randomUUID();
                 try {
-                    NPC npc = null;
+                    ShopType type = ShopType.valueOf(args[1].toUpperCase(Locale.ROOT));
+                    ShopNpc shopNpc = null;
                     if (Main.IS_NPC_LIB_LOADED) {
-                        npc = NPCUtils.create(shopUuid, args[1], player.getLocation());
+                        shopNpc = MileNpc.create(shopUuid, args[2], player.getLocation());
                     }
-                    Shop shop = new Shop(shopUuid, args[1], npc, ShopType.valueOf(args[2].toUpperCase(Locale.ROOT)));
+                    Shop shop = new Shop(shopUuid, args[2], shopNpc, type);
                     Main.getStorage().asyncSaveShop(shop, true, player);
                 } catch (IllegalArgumentException exception) {
-                    NPCUtils.destroy(shopUuid);
-                    Main.message(player, "&cUnknown NPC type !");
-                    Main.getMileLogger().info("Creation cancelled, unknown NPC type " + args[2]);
+                    MileNpc.destroy(shopUuid);
+                    Main.message(player, "&cUnknown NPC type '" + args[1] + "' !");
                     Main.message(player, "&cPlease use one of " + Arrays.toString(ShopType.values()));
                 } catch (Exception exception) {
-                    NPCUtils.destroy(shopUuid);
+                    MileNpc.destroy(shopUuid);
                     Main.message(player, "&cError while trying to create the shop");
                     Main.getMileLogger().stack(exception.getStackTrace());
                 }
@@ -168,7 +188,7 @@ public class ShopsCmd implements TabExecutor {
 
     private void displayShopsList(@NotNull Player player, int page, String label) {
         try {
-            List<Shop> allShops = Main.getStorage().getAllShops();
+            List<Shop> allShops = Main.getStorage().getCacheAllShops();
             if (allShops.isEmpty()) {
                 Main.message(player, "&cNo shop found.");
                 return;
@@ -290,7 +310,8 @@ public class ShopsCmd implements TabExecutor {
     }
 
     private void sendHelp(@NotNull CommandSender sender, String lbl) {
-        Main.message(sender, "&6/" + lbl + " create <name> <type>");
+        Main.message(sender, "&6/" + lbl + " create <type> <name>");
+        Main.message(sender, "&6/" + lbl + " type <name> <newType>");
         Main.message(sender, "&6/" + lbl + " remove <name>");
         Main.message(sender, "&6/" + lbl + " list [page]");
         Main.message(sender, "&6/" + lbl + " open <name>");
@@ -304,8 +325,19 @@ public class ShopsCmd implements TabExecutor {
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command,
                                       @NotNull String alias, String @NotNull [] args) {
         if (args.length <= 1) {
-            return McTools.getTabArgs(args[0], List.of("create", "remove", "list", "open", "edit", "reload", "help"));
-        } else if (args.length >= 3 && args[0].equalsIgnoreCase("create")) {
+            return McTools.getTabArgs(args[0], List.of("create", "type", "remove", "list", "open", "edit", "reload", "help"));
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("type")) {
+            try {
+                return Main.getStorage().getCacheAllShops().stream()
+                        .map(Shop::getName)
+                        .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
+                        .toList();
+            } catch (StorageExecuteException e) {
+                return null;
+            }
+        } else if (args.length == 2 && args[0].equalsIgnoreCase("create")) {
+            return McTools.getTabArgs(args[1], shopTypes);
+        } else if (args.length == 3 && args[0].equalsIgnoreCase("type")) {
             return McTools.getTabArgs(args[2], shopTypes);
         }
 

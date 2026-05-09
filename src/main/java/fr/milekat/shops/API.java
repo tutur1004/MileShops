@@ -5,6 +5,8 @@ import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.exceptions.StorageException;
 import fr.milekat.shops.workers.utils.ShopUtils;
+import fr.milekat.shops.api.classes.TradeMode;
+import fr.milekat.shops.workers.utils.TradeUtils;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -23,7 +25,7 @@ public class API implements MileShopsIAPI {
     @Override
     public @NotNull List<Shop> getShops() throws StorageException {
         try {
-            return Main.getStorage().getAllShops();
+            return Main.getStorage().getCacheAllShops();
         } catch (StorageExecuteException exception) {
             throw new StorageException(exception, exception.getMessage());
         }
@@ -50,6 +52,12 @@ public class API implements MileShopsIAPI {
         } catch (StorageExecuteException exception) {
             throw new StorageException(exception, exception.getMessage());
         }
+    }
+
+    @Override
+    public int processedTrades(@NotNull Player player, @NotNull TradeMode tradeMode,
+                               @NotNull Shop shop, @NotNull Trade trade, boolean multiple) {
+        return TradeUtils.processedTrades(player, tradeMode, shop, trade, multiple);
     }
 
     @Override
@@ -82,16 +90,25 @@ public class API implements MileShopsIAPI {
 
     @Override
     public @Nullable Map<String, Object> getPlayerTags(@NotNull UUID uuid) {
+        return getPlayerTagsStatic(uuid);
+    }
+    public static @Nullable Map<String, Object> getPlayerTagsStatic(@NotNull UUID uuid) {
         return Main.PLAYER_TAGS.getOrDefault(uuid, null);
     }
 
     @Override
     public void removePlayerTags(@NotNull UUID uuid) {
+        removePlayerTagsStatic(uuid);
+    }
+    public static void removePlayerTagsStatic(@NotNull UUID uuid) {
         Main.PLAYER_TAGS.remove(uuid);
     }
 
     @Override
     public void setPlayerTags(@NotNull UUID uuid, @NotNull Map<String, Object> tags) {
+        setPlayerTagsStatic(uuid, tags);
+    }
+    public static void setPlayerTagsStatic(@NotNull UUID uuid, @NotNull Map<String, Object> tags) {
         Main.PLAYER_TAGS.put(uuid, tags);
     }
 }

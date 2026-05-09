@@ -1,33 +1,38 @@
 package fr.milekat.shops.api;
 
+import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.exceptions.ApiUnavailable;
-import org.jetbrains.annotations.Contract;
-import org.jetbrains.annotations.NotNull;
+import fr.milekat.shops.api.exceptions.StorageException;
+import org.bukkit.Bukkit;
+import org.bukkit.plugin.RegisteredServiceProvider;
+import org.jspecify.annotations.NonNull;
+
+import java.util.List;
+import java.util.UUID;
 
 /**
- * The CustomShopsAPI class provides access to the custom shops API.
+ * The MileShopsAPI class provides access to the MileShops API via the Bukkit ServicesManager.
  */
 public class MileShopsAPI {
-    /**
-     * Indicates whether the API is ready for use.
-     */
-    public static boolean API_READY = false;
-    /**
-     * The loaded API instance.
-     */
-    public static MileShopsIAPI LOADED_API;
 
-    /**
-     * Retrieves the instance of the custom shops API.
-     *
-     * @return The custom shops API instance.
-     * @throws ApiUnavailable if the API is not ready.
-     */
-    @Contract(value = " -> new", pure = true)
-    public static @NotNull MileShopsIAPI getAPI() throws ApiUnavailable {
-        if (!MileShopsAPI.API_READY) {
-            throw new ApiUnavailable();
+    public static boolean isDebug() {
+        try {
+            return getLoadShopAPI().isDebug();
+        } catch (ApiUnavailable e) {
+            return false;
         }
-        return LOADED_API;
+    }
+
+    public static @NonNull List<Trade> getShopTrades(UUID shopUuid) throws ApiUnavailable, StorageException {
+        return getLoadShopAPI().getShopTrades(shopUuid);
+    }
+
+    private static @NonNull MileShopsIAPI getLoadShopAPI() throws ApiUnavailable {
+        RegisteredServiceProvider<MileShopsIAPI> provider =
+                Bukkit.getServicesManager().getRegistration(MileShopsIAPI.class);
+
+        if (provider == null) throw new ApiUnavailable();
+
+        return provider.getProvider();
     }
 }

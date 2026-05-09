@@ -4,7 +4,7 @@ import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.storage.StorageImplementation;
-import fr.milekat.shops.workers.utils.TradeMode;
+import fr.milekat.shops.api.classes.TradeMode;
 import fr.milekat.utils.Configs;
 import fr.milekat.utils.storage.adapter.sql.connection.SQLConnection;
 import fr.milekat.utils.storage.adapter.sql.connection.SQLDataBaseClient;
@@ -48,10 +48,10 @@ public class SQLStorage implements StorageImplementation {
     /*
         Main DB
      */
-    public SQLStorage(@NotNull Configs config) throws StorageLoadException {
+    public SQLStorage(@NotNull SQLConnection sqlConnection, @NotNull Configs config) throws StorageLoadException {
         this.config = config;
         DatabaseName = config.getString("storage.sql.database");
-        sqlDataBaseClient = new SQLConnection(config, Main.getMileLogger()).getSQLClient();
+        sqlDataBaseClient = sqlConnection.getSQLClient();
         ensureSchema();
     }
 

@@ -1,17 +1,18 @@
-package fr.milekat.shops.workers.utils;
+package fr.milekat.shops.hooks.npc;
 
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
+import fr.milekat.shops.hooks.MileNpc;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.List;
 
-public class TimedShops {
+public class NPCTimedShops {
     private final BukkitTask task;
 
-    public TimedShops() {
+    public NPCTimedShops() {
         Main.getMileLogger().info("Starting timed shops worker...");
         task = prepareTask();
     }
@@ -35,15 +36,16 @@ public class TimedShops {
                 // Ensure that all shops that should be spawned are spawned
                 shouldBeSpawned.forEach(shop -> {
                     // Create the NPC
-                    NPCUtils.ensureVisible(shop.getNpc().getUuid());
+                    if (shop.getNpc() != null) MileNpc.ensureVisible(shop.getNpc().uuid());
                 });
                 // Ensure that all shops that should not be spawned are not spawned
                 shouldNotBeSpawned.forEach(shop -> {
                     // Destroy the NPC
-                    NPCUtils.ensureInvisible(shop.getNpc().getUuid());
+                    if (shop.getNpc() != null) MileNpc.ensureInvisible(shop.getNpc().uuid());
                 });
             } catch (StorageExecuteException e) {
                 Main.getMileLogger().warning("Error while getting all shops from database.");
+                Main.getMileLogger().stack(e.getStackTrace());
             }
         }, 100, 600);
     }

@@ -16,9 +16,11 @@ import java.util.function.Function;
 
 @SuppressWarnings("unused")
 public enum InventoryShopShape {
+    //  TODO - 2025/10/16 : Merge with ShopType enum
+
     //  A shop with 1 column of 4 trades without secondary item
     BASIC_FOUR(InventoryType.CHEST, 54,
-            Main.getConfigs().getMessage("messages.gui.chest-shop.title", "&3Shop <shop_name>"),
+            Main.getConfigs().getMessage("messages.gui.chest-shop.title.basic-four", "&3Shop <shop_name>"),
             List.of(new TradeSlots(11, null, 15,
                             Map.of(13, Buttons.HEAD_LEFT.get())),
                     new TradeSlots(20, null, 24,
@@ -33,7 +35,7 @@ public enum InventoryShopShape {
 
     //  A shop with 2 columns of 6 trades without secondary item
     DOUBLE_SIX(InventoryType.CHEST, 54,
-            Main.getConfigs().getMessage("messages.gui.chest-shop.title", "&3Shop <shop_name>"),
+            Main.getConfigs().getMessage("messages.gui.chest-shop.title.double-six", "&3Shop <shop_name>"),
             List.of(
                     //  First column
                     new TradeSlots(0, null, 3, new HashMap<>()),
@@ -51,6 +53,54 @@ public enum InventoryShopShape {
                     new TradeSlots(50, null, 53, new HashMap<>())
             ),
 
+            0, 0, 0, 0,
+            false
+    ),
+
+    SINGLE_ONE(InventoryType.CHEST, 27,
+            Main.getConfigs().getMessage("messages.gui.chest-shop.title.single-one", "&3Shop <shop_name>"),
+            List.of(new TradeSlots(11, null, 15,
+                            Map.of(15, Buttons.CUSTOM_ARROW_LEFT.get(), 19, Buttons.FROST_GLOW.get()))),
+            0, 0, 0, 0,
+            false
+    ),
+
+    SINGLE_SIX(InventoryType.CHEST, 54,
+            Main.getConfigs().getMessage("messages.gui.chest-shop.title.single-six", "&3Shop <shop_name>"),
+            List.of(
+                    new TradeSlots(2, null, 6, new HashMap<>()),
+                    new TradeSlots(11, null, 15, new HashMap<>()),
+                    new TradeSlots(20, null, 24, new HashMap<>()),
+                    new TradeSlots(29, null, 33, new HashMap<>()),
+                    new TradeSlots(38, null, 42, new HashMap<>()),
+                    new TradeSlots(47, null, 51, new HashMap<>())
+            ),
+            0, 0, 0, 0,
+            false
+    ),
+
+    COMPACT_ONE(InventoryType.CHEST, 45,
+            Main.getConfigs().getMessage("messages.gui.chest-shop.title.compact-one", "&3Shop <shop_name>"),
+            List.of(new TradeSlots(23, null, 25,
+                    Map.of(24, Buttons.CUSTOM_ARROW_LEFT.get(), 28, Buttons.FROST_GLOW.get()))),
+                    0, 0, 0, 0,
+                    false
+            ),
+
+    COMPACT_FIVE(InventoryType.CHEST, 45,
+            Main.getConfigs().getMessage("messages.gui.chest-shop.title.compact-five", "&3Shop <shop_name>"),
+            List.of(
+                    new TradeSlots(5, null, 7,
+                            Map.of(6, Buttons.CUSTOM_ARROW_LEFT.get(), 28, Buttons.FROST_GLOW.get())),
+                    new TradeSlots(14, null, 16,
+                            Map.of(15, Buttons.CUSTOM_ARROW_LEFT.get())),
+                    new TradeSlots(23, null, 25,
+                            Map.of(24, Buttons.CUSTOM_ARROW_LEFT.get())),
+                    new TradeSlots(32, null, 34,
+                            Map.of(33, Buttons.CUSTOM_ARROW_LEFT.get())),
+                    new TradeSlots(41, null, 43,
+                            Map.of(42, Buttons.CUSTOM_ARROW_LEFT.get()))
+            ),
             0, 0, 0, 0,
             false
     );
