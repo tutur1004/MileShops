@@ -15,6 +15,7 @@ import fr.milekat.shops.workers.listeners.ShopsListeners;
 import fr.milekat.shops.workers.listeners.TradeListeners;
 import fr.milekat.shops.workers.utils.ColorStyles;
 import fr.milekat.utils.Configs;
+import fr.milekat.utils.McTools;
 import fr.milekat.utils.MileLogger;
 import fr.milekat.utils.storage.StorageConnection;
 import fr.milekat.utils.storage.StorageLoader;
@@ -146,15 +147,14 @@ public class Main extends JavaPlugin {
      * Send a formatted message to sender
      */
     public static void message(@NotNull Player player, @NotNull String message) {
-        Component messageComponent = Component.text(message, ColorStyles.INFO_VALUE);
-        player.sendMessage(messageComponent);
+        message(player, Component.text(McTools.minecraftColorCodes(message)));
     }
 
     /**
      * Send a formatted BaseComponent message to sender
      */
     public static void message(@NotNull Player player, @NotNull Component message) {
-        message(player, PlainTextComponentSerializer.plainText().serialize(message));
+        player.sendMessage(message.style(message.style().merge(ColorStyles.INFO_VALUE)));
     }
 
     /**
