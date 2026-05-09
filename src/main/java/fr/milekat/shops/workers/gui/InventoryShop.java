@@ -45,8 +45,6 @@ public class InventoryShop extends FastInv {
     private int currentPage = 1;
     private boolean isProcessingTrade = false;
 
-    private final int multiplierMalus;
-
     public InventoryShop(@NotNull InventoryShopShape inventoryShopShape, @NotNull Shop shop, @NotNull Player player)
             throws StorageExecuteException {
         //  Shop shape parameters
@@ -74,12 +72,6 @@ public class InventoryShop extends FastInv {
 
         //  Create the inventory
         updatePageContent();
-
-        if (Main.PLAYER_MALUS.contains(player.getUniqueId())) {
-            this.multiplierMalus = -1;
-        } else {
-            this.multiplierMalus = 1;
-        }
 
         //  Open the inventory to the player
         PlayerOpenShop event = new PlayerOpenShop(player, shop);
