@@ -312,25 +312,25 @@ public class TradeUtils {
      * @param trade the trade being executed (used for money transactions if applicable)
      * @param requiredItems the list of items to remove from the player's inventories
      * @param resultItem the item to add to the player's inventories
-     * @param trades the number of trades to execute
+     * @param tradeCount the number of trades to execute
      * @param tradeMode the trade mode determining which inventories to access
      */
     public static void executeTrade(@NotNull Player player,
                                     @NotNull Trade trade,
                                     @NotNull List<ItemStack> requiredItems,
                                     @NotNull ItemStack resultItem,
-                                    int trades,
+                                    int tradeCount,
                                     TradeMode tradeMode) {
         List<InventoryStorage> inventories = buildInventoryList(player, tradeMode);
 
         // First, remove all required items from inventories
-        removeItemsFromInventories(inventories, requiredItems, trades);
+        removeItemsFromInventories(inventories, requiredItems, tradeCount);
 
         // Then, add result items to inventories
         if (!trade.isMoneyTrade()) {
-            addItemsToInventories(inventories, resultItem, trades);
+            addItemsToInventories(inventories, resultItem, tradeCount);
         } else {
-            addMoneyToPlayer(player, trade, trades);
+            addMoneyToPlayer(player, trade, tradeCount);
         }
     }
 
@@ -461,7 +461,7 @@ public class TradeUtils {
                     double amount = entry.getValue() * trades * API.getPlayerModifierStatic(player.getUniqueId());
                     amount = Math.floor(amount);
                     Map<String, Object> moneyTags = new HashMap<>(playerTags);
-                    moneyTags.put("money", entry.getValue());
+                    moneyTags.put("currency", entry.getKey());
                     MileBanks.addMoneyByTags(
                             moneyTags,
                             (int) Math.floor(amount),
