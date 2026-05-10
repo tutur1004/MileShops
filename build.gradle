@@ -81,7 +81,7 @@ dependencies {
 
     //  Milekat
     compileOnly group: 'fr.milekat', name: 'mile-npc-api', version: '1.2.0'
-    compileOnly group: 'fr.milekat', name: 'mile-banks-api', version: '1.4.2'
+    compileOnly group: 'fr.milekat', name: 'mile-banks-api', version: '1.5.1'
 
     //  Utils
     compileOnly group: 'fr.milekat', name: 'milekat-utils', version: '1.9.1'
