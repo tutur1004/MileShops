@@ -85,7 +85,7 @@ dependencies {
 
     //  Utils
     compileOnly group: 'fr.milekat', name: 'milekat-utils', version: '1.9.1'
-    implementation group: 'fr.mrmicky', name: 'FastInv', version: '3.0.4'
+    implementation group: 'fr.mrmicky', name: 'fastinv', version: '3.1.2'
 
     //  Storage clients
     compileOnly group: 'com.zaxxer', name: 'HikariCP', version: '4.0.3'

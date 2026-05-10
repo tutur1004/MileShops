@@ -2,6 +2,8 @@ package fr.milekat.shops.workers.gui;
 
 import fr.milekat.shops.Main;
 import fr.milekat.shops.workers.utils.Buttons;
+import fr.mrmicky.fastinv.FastInv;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
@@ -132,11 +134,11 @@ public enum InventoryShopShape {
     }
 
     @Contract(pure = true)
-    public @NotNull Function<InventoryHolder, Inventory> getInventoryFunction(String shopName) {
+    public @NotNull Function<FastInv, Inventory> getInventoryFunction(String shopName) {
         if (inventoryType == InventoryType.CHEST && size != 0) {
-            return owner -> Bukkit.createInventory(owner, size, title.replaceAll("<shop_name>", shopName));
+            return owner -> Bukkit.createInventory(owner, size, Component.text(title.replaceAll("<shop_name>", shopName)));
         } else {
-            return owner -> Bukkit.createInventory(owner, inventoryType, title.replaceAll("<shop_name>", shopName));
+            return owner -> Bukkit.createInventory(owner, inventoryType, Component.text(title.replaceAll("<shop_name>", shopName)));
         }
     }
 
