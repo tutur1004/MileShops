@@ -7,6 +7,7 @@ description: "API/Plugin to create trading shops"
 website: https://github.com/tutur1004/MileShops
 softdepend:
   - MileNpc
+  - MileBanks
 libraries:
   # Utils
   - fr.milekat:milekat-utils:1.9.1

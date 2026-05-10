@@ -6,6 +6,7 @@ import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.classes.TradeMode;
 import fr.milekat.shops.api.events.TradeCompleteEvent;
+import fr.milekat.shops.hooks.MileBanks;
 import fr.milekat.shops.workers.gui.InventoryStorage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -174,7 +175,7 @@ public class TradeUtils {
         }
 
         //  Execute the trade
-        TradeUtils.executeTrade(player, tradeItems, trade.getResultItem().clone(),
+        TradeUtils.executeTrade(player, trade, tradeItems, trade.getResultItem().clone(),
                 maxDoAbleTrades, tradeMode);
 
         //  Call the TradeCompleteEvent
@@ -308,23 +309,29 @@ public class TradeUtils {
      * Use {@link #maxDoAbleTrades(Player, List, ItemStack, boolean, TradeMode)} to validate before calling this.</p>
      *
      * @param player the player performing the trade
+     * @param trade the trade being executed (used for money transactions if applicable)
      * @param requiredItems the list of items to remove from the player's inventories
      * @param resultItem the item to add to the player's inventories
-     * @param trades the number of trades to execute
+     * @param tradeCount the number of trades to execute
      * @param tradeMode the trade mode determining which inventories to access
      */
     public static void executeTrade(@NotNull Player player,
+                                    @NotNull Trade trade,
                                     @NotNull List<ItemStack> requiredItems,
                                     @NotNull ItemStack resultItem,
-                                    int trades,
+                                    int tradeCount,
                                     TradeMode tradeMode) {
         List<InventoryStorage> inventories = buildInventoryList(player, tradeMode);
 
         // First, remove all required items from inventories
-        removeItemsFromInventories(inventories, requiredItems, trades);
+        removeItemsFromInventories(inventories, requiredItems, tradeCount);
 
         // Then, add result items to inventories
-        addItemsToInventories(inventories, resultItem, trades);
+        if (!trade.isMoneyTrade()) {
+            addItemsToInventories(inventories, resultItem, tradeCount);
+        } else {
+            addMoneyToPlayer(player, trade, tradeCount);
+        }
     }
 
     /**
@@ -442,6 +449,28 @@ public class TradeUtils {
 
             // If this inventory is a shulker box, update its metadata
             updateShulkerIfNeeded(storage);
+        }
+    }
+
+    //  Handle money transactions
+    private static void addMoneyToPlayer(@NotNull Player player, Trade trade, int trades) {
+        try {
+            Map<String, Object> playerTags = API.getPlayerTagsStatic(player.getUniqueId());
+            if (playerTags != null && !playerTags.isEmpty()) {
+                for (Map.Entry<String, Integer> entry : trade.getMoneyResult().entrySet()) {
+                    double amount = entry.getValue() * trades * API.getPlayerModifierStatic(player.getUniqueId());
+                    amount = Math.floor(amount);
+                    Map<String, Object> moneyTags = new HashMap<>(playerTags);
+                    moneyTags.put("currency", entry.getKey());
+                    MileBanks.addMoneyByTags(
+                            moneyTags,
+                            (int) Math.floor(amount),
+                            "trade_" + trade.getFirstItem().getType().name().toLowerCase(Locale.ROOT)
+                    );
+                }
+            }
+        } catch (RuntimeException exception) {
+            Main.getMileLogger().warning("Failed to process " + trades + " money trade for player " + player.getName());
         }
     }
 

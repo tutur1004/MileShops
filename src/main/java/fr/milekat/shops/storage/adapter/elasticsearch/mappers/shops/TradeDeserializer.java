@@ -12,7 +12,9 @@ import org.bukkit.Tag;
 import org.bukkit.inventory.ItemStack;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -26,7 +28,13 @@ import java.util.UUID;
  *         "secondItem": ItemStack,
  *         "secondItemTag": String,
  *         "maxTradeUse": int,
- *         "maxTradeTagsNames": String[]
+ *         "maxTradeTagsNames": String[],
+ *         "moneyResult": {
+ *             "moneyA": int,
+ *             "moneyB": int,
+ *             ...
+ *             "moneyN": int,
+ *         }
  *     }
  * }
  */
@@ -64,12 +72,18 @@ public class TradeDeserializer extends StdDeserializer<Trade> {
             maxTradeUse = node.get("maxTradeUse").asInt();
             maxTradeTagsNames = List.of(mapper.convertValue(node.get("maxTradeTagsNames"), String[].class));
         }
+        Map<String, Integer> moneyResult = new HashMap<>();
+        if (node.has("moneyResult")) {
+            moneyResult = mapper.convertValue(node.get("moneyResult"),
+                    mapper.getTypeFactory().constructMapType(Map.class, String.class, Integer.class));
+        }
 
         return new Trade(shopUuid, tradePosition,
                 firstItem, firstItemTag,
                 secondItem, secondItemTag,
                 resultItem,
-                maxTradeUse, maxTradeTagsNames);
+                maxTradeUse, maxTradeTagsNames,
+                moneyResult);
     }
 }
 

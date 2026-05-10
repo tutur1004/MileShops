@@ -2,6 +2,7 @@ package fr.milekat.shops;
 
 import fr.milekat.shops.api.MileShopsIAPI;
 import fr.milekat.shops.api.classes.Shop;
+import fr.milekat.shops.hooks.MileBanks;
 import fr.milekat.shops.hooks.MileNpc;
 import fr.milekat.shops.hooks.npc.NPCTimedShops;
 import fr.milekat.shops.listeners.DefaultTags;
@@ -49,10 +50,12 @@ public class Main extends JavaPlugin {
     public static Boolean DEBUG = false;
     public static String PREFIX;
     public static boolean IS_NPC_LIB_LOADED = false;
+    public static boolean IS_BANKS_LIB_LOADED = false;
     private static StorageImplementation STORAGE;
     public static final Map<String, Class<?>> TAGS = new HashMap<>();
     public static final Map<UUID, Map<String, Object>> PLAYER_TAGS = new HashMap<>();
     private NPCTimedShops NPCTimedShops;
+    public static Map<UUID, Double> PLAYER_MODIFIERS = new HashMap<>();
     /*
         Shop cache
      */
@@ -67,6 +70,7 @@ public class Main extends JavaPlugin {
     public void onEnable() {
         plugin = this;
         logger = new MileLogger(this.getLogger());
+        //  Hook to MileNpc for NPC shops
         if (Bukkit.getPluginManager().getPlugin("MileNpc") != null) {
             logger.info("MileNPC detected, hooking into it..");
             try {
@@ -76,6 +80,17 @@ public class Main extends JavaPlugin {
                 logger.info("Hooked into MileNPC successfully !");
             } catch (RuntimeException exception) {
                 logger.warning("Failed to hook into MileNPC, NPC features will be unavailable !");
+            }
+        }
+        //  Hook to MileBanks for money trades
+        if (Bukkit.getPluginManager().getPlugin("MileBanks") != null) {
+            logger.info("MileBanks detected, hooking into it..");
+            try {
+                MileBanks.getBankApi();
+                IS_BANKS_LIB_LOADED = true;
+                logger.info("Hooked into MileBanks successfully !");
+            } catch (RuntimeException exception) {
+                logger.warning("Failed to hook into MileBanks, money features will be unavailable !");
             }
         }
         //  Load configs

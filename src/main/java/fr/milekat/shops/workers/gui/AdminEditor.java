@@ -138,7 +138,8 @@ public class AdminEditor extends FastInv {
                         getFirstItemPos(index), null,
                         shop.getType().equals(ShopType.VANILLA) ? getSecondItemPos(index) : null, null,
                         getResultItemPos(index),
-                        0, null)));
+                        0, null,
+                        new HashMap<>()))); //  TODO - 2026/02/04 : Handle it better
             }
         });
         this.trades.put(this.currentPage, newTrades);
@@ -210,7 +211,8 @@ public class AdminEditor extends FastInv {
                 firstItem, firstItemTag,
                 getSecondItemPos(position), secondItemTag,
                 getResultItemPos(position),
-                maxTradeUse, maxTradeTagsNames);
+                maxTradeUse, maxTradeTagsNames,
+                new HashMap<>()); //  TODO - 2026/02/04 : Handle it better
     }
 
     @Override

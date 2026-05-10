@@ -111,4 +111,20 @@ public class API implements MileShopsIAPI {
     public static void setPlayerTagsStatic(@NotNull UUID uuid, @NotNull Map<String, Object> tags) {
         Main.PLAYER_TAGS.put(uuid, tags);
     }
+
+    @Override
+    public double getPlayerModifier(@NotNull UUID uuid) {
+        return getPlayerModifierStatic(uuid);
+    }
+    public static double getPlayerModifierStatic(@NotNull UUID uuid) {
+        return Main.PLAYER_MODIFIERS.getOrDefault(uuid, 1.0);
+    }
+
+    @Override
+    public void setPlayerModifier(@NotNull UUID uuid, double modifier) {
+        setPlayerModifierStatic(uuid, modifier);
+    }
+    public static void setPlayerModifierStatic(@NotNull UUID uuid, double modifier) {
+        Main.PLAYER_MODIFIERS.put(uuid, modifier);
+    }
 }

@@ -1,5 +1,6 @@
 package fr.milekat.shops.workers.commands;
 
+import fr.milekat.shops.API;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.ShopNpc;
 import fr.milekat.shops.api.classes.Shop;
@@ -12,6 +13,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -178,6 +181,19 @@ public class ShopsCmd implements TabExecutor {
                     Main.getMileLogger().stack(exception.getStackTrace());
                 }
 
+                return true;
+            }
+
+            if (args[0].equalsIgnoreCase("modifier") && player.hasPermission("shops.modifier")) {
+                OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+                try {
+                    double modifier = Double.parseDouble(args[2]);
+                    API.setPlayerModifierStatic(target.getUniqueId(), modifier);
+                    Main.message(player, "&2Modifier set to " + args[2] + " " +
+                            "for player " + target.getName() + " !");
+                } catch (NumberFormatException e) {
+                    Main.message(player, "&cModifier must be a valid number.");
+                }
                 return true;
             }
 

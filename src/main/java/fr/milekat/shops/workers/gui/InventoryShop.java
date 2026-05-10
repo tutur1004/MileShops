@@ -193,7 +193,12 @@ public class InventoryShop extends FastInv {
             setItem(tradeSlots.resultItemSlot(), getGuiItem(trade).secondItem());
         }
         setItem(tradeSlots.resultItemSlot(), getGuiItem(trade).resultItem(),
-                event -> requestTrade(trade, event.getClick()));
+                event -> {
+            // Ensure the click is on the result item slot
+            if (event.getSlot() == tradeSlots.resultItemSlot()) {
+                requestTrade(trade, event.getClick());
+            }
+        });
     }
 
     private void requestTrade(@NotNull Trade trade, @NotNull ClickType click) {

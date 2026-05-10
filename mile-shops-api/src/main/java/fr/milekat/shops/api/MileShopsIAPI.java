@@ -125,4 +125,29 @@ public interface MileShopsIAPI {
      * @param tags The tags to set for the player.
      */
     void setPlayerTags(@NotNull UUID uuid, @NotNull Map<String, Object> tags);
+
+    /**
+     * Get the current player modifier
+     *
+     * @param uuid The UUID of the player.
+     * @return the current player modifier, where 1.0 means no modification,
+     * values greater than 1.0 increase the amount received, and values less than 1.0 decrease it.
+     */
+    double getPlayerModifier(@NotNull UUID uuid);
+    /**
+     * Reset the player modifier to 1.0 (100%)
+     * @param uuid The UUID of the player.
+     */
+    default void resetPlayerModifier(@NotNull UUID uuid) {
+        setPlayerModifier(uuid, 1.0);
+    }
+    /**
+     * Set player trade result modifier, to increase or decrease the amount received (Rounded to int)
+     * Value can be positive or negative, but it's only impact money trades
+     *
+     * @param uuid The UUID of the player.
+     * @param modifier The modifier to set for the player, where 1.0 means no modification,
+     *                 values greater than 1.0 increase the amount received, and values less than 1.0 decrease it.
+     */
+    void setPlayerModifier(@NotNull UUID uuid, double modifier);
 }

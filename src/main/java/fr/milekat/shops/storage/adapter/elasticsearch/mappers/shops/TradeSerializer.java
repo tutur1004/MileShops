@@ -8,6 +8,7 @@ import fr.milekat.shops.api.classes.Trade;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * {
@@ -18,7 +19,13 @@ import java.io.IOException;
  *         "resultItem": ItemStack,
  *         "secondItem": ItemStack,
  *         "maxTradeUse": int,
- *         "maxTradeTagsNames": String[]
+ *         "maxTradeTagsNames": String[],
+ *         "moneyResult": {
+ *             "moneyA": int,
+ *             "moneyB": int,
+ *             ...
+ *             "moneyN": int,
+ *         }
  *     }
  * }
  */
@@ -52,6 +59,13 @@ public class TradeSerializer extends StdSerializer<Trade> {
                 gen.writeString(tag);
             }
             gen.writeEndArray();
+        }
+        if (value.isMoneyTrade()) {
+            gen.writeObjectFieldStart("moneyResult");
+            for (Map.Entry<String, Integer> moneyType : value.getMoneyResult().entrySet()) {
+                gen.writeNumberField(moneyType.getKey(), moneyType.getValue());
+            }
+            gen.writeEndObject();
         }
         gen.writeEndObject();
     }
