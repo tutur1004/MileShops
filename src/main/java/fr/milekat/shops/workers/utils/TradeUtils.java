@@ -265,9 +265,8 @@ public class TradeUtils {
                 int amountNeeded = requirement.item().getAmount();
                 boolean removed;
 
-                if (requirement.isTagTrade()) {
+                if (requirement.isTagTrade() && requirement.tag != null) {
                     // Tag trade: accept any material from the tag, mix allowed
-                    //noinspection DataFlowIssue - isTagTrade() guarantees non-null
                     removed = removeTagItemsFromVirtual(virtualStorages, requirement.tag(), amountNeeded);
                 } else {
                     // Standard trade: exact material match
@@ -280,6 +279,7 @@ public class TradeUtils {
                 }
             }
             if (!canRemoveAll) {
+                // Cannot remove all required items, stop trading
                 break;
             }
 
@@ -295,6 +295,7 @@ public class TradeUtils {
                 }
             }
             if (!added) {
+                // All inventories are full, cannot add the result item, stop trading
                 break;
             }
         }
@@ -469,21 +470,25 @@ public class TradeUtils {
                 // Standard trade: exact material match
                 ItemStack requiredItem = requirement.item();
                 for (InventoryStorage storage : inventories) {
-                    if (itemsRemoved >= totalItemsToRemove) break;
+                    if (itemsRemoved >= totalItemsToRemove) break; // All items removed
 
                     Inventory inventory = storage.inventory();
                     ItemStack clonedItem = requiredItem.clone();
 
+                    // Keep removing items until we've removed enough or inventory runs out
                     while (itemsRemoved < totalItemsToRemove && inventory.containsAtLeast(clonedItem, clonedItem.getAmount())) {
+                        // Set the amount to remove for this iteration
                         int remainingToRemove = totalItemsToRemove - itemsRemoved;
                         clonedItem.setAmount(Math.min(clonedItem.getAmount(), remainingToRemove));
 
                         inventory.removeItem(clonedItem);
                         itemsRemoved += clonedItem.getAmount();
 
+                        // Reset amount for next iteration
                         clonedItem.setAmount(requiredItem.getAmount());
                     }
 
+                    // If this inventory is a shulker box, update its metadata
                     updateShulkerIfNeeded(storage);
                 }
             }
