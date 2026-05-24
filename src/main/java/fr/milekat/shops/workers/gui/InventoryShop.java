@@ -11,6 +11,8 @@ import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import fr.mrmicky.fastinv.FastInv;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.HoverEvent;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
@@ -18,6 +20,7 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -44,6 +47,11 @@ public class InventoryShop extends FastInv {
     private TradeMode tradeMode;
     private int currentPage = 1;
     private boolean isProcessingTrade = false;
+
+    //  Tag trade carousel
+    private @Nullable BukkitTask carouselTask;
+    private final Map<Integer, TagCarouselEntry> tagCarousels = new HashMap<>();
+    private int carouselTick = 0;
 
     public InventoryShop(@NotNull InventoryShopShape inventoryShopShape, @NotNull Shop shop, @NotNull Player player)
             throws StorageExecuteException {
@@ -111,6 +119,8 @@ public class InventoryShop extends FastInv {
     }
 
     private void updatePageContent() {
+        stopCarousel();
+        tagCarousels.clear();
         if (this.fillBackground) fillBackground();
         if (this.inventoryModeSlot != 0) updateTradeModeButton();
         if (this.closeSlot != 0) setItem(this.closeSlot, Buttons.EXIT.get(), event -> player.closeInventory());
@@ -122,6 +132,7 @@ public class InventoryShop extends FastInv {
                 pagePosition++;
             }
         }
+        startCarousel();
     }
 
     private void fillBackground() {
@@ -188,13 +199,33 @@ public class InventoryShop extends FastInv {
         //  Display additional trade items (Arrow, etc...)
         tradeSlots.additionalTradeItems().forEach(this::setItem);
         //  Display trade items
-        setItem(tradeSlots.firstItemSlot(), getGuiItem(trade).firstItem());
-        if (trade.getSecondItem() != null && tradeSlots.secondItemSlot() != null) {
-            setItem(tradeSlots.resultItemSlot(), getGuiItem(trade).secondItem());
+        TradeGuiItems guiItems = getGuiItem(trade);
+
+        // First item display (or tag carousel)
+        if (trade.getFirstItemTag() != null) {
+            List<Material> materials = new ArrayList<>(trade.getFirstItemTag().getValues());
+            tagCarousels.put(tradeSlots.firstItemSlot(),
+                    new TagCarouselEntry(materials, trade.getFirstItem().getAmount()));
+            setItem(tradeSlots.firstItemSlot(), guiItems.firstItem());
+        } else {
+            setItem(tradeSlots.firstItemSlot(), guiItems.firstItem());
         }
-        setItem(tradeSlots.resultItemSlot(), getGuiItem(trade).resultItem(),
+
+        // Second item display (or tag carousel)
+        if (trade.getSecondItem() != null && tradeSlots.secondItemSlot() != null) {
+            if (trade.getSecondItemTag() != null) {
+                List<Material> materials = new ArrayList<>(trade.getSecondItemTag().getValues());
+                tagCarousels.put(tradeSlots.secondItemSlot(),
+                        new TagCarouselEntry(materials, trade.getSecondItem().getAmount()));
+                setItem(tradeSlots.secondItemSlot(), guiItems.secondItem());
+            } else {
+                setItem(tradeSlots.secondItemSlot(), guiItems.secondItem());
+            }
+        }
+
+        // Result item display (always exact)
+        setItem(tradeSlots.resultItemSlot(), guiItems.resultItem(),
                 event -> {
-            // Ensure the click is on the result item slot
             if (event.getSlot() == tradeSlots.resultItemSlot()) {
                 requestTrade(trade, event.getClick());
             }
@@ -224,8 +255,38 @@ public class InventoryShop extends FastInv {
         }
     }
 
+    private void startCarousel() {
+        if (tagCarousels.isEmpty()) return;
+        if (carouselTask != null) carouselTask.cancel();
+        carouselTask = Bukkit.getScheduler().runTaskTimer(Main.getInstance(), () -> {
+            carouselTick++;
+            for (Map.Entry<Integer, TagCarouselEntry> entry : tagCarousels.entrySet()) {
+                int slot = entry.getKey();
+                TagCarouselEntry carousel = entry.getValue();
+                List<Material> materials = carousel.materials();
+                int index = carouselTick % materials.size();
+                ItemStack display = new ItemStack(materials.get(index), carousel.amount());
+                ItemMeta meta = display.getItemMeta();
+                if (meta != null) {
+                    meta.getPersistentDataContainer().set(TradeGuiItems.key,
+                            PersistentDataType.STRING, UUID.randomUUID().toString());
+                }
+                display.setItemMeta(meta);
+                getInventory().setItem(slot, display);
+            }
+        }, 10L, 10L);
+    }
+
+    private void stopCarousel() {
+        if (carouselTask != null) {
+            carouselTask.cancel();
+            carouselTask = null;
+        }
+    }
+
     @Override
     protected void onClose(InventoryCloseEvent event) {
+        stopCarousel();
         super.onClose(event);
         if (!player.hasPermission("shops.admin")) return;
         this.tradeCompleted.forEach((trade, count) -> {
@@ -246,6 +307,8 @@ public class InventoryShop extends FastInv {
     private @NotNull TradeGuiItems getGuiItem(@NotNull Trade trade) {
         return new TradeGuiItems(trade.getFirstItem(), trade.getSecondItem(), trade.getResultItem());
     }
+
+    private record TagCarouselEntry(@NotNull List<Material> materials, int amount) {}
 
     private record TradeGuiItems(@NotNull ItemStack firstItem,
                                  @Nullable ItemStack secondItem,

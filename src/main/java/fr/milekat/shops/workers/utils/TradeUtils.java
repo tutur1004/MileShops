@@ -31,6 +31,16 @@ import java.util.*;
  * @author Milekat
  */
 public class TradeUtils {
+
+    /**
+     * Represents a trade requirement: an item with an optional material tag.
+     * When the tag is non-null, any material from the tag's values is accepted.
+     */
+    public record TradeRequirement(@NotNull ItemStack item, @Nullable Tag<Material> tag) {
+        public boolean isTagTrade() {
+            return tag != null;
+        }
+    }
     /** Maximum stack size for items in Minecraft inventory (standard stack) */
     private static final int MAX_STACK_SIZE = 64;
 
@@ -133,15 +143,15 @@ public class TradeUtils {
                                 @NotNull Shop shop,
                                 @NotNull Trade trade,
                                 boolean multiple) {
-        //  Set the trade items
-        List<ItemStack> tradeItems = new LinkedList<>();
-        tradeItems.add(trade.getFirstItem().clone());
+        //  Set the trade requirements (item + optional tag)
+        List<TradeRequirement> tradeRequirements = new LinkedList<>();
+        tradeRequirements.add(new TradeRequirement(trade.getFirstItem().clone(), trade.getFirstItemTag()));
         if (trade.getSecondItem() != null) {
-            tradeItems.add(trade.getSecondItem().clone());
+            tradeRequirements.add(new TradeRequirement(trade.getSecondItem().clone(), trade.getSecondItemTag()));
         }
 
         //  Calculate the max doable trades
-        int maxDoAbleTrades = TradeUtils.maxDoAbleTrades(player, tradeItems,
+        int maxDoAbleTrades = TradeUtils.maxDoAbleTrades(player, tradeRequirements,
                 trade.getResultItem().clone(), multiple, tradeMode);
 
         //  If no trades can be done, return 0
@@ -175,7 +185,7 @@ public class TradeUtils {
         }
 
         //  Execute the trade
-        TradeUtils.executeTrade(player, trade, tradeItems, trade.getResultItem().clone(),
+        TradeUtils.executeTrade(player, trade, tradeRequirements, trade.getResultItem().clone(),
                 maxDoAbleTrades, tradeMode);
 
         //  Call the TradeCompleteEvent
@@ -200,14 +210,14 @@ public class TradeUtils {
      * </ul>
      *
      * @param player the player whose inventory to check
-     * @param requiredItems a list of ItemStacks required for each trade
+     * @param requirements a list of TradeRequirements (item + optional tag) required for each trade
      * @param resultItem the ItemStack that will be given to the player per trade
      * @param unlimitedTrades if true, calculate trades across all inventories; if false, stop after first inventory
      * @param tradeMode the trade mode determining which inventories to check
      * @return the maximum number of trades the player can perform
      */
     public static int maxDoAbleTrades(@NotNull Player player,
-                                      @NotNull List<ItemStack> requiredItems,
+                                      @NotNull List<TradeRequirement> requirements,
                                       @NotNull ItemStack resultItem,
                                       boolean unlimitedTrades,
                                       TradeMode tradeMode) {
@@ -220,22 +230,24 @@ public class TradeUtils {
             }
         }
 
-        return calculateMaxTrades(inventories, requiredItems, resultItem, maxTrades);
+        return calculateMaxTrades(inventories, requirements, resultItem, maxTrades);
     }
 
     /**
     * Calculates the maximum number of possible trades by simulating real exchanges.
     * This method creates virtual copies of all inventories and progressively performs
-    * trades (removing requiredItems and adding the resultItem) until no further trade can be made.
+    * trades (removing requirements and adding the resultItem) until no further trade can be made.
+    * Supports tag-based requirements where any material from the tag is accepted,
+    * including "half trades" (mixing different materials from the same tag).
     *
     * @param inventories list of all available inventories
-    * @param requiredItems items required per trade
+    * @param requirements items/tags required per trade
     * @param resultItem item given per trade
     * @param maxTrades upper limit (for single trade mode)
     * @return maximum number of possible trades
     */
     private static int calculateMaxTrades(@NotNull List<InventoryStorage> inventories,
-                                          @NotNull List<ItemStack> requiredItems,
+                                          @NotNull List<TradeRequirement> requirements,
                                           @NotNull ItemStack resultItem,
                                           int maxTrades) {
         List<Inventory> virtualStorages = new ArrayList<>();
@@ -247,29 +259,27 @@ public class TradeUtils {
 
         // Loop until we reach the maximum trades or can no longer trade
         while (totalDoAbleTrades < maxTrades) {
-            // Phase 1 : Check and remove all requiredItems
-            List<ItemStack> itemsToRemove = new ArrayList<>();
-            for (ItemStack required : requiredItems) {
-                ItemStack toRemove = required.clone();
-                itemsToRemove.add(toRemove);
-            }
+            // Phase 1 : Check and remove all requirements
             boolean canRemoveAll = true;
-            for (ItemStack itemToRemove : itemsToRemove) {
-                boolean found = false;
-                for (Inventory vInv : virtualStorages) {
-                    if (vInv.containsAtLeast(itemToRemove, itemToRemove.getAmount())) {
-                        vInv.removeItem(itemToRemove.clone());
-                        found = true;
-                        break;
-                    }
+            for (TradeRequirement requirement : requirements) {
+                int amountNeeded = requirement.item().getAmount();
+                boolean removed;
+
+                if (requirement.isTagTrade()) {
+                    // Tag trade: accept any material from the tag, mix allowed
+                    //noinspection DataFlowIssue - isTagTrade() guarantees non-null
+                    removed = removeTagItemsFromVirtual(virtualStorages, requirement.tag(), amountNeeded);
+                } else {
+                    // Standard trade: exact material match
+                    removed = removeExactItemsFromVirtual(virtualStorages, requirement.item());
                 }
-                if (!found) {
+
+                if (!removed) {
                     canRemoveAll = false;
                     break;
                 }
             }
             if (!canRemoveAll) {
-                // Cannot remove all required items, stop trading
                 break;
             }
 
@@ -285,12 +295,93 @@ public class TradeUtils {
                 }
             }
             if (!added) {
-                // All inventories are full, cannot add the result item, stop trading
                 break;
             }
         }
 
         return totalDoAbleTrades;
+    }
+
+    /**
+     * Removes items matching an exact material from virtual inventories.
+     */
+    private static boolean removeExactItemsFromVirtual(@NotNull List<Inventory> virtualStorages,
+                                                       @NotNull ItemStack itemToRemove) {
+        for (Inventory vInv : virtualStorages) {
+            if (vInv.containsAtLeast(itemToRemove, itemToRemove.getAmount())) {
+                vInv.removeItem(itemToRemove.clone());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Removes items matching any material from a tag across all virtual inventories.
+     * Supports "half trades" - mixing different materials from the same tag to meet the amount.
+     *
+     * @param virtualStorages the virtual inventories to remove from
+     * @param tag the material tag to match against
+     * @param amountNeeded the total quantity needed
+     * @return true if enough items were removed
+     */
+    private static boolean removeTagItemsFromVirtual(@NotNull List<Inventory> virtualStorages,
+                                                     @NotNull Tag<Material> tag,
+                                                     int amountNeeded) {
+        // First check if we have enough total across all inventories
+        int totalAvailable = 0;
+        for (Inventory vInv : virtualStorages) {
+            totalAvailable += countTagItemsInInventory(vInv, tag);
+        }
+        if (totalAvailable < amountNeeded) {
+            return false;
+        }
+
+        // Remove items across inventories, mixing materials as needed
+        int remaining = amountNeeded;
+        for (Inventory vInv : virtualStorages) {
+            if (remaining <= 0) break;
+            remaining = removeTagItemsFromInventory(vInv, tag, remaining);
+        }
+        return remaining <= 0;
+    }
+
+    /**
+     * Counts the total number of items matching any material from a tag in an inventory.
+     */
+    private static int countTagItemsInInventory(@NotNull Inventory inventory, @NotNull Tag<Material> tag) {
+        int count = 0;
+        for (ItemStack item : inventory.getStorageContents()) {
+            if (item != null && tag.isTagged(item.getType())) {
+                count += item.getAmount();
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Removes items matching any material from a tag in an inventory.
+     * Returns the remaining amount that could not be removed.
+     */
+    private static int removeTagItemsFromInventory(@NotNull Inventory inventory,
+                                                   @NotNull Tag<Material> tag,
+                                                   int amountToRemove) {
+        int remaining = amountToRemove;
+        ItemStack[] contents = inventory.getStorageContents();
+        for (int i = 0; i < contents.length && remaining > 0; i++) {
+            ItemStack item = contents[i];
+            if (item != null && tag.isTagged(item.getType())) {
+                int removeFromSlot = Math.min(item.getAmount(), remaining);
+                if (removeFromSlot >= item.getAmount()) {
+                    contents[i] = null;
+                } else {
+                    item.setAmount(item.getAmount() - removeFromSlot);
+                }
+                remaining -= removeFromSlot;
+            }
+        }
+        inventory.setStorageContents(contents);
+        return remaining;
     }
 
     /**
@@ -310,21 +401,21 @@ public class TradeUtils {
      *
      * @param player the player performing the trade
      * @param trade the trade being executed (used for money transactions if applicable)
-     * @param requiredItems the list of items to remove from the player's inventories
+     * @param requirements the list of trade requirements to remove from the player's inventories
      * @param resultItem the item to add to the player's inventories
      * @param tradeCount the number of trades to execute
      * @param tradeMode the trade mode determining which inventories to access
      */
     public static void executeTrade(@NotNull Player player,
                                     @NotNull Trade trade,
-                                    @NotNull List<ItemStack> requiredItems,
+                                    @NotNull List<TradeRequirement> requirements,
                                     @NotNull ItemStack resultItem,
                                     int tradeCount,
                                     TradeMode tradeMode) {
         List<InventoryStorage> inventories = buildInventoryList(player, tradeMode);
 
         // First, remove all required items from inventories
-        removeItemsFromInventories(inventories, requiredItems, tradeCount);
+        removeItemsFromInventories(inventories, requirements, tradeCount);
 
         // Then, add result items to inventories
         if (!trade.isMoneyTrade()) {
@@ -337,6 +428,7 @@ public class TradeUtils {
     /**
      * Removes the required items from player inventories.
      * Items are removed in order across all available inventories until the required amount is reached.
+     * Supports tag-based requirements where any material from the tag is accepted (half trades).
      * If insufficient items are found, a warning is logged.
      *
      * <p>Removal order:</p>
@@ -348,40 +440,52 @@ public class TradeUtils {
      * </ol>
      *
      * @param inventories the list of inventories to remove items from
-     * @param requiredItems the list of items required for the trades
+     * @param requirements the list of trade requirements for the trades
      * @param trades the number of trades (not the number of item stacks, but actual trade operations)
      */
     private static void removeItemsFromInventories(@NotNull List<InventoryStorage> inventories,
-                                                   @NotNull List<ItemStack> requiredItems,
+                                                   @NotNull List<TradeRequirement> requirements,
                                                    int trades) {
         // Process each required item type
-        for (ItemStack requiredItem : requiredItems) {
+        for (TradeRequirement requirement : requirements) {
             // Calculate total items to remove: amount per trade × number of trades
-            int totalItemsToRemove = requiredItem.getAmount() * trades;
+            int totalItemsToRemove = requirement.item().getAmount() * trades;
             int itemsRemoved = 0;
 
-            // Iterate through all inventories
-            for (InventoryStorage storage : inventories) {
-                if (itemsRemoved >= totalItemsToRemove) break; // All items removed
+            if (requirement.isTagTrade() && requirement.tag() != null) {
+                // Tag trade: remove any matching material from the tag
+                Tag<Material> tag = requirement.tag();
+                for (InventoryStorage storage : inventories) {
+                    if (itemsRemoved >= totalItemsToRemove) break;
 
-                Inventory inventory = storage.inventory();
-                ItemStack clonedItem = requiredItem.clone();
+                    int remaining = totalItemsToRemove - itemsRemoved;
+                    int beforeRemaining = remaining;
+                    remaining = removeTagItemsFromInventory(storage.inventory(), tag, remaining);
+                    itemsRemoved += (beforeRemaining - remaining);
 
-                // Keep removing items until we've removed enough or inventory runs out
-                while (itemsRemoved < totalItemsToRemove && inventory.containsAtLeast(clonedItem, clonedItem.getAmount())) {
-                    // Set the amount to remove for this iteration
-                    int remainingToRemove = totalItemsToRemove - itemsRemoved;
-                    clonedItem.setAmount(Math.min(clonedItem.getAmount(), remainingToRemove));
-
-                    inventory.removeItem(clonedItem);
-                    itemsRemoved += clonedItem.getAmount();
-
-                    // Reset amount for next iteration
-                    clonedItem.setAmount(requiredItem.getAmount());
+                    updateShulkerIfNeeded(storage);
                 }
+            } else {
+                // Standard trade: exact material match
+                ItemStack requiredItem = requirement.item();
+                for (InventoryStorage storage : inventories) {
+                    if (itemsRemoved >= totalItemsToRemove) break;
 
-                // If this inventory is a shulker box, update its metadata
-                updateShulkerIfNeeded(storage);
+                    Inventory inventory = storage.inventory();
+                    ItemStack clonedItem = requiredItem.clone();
+
+                    while (itemsRemoved < totalItemsToRemove && inventory.containsAtLeast(clonedItem, clonedItem.getAmount())) {
+                        int remainingToRemove = totalItemsToRemove - itemsRemoved;
+                        clonedItem.setAmount(Math.min(clonedItem.getAmount(), remainingToRemove));
+
+                        inventory.removeItem(clonedItem);
+                        itemsRemoved += clonedItem.getAmount();
+
+                        clonedItem.setAmount(requiredItem.getAmount());
+                    }
+
+                    updateShulkerIfNeeded(storage);
+                }
             }
 
             // Log warning if we couldn't remove all required items
