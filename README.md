@@ -1,5 +1,10 @@
 # MileShops - Minecraft Trading Shop Plugin
 
+[![GitHub Release](https://img.shields.io/github/v/release/tutur1004/MileShops?style=flat-square)](https://github.com/tutur1004/MileShops/releases/latest)
+[![Maven Central](https://img.shields.io/maven-central/v/fr.milekat/mile-shops-api?style=flat-square&label=Maven%20Central)](https://central.sonatype.com/artifact/fr.milekat/mile-shops-api)
+[![Javadoc](https://img.shields.io/badge/javadoc.io-mile--shops--api-blue?style=flat-square)](https://javadoc.io/doc/fr.milekat/mile-shops-api)
+[![GitHub Issues](https://img.shields.io/github/issues/tutur1004/MileShops?style=flat-square)](https://github.com/tutur1004/MileShops/issues)
+
 MileShops is a Minecraft plugin developed by Milekat, designed to bring a flexible and feature-rich trading shop system to your server.
 It supports multiple shop layouts, complex item and money trades, per-player modifiers, and dual-backend storage (SQL or Elasticsearch).
 
