@@ -66,17 +66,33 @@ public class TradeUtils {
 
     /**
      * Retrieves a Bukkit Tag for the specified tag name.
-     * First attempts to find the tag in the REGISTRY_BLOCKS, then falls back to REGISTRY_ITEMS.
      *
      * @param tagName the name of the tag to retrieve (e.g., "logs", "planks")
      * @return the Tag if found, null otherwise
      */
     public static @Nullable Tag<Material> getMaterialTag(@NotNull String tagName) {
-        Tag<Material> found = Bukkit.getTag(Tag.REGISTRY_BLOCKS, NamespacedKey.minecraft(tagName), Material.class);
-        if (found == null) {
-            found = Bukkit.getTag(Tag.REGISTRY_ITEMS, NamespacedKey.minecraft(tagName), Material.class);
+        NamespacedKey key;
+        if (tagName.contains(":")) {
+            String[] parts = tagName.split(":", 2);
+            key = new NamespacedKey(parts[0], parts[1]);
+        } else {
+            key = NamespacedKey.minecraft(tagName);
         }
-        return found;
+        return Bukkit.getTag(Tag.REGISTRY_ITEMS, key, Material.class);
+    }
+
+    /**
+     * Returns every Material tag
+     * whose value set contains the given material.
+     */
+    public static @NotNull List<Tag<Material>> getMaterialTagsContaining(@NotNull Material material) {
+        Map<NamespacedKey, Tag<Material>> uniqueTags = new LinkedHashMap<>();
+        for (Tag<Material> tag : Bukkit.getTags(Tag.REGISTRY_ITEMS, Material.class)) {
+            if (tag.getValues().contains(material)) {
+                uniqueTags.putIfAbsent(tag.getKey(), tag);
+            }
+        }
+        return new ArrayList<>(uniqueTags.values());
     }
 
     /**
