@@ -9,7 +9,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Tag;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -23,13 +22,26 @@ import java.util.function.Consumer;
  * Unified sub-editor opened from {@link AdminEditor} in advanced mode.
  *
  * <ul>
- *   <li><b>MATERIAL_TAG</b> — attach a Bukkit {@link Tag}{@code <Material>} to a first/second
- *       item slot. At most one tag active at a time; clicking the active tag deselects it.</li>
- *   <li><b>MONEY_TAG</b> — configure the money-result map for the result slot.
- *       Multiple currencies selectable; each amount is entered via an Anvil prompt.</li>
- *   <li><b>USES_TAG</b> — configure maxTradeUse (single Anvil prompt for the count) and the
- *       set of MileBanks player-tags that track per-player usage (multi-select toggle).</li>
+ *   <li><b>MATERIAL_TAG</b> — attach a Bukkit {@link Tag}{@code <Material>} to a
+ *       first/second item. At most one tag active; clicking the active tag deselects it.</li>
+ *   <li><b>MONEY_TAG</b> — configure the money-result map. Multiple currencies selectable;
+ *       amounts entered via an Anvil prompt (0 / negative removes the currency).</li>
+ *   <li><b>USES_TAG</b> — configure {@code maxTradeUse} (Anvil prompt) and the set of
+ *       MileBanks player-tags that track per-player usage (multi-select toggle).</li>
  * </ul>
+ *
+ * <h3>Lifecycle / re-instantiation</h3>
+ * FastInv loses its event handlers when an inventory window closes. Two transitions require
+ * a fresh instance:
+ * <ol>
+ *   <li><b>AnvilInput → AdvancedEditor</b>: {@link #openAnvilAndReturn} sets
+ *       {@code state.subEditorGoingToAnvil = true} so the state listener does not reopen
+ *       {@link AdminEditor}, then creates a fresh AdvancedEditor via {@link #createReopened()}
+ *       after the anvil closes.</li>
+ *   <li><b>AdvancedEditor → AdminEditor</b>: calling {@link #returnToParent()} (or Escape)
+ *       just closes this window. {@link AdminEditorState} detects the close and creates a
+ *       fresh AdminEditor automatically — <em>no direct call back to AdminEditor here</em>.</li>
+ * </ol>
  *
  * <h3>Layout (45 slots, 5 rows)</h3>
  * <pre>
@@ -37,9 +49,9 @@ import java.util.function.Consumer;
  * [BK][BK][BK][BK][BK][T0][T1][T2][BK]   row 1
  * [BK][BK][IT][BK][BK][T3][T4][T5][BK]   row 2
  * [BK][BK][BK][BK][BK][T6][T7][T8][BK]   row 3
- * [EX][BK][BK][BK][BK][PR][BK][NX][BK]   row 4
+ * [BK][BK][PR][BK][EX][BK][NX][BK][BK]   row 4
  * </pre>
- * IT=slot 20, T0-T8={14,15,16,23,24,25,32,33,34}, EX=36, PR=41, NX=43
+ * IT=20  T0-T8={14,15,16,23,24,25,32,33,34}  PR=38  EX=40  NX=42
  */
 @SuppressWarnings("deprecation")
 public class AdvancedEditor extends FastInv {
@@ -48,115 +60,139 @@ public class AdvancedEditor extends FastInv {
 
     // ---- Layout constants ----
     private static final int   ITEM_SLOT = 20;
+    private static final int   PREV_SLOT = 38;
+    private static final int   NEXT_SLOT = 42;
     private static final int[] TAG_SLOTS = {14, 15, 16, 23, 24, 25, 32, 33, 34};
 
-    // ---- Parent / identity ----
-    private final AdminEditor parent;
-    private final Player      player;
-    private final int         position;
-    private final boolean     firstItem;  // only used in MATERIAL_TAG mode
-    private final Mode        mode;
-    private final ItemStack   editedItem; // for MATERIAL_TAG / MONEY_TAG
+    // ---- Shared session state ----
+    private final AdminEditorState state;
+    private final Player           player; // convenience alias for state.player
 
-    // ---- MATERIAL_TAG state ----
+    // ---- Editor identity ----
+    private final int       position;
+    private final boolean   firstItem;  // only meaningful in MATERIAL_TAG mode
+    private final Mode      mode;
+    private final ItemStack editedItem;
+
+    // ---- MATERIAL_TAG ----
     private final List<Tag<Material>> materialTags;
     private @Nullable Tag<Material>   selectedMaterialTag;
 
-    // ---- MONEY_TAG state ----
+    // ---- MONEY_TAG ----
     private final List<String>         moneyCurrencies;
     private final Map<String, Integer> selectedMoney;
 
-    // ---- USES_TAG state ----
+    // ---- USES_TAG ----
     private final List<String> usesCurrencies;
     private int                selectedMaxUse;
     private final Set<String>  selectedUsesTags;
 
-    // ---- Pagination / navigation ----
-    private int     tagPage   = 0;
-    private boolean anvilEdit = false;
+    // ---- Pagination ----
+    private int tagPage = 0;
 
     // =========================================================================
-    //  Constructors
+    //  Public constructors (initial opening from AdminEditor)
     // =========================================================================
 
-    /** MATERIAL_TAG — editing a first/second item's required-material tag. */
-    public AdvancedEditor(@NotNull AdminEditor parent, @NotNull Player player,
+    /** MATERIAL_TAG — edit the required-material tag of a first/second item. */
+    public AdvancedEditor(@NotNull AdminEditorState state,
                           int position, boolean firstItem,
                           @NotNull ItemStack editedItem,
                           @Nullable Tag<Material> currentTag) {
-        super(45, ChatColor.DARK_AQUA + "Tag editor: " + editedItem.getType().name());
-        this.parent              = parent;
-        this.player              = player;
-        this.position            = position;
-        this.firstItem           = firstItem;
-        this.mode                = Mode.MATERIAL_TAG;
-        this.editedItem          = editedItem;
-        this.selectedMaterialTag = currentTag;
-        this.materialTags        = TradeUtils.getMaterialTagsContaining(editedItem.getType());
-        this.moneyCurrencies     = List.of();
-        this.selectedMoney       = new HashMap<>();
-        this.usesCurrencies      = List.of();
-        this.selectedMaxUse      = 0;
-        this.selectedUsesTags    = new LinkedHashSet<>();
-        parent.advancedEditorGuiOpen();
+        this(state, position, firstItem, Mode.MATERIAL_TAG, editedItem,
+                currentTag, new HashMap<>(), 0, new LinkedHashSet<>(),
+                List.of(), TradeUtils.getMaterialTagsContaining(editedItem.getType()), 0);
     }
 
-    /** MONEY_TAG — editing the money-result map on a result slot. */
-    public AdvancedEditor(@NotNull AdminEditor parent, @NotNull Player player,
+    /** MONEY_TAG — edit the money-result map of a result slot. */
+    public AdvancedEditor(@NotNull AdminEditorState state,
                           int position,
                           @NotNull ItemStack editedItem,
                           @NotNull Map<String, Integer> currentMoney) {
-        super(45, ChatColor.DARK_AQUA + "Money result editor");
-        this.parent              = parent;
-        this.player              = player;
-        this.position            = position;
-        this.firstItem           = true;
-        this.mode                = Mode.MONEY_TAG;
-        this.editedItem          = editedItem;
-        this.selectedMaterialTag = null;
-        this.materialTags        = List.of();
-        this.moneyCurrencies     = safeGetTags(player);
-        this.selectedMoney       = new HashMap<>(currentMoney);
-        this.usesCurrencies      = List.of();
-        this.selectedMaxUse      = 0;
-        this.selectedUsesTags    = new LinkedHashSet<>();
-        parent.advancedEditorGuiOpen();
+        this(state, position, true, Mode.MONEY_TAG, editedItem,
+                null, new HashMap<>(currentMoney), 0, new LinkedHashSet<>(),
+                safeGetTags(state.player), List.of(), 0);
     }
 
-    /**
-     * USES_TAG — editing maxTradeUse count and the player-tag tracking set.
-     *
-     * @param currentMax   current maxTradeUse (0 = no limit)
-     * @param currentTags  currently selected player-tag names
-     */
-    public AdvancedEditor(@NotNull AdminEditor parent, @NotNull Player player,
+    /** USES_TAG — edit maxTradeUse count and the player-tag tracking set. */
+    public AdvancedEditor(@NotNull AdminEditorState state,
                           int position,
                           int currentMax, @NotNull List<String> currentTags) {
-        super(45, ChatColor.DARK_AQUA + "Uses limit editor");
-        this.parent              = parent;
-        this.player              = player;
-        this.position            = position;
-        this.firstItem           = true;
-        this.mode                = Mode.USES_TAG;
-        this.editedItem          = new ItemStack(Material.PAPER);
-        this.selectedMaterialTag = null;
-        this.materialTags        = List.of();
-        this.moneyCurrencies     = List.of();
-        this.selectedMoney       = new HashMap<>();
-        this.usesCurrencies      = safeGetTags(player);
-        this.selectedMaxUse      = currentMax;
-        this.selectedUsesTags    = new LinkedHashSet<>(currentTags);
-        parent.advancedEditorGuiOpen();
+        this(state, position, true, Mode.USES_TAG, new ItemStack(Material.PAPER),
+                null, new HashMap<>(), currentMax, new LinkedHashSet<>(currentTags),
+                safeGetTags(state.player), List.of(), 0);
     }
 
-    @Override
-    protected void onOpen(InventoryOpenEvent event) {
-        refreshDisplay();
+    // =========================================================================
+    //  Master (all-fields) constructor
+    // =========================================================================
+
+    private AdvancedEditor(
+            @NotNull AdminEditorState state,
+            int position, boolean firstItem,
+            @NotNull Mode mode,
+            @NotNull ItemStack editedItem,
+            @Nullable Tag<Material> selectedMaterialTag,
+            @NotNull Map<String, Integer> selectedMoney,
+            int selectedMaxUse,
+            @NotNull Set<String> selectedUsesTags,
+            @NotNull List<String> usesCurrencies,
+            @NotNull List<Tag<Material>> materialTags,
+            int tagPage
+    ) {
+        super(45, buildTitle(mode, editedItem));
+        this.state               = state;
+        this.player              = state.player;
+        this.position            = position;
+        this.firstItem           = firstItem;
+        this.mode                = mode;
+        this.editedItem          = editedItem;
+        this.selectedMaterialTag = selectedMaterialTag;
+        this.selectedMoney       = selectedMoney;
+        this.selectedMaxUse      = selectedMaxUse;
+        this.selectedUsesTags    = selectedUsesTags;
+        this.usesCurrencies      = usesCurrencies;
+        this.materialTags        = materialTags;
+        this.moneyCurrencies     = (mode == Mode.MONEY_TAG) ? safeGetTags(state.player) : List.of();
+        this.tagPage             = tagPage;
+    }
+
+    // ---- helpers ----
+
+    private static @NotNull String buildTitle(@NotNull Mode mode, @NotNull ItemStack item) {
+        return switch (mode) {
+            case MATERIAL_TAG -> ChatColor.DARK_AQUA + "Tag editor: " + item.getType().name();
+            case MONEY_TAG    -> ChatColor.DARK_AQUA + "Money result editor";
+            case USES_TAG     -> ChatColor.DARK_AQUA + "Uses limit editor";
+        };
     }
 
     private static @NotNull List<String> safeGetTags(@NotNull Player player) {
         try { return MileBanks.getExistingTags(player); }
         catch (RuntimeException e) { return new ArrayList<>(); }
+    }
+
+    /**
+     * Creates a fresh AdvancedEditor preserving all current UI state (selections, page).
+     * Used after an {@link AnvilInput} returns, to re-register FastInv event handlers.
+     */
+    private @NotNull AdvancedEditor createReopened() {
+        return new AdvancedEditor(
+                state, position, firstItem, mode, editedItem,
+                selectedMaterialTag, new HashMap<>(selectedMoney),
+                selectedMaxUse, new LinkedHashSet<>(selectedUsesTags),
+                usesCurrencies, materialTags, tagPage);
+    }
+
+    // =========================================================================
+    //  onOpen — registers this inventory with the state orchestrator
+    // =========================================================================
+
+    @Override
+    protected void onOpen(@NotNull InventoryOpenEvent event) {
+        // Tell the state which inventory to watch so it knows when we close
+        state.registerSubEditorInventory(event.getInventory());
+        refreshDisplay();
     }
 
     // =========================================================================
@@ -178,8 +214,8 @@ public class AdvancedEditor extends FastInv {
 
         // Right-side tag grid (selected entries sorted first)
         List<?> sorted = buildSortedTagList();
-        int start = tagPage * 9;
-        int end   = Math.min(start + 9, sorted.size());
+        int start = tagPage * TAG_SLOTS.length;
+        int end   = Math.min(start + TAG_SLOTS.length, sorted.size());
 
         for (int i = start; i < end; i++) {
             int slot = TAG_SLOTS[i - start];
@@ -193,7 +229,7 @@ public class AdvancedEditor extends FastInv {
                 case MONEY_TAG -> {
                     String currency = (String) sorted.get(i);
                     boolean sel = selectedMoney.containsKey(currency);
-                    int amt     = selectedMoney.getOrDefault(currency, 0);
+                    int     amt = selectedMoney.getOrDefault(currency, 0);
                     setItem(slot, buildMoneyTagItem(currency, sel, amt),
                             event -> onMoneyTagClick(currency));
                 }
@@ -206,10 +242,10 @@ public class AdvancedEditor extends FastInv {
         }
 
         // Pagination arrows
-        if (tagPage > 0)          setItem(getInventory().getSize() - 9, Buttons.PREVIOUS.get(),
-                event -> { tagPage--; refreshDisplay(); });
-        if (end < sorted.size())  setItem(getInventory().getSize(), Buttons.NEXT.get(),
-                event -> { tagPage++; refreshDisplay(); });
+        if (tagPage > 0)
+            setItem(PREV_SLOT, Buttons.PREVIOUS.get(), event -> { tagPage--; refreshDisplay(); });
+        if (end < sorted.size())
+            setItem(NEXT_SLOT, Buttons.NEXT.get(), event -> { tagPage++; refreshDisplay(); });
     }
 
     private @NotNull List<?> buildSortedTagList() {
@@ -242,14 +278,14 @@ public class AdvancedEditor extends FastInv {
         };
     }
 
-    // ---- IT slot display ----
+    // ---- IT slot ----
 
     private @NotNull ItemStack buildItemSlotDisplay() {
         return switch (mode) {
             case MATERIAL_TAG -> {
                 ItemBuilder b = new ItemBuilder(editedItem.clone())
                         .name(ChatColor.GREEN + editedItem.getType().name())
-                        .lore(ChatColor.GRAY + "Click to remove all complexity");
+                        .lore(ChatColor.GRAY + "Click to clear tag");
                 if (selectedMaterialTag != null)
                     b.lore(ChatColor.DARK_GRAY + "Tag: "
                             + ChatColor.AQUA + selectedMaterialTag.getKey().getKey());
@@ -258,7 +294,7 @@ public class AdvancedEditor extends FastInv {
             case MONEY_TAG -> {
                 ItemBuilder b = new ItemBuilder(editedItem.clone())
                         .name(ChatColor.GREEN + editedItem.getType().name())
-                        .lore(ChatColor.GRAY + "Click to remove all complexity");
+                        .lore(ChatColor.GRAY + "Click to clear all currencies");
                 if (!selectedMoney.isEmpty())
                     for (Map.Entry<String, Integer> e : selectedMoney.entrySet())
                         b.lore(ChatColor.DARK_GRAY + e.getKey()
@@ -271,8 +307,7 @@ public class AdvancedEditor extends FastInv {
                             .name(ChatColor.GREEN + "Max uses: " + selectedMaxUse);
                     for (String t : selectedUsesTags)
                         b.lore(ChatColor.GRAY + "Tag: " + ChatColor.WHITE + t);
-                    b.lore("").lore(ChatColor.GRAY + "Click to change count  |  "
-                            + ChatColor.RED + "shift-click to reset");
+                    b.lore("").lore(ChatColor.GRAY + "Click to change count");
                     ItemStack item = b.build();
                     applyGlint(item);
                     yield item;
@@ -300,22 +335,19 @@ public class AdvancedEditor extends FastInv {
         b.lore("");
         if (selected) {
             b.lore(ChatColor.GREEN + "✔ Active  —  click to deselect");
-            ItemStack item = b.build();
-            applyGlint(item);
-            return item;
+            ItemStack item = b.build(); applyGlint(item); return item;
         }
         return b.lore(ChatColor.GRAY + "Click to select").build();
     }
 
-    private @NotNull ItemStack buildMoneyTagItem(@NotNull String currency, boolean selected, int amount) {
+    private @NotNull ItemStack buildMoneyTagItem(@NotNull String currency,
+                                                 boolean selected, int amount) {
         ItemBuilder b = new ItemBuilder(Material.EMERALD)
                 .name((selected ? ChatColor.GOLD : ChatColor.YELLOW) + currency);
         if (selected) {
             b.lore(ChatColor.GRAY + "Amount: " + ChatColor.WHITE + amount)
              .lore("").lore(ChatColor.GOLD + "✔ Active  —  click to change");
-            ItemStack item = b.build();
-            applyGlint(item);
-            return item;
+            ItemStack item = b.build(); applyGlint(item); return item;
         }
         return b.lore(ChatColor.GRAY + "Click to set amount").build();
     }
@@ -325,9 +357,7 @@ public class AdvancedEditor extends FastInv {
                 .name((selected ? ChatColor.GREEN : ChatColor.YELLOW) + tag);
         if (selected) {
             b.lore("").lore(ChatColor.GREEN + "✔ Active  —  click to remove");
-            ItemStack item = b.build();
-            applyGlint(item);
-            return item;
+            ItemStack item = b.build(); applyGlint(item); return item;
         }
         return b.lore(ChatColor.GRAY + "Click to add").build();
     }
@@ -341,88 +371,98 @@ public class AdvancedEditor extends FastInv {
     //  Click handlers
     // =========================================================================
 
-    /** IT slot: remove all complexity → push empty state → return to parent. */
     private void onItemSlotClick() {
         switch (mode) {
-            case MATERIAL_TAG -> parent.applyAdvancedTagEdit(position, firstItem, null);
-            case MONEY_TAG    -> parent.applyAdvancedResultEdit(position, new HashMap<>());
-            case USES_TAG     -> onUsesCountClick();
+            case MATERIAL_TAG -> {
+                selectedMaterialTag = null;
+                state.applyTagEdit(position, firstItem, null);
+                returnToParent();
+            }
+            case MONEY_TAG -> {
+                selectedMoney.clear();
+                state.applyResultEdit(position, new HashMap<>());
+                returnToParent();
+            }
+            case USES_TAG -> onUsesCountClick();
         }
-        returnToParent();
     }
 
-    /** MATERIAL_TAG: toggle tag selection and push to parent. */
     private void onMaterialTagClick(@NotNull Tag<Material> tag) {
         selectedMaterialTag = (selectedMaterialTag != null
                 && selectedMaterialTag.getKey().equals(tag.getKey())) ? null : tag;
-        parent.applyAdvancedTagEdit(position, firstItem, selectedMaterialTag);
+        state.applyTagEdit(position, firstItem, selectedMaterialTag);
         refreshDisplay();
     }
 
-    /** MONEY_TAG: Anvil prompt for amount (0/negative removes the currency). */
     private void onMoneyTagClick(@NotNull String currency) {
         String initial = String.valueOf(selectedMoney.getOrDefault(currency, 1));
         openAnvilAndReturn(initial, input -> {
             if (input != null && !input.isBlank()) {
                 int amount;
-                try { amount = Integer.parseInt(input.trim()); } catch (NumberFormatException e) { amount = 0; }
+                try { amount = Integer.parseInt(input.trim()); }
+                catch (NumberFormatException e) { amount = 0; }
                 if (amount <= 0) selectedMoney.remove(currency);
                 else             selectedMoney.put(currency, amount);
-                parent.applyAdvancedResultEdit(position, new HashMap<>(selectedMoney));
+                state.applyResultEdit(position, new HashMap<>(selectedMoney));
             }
         });
     }
 
-    /** USES_TAG: Anvil prompt for the max-uses count. */
     private void onUsesCountClick() {
         String initial = selectedMaxUse > 0 ? String.valueOf(selectedMaxUse) : "1";
         openAnvilAndReturn(initial, input -> {
             if (input != null && !input.isBlank()) {
                 int count;
-                try { count = Integer.parseInt(input.trim()); } catch (NumberFormatException e) { count = 0; }
+                try { count = Integer.parseInt(input.trim()); }
+                catch (NumberFormatException e) { count = 0; }
                 selectedMaxUse = Math.max(0, count);
                 if (selectedMaxUse == 0) selectedUsesTags.clear();
-                parent.applyAdvancedUsesEdit(position, selectedMaxUse, new ArrayList<>(selectedUsesTags));
+                state.applyUsesEdit(position, selectedMaxUse, new ArrayList<>(selectedUsesTags));
             }
         });
     }
 
-    /** USES_TAG: toggle a player-tag on/off (no amount). */
     private void onUsesTagClick(@NotNull String tag) {
         if (selectedUsesTags.contains(tag)) selectedUsesTags.remove(tag);
         else                                selectedUsesTags.add(tag);
-        parent.applyAdvancedUsesEdit(position, selectedMaxUse, new ArrayList<>(selectedUsesTags));
+        state.applyUsesEdit(position, selectedMaxUse, new ArrayList<>(selectedUsesTags));
         refreshDisplay();
     }
 
+    // =========================================================================
+    //  Navigation
+    // =========================================================================
+
     /**
-     * Opens {@link AnvilInput}, navigates away, runs {@code action} on result,
-     * then re-opens this editor.
+     * Dismisses this sub-editor and hands control back to AdminEditor.
+     *
+     * <p>Closing this inventory is all that is needed: {@link AdminEditorState} is
+     * listening for the {@code InventoryCloseEvent} and will create a fresh
+     * {@link AdminEditor} automatically.</p>
      */
-    private void openAnvilAndReturn(@NotNull String initial, @NotNull Consumer<String> action) {
-        anvilEdit = true;
+    private void returnToParent() {
+        player.closeInventory();
+        // AdminEditorState.onInventoryClose() detects this and opens a new AdminEditor
+    }
+
+    /**
+     * Opens an {@link AnvilInput} for the given {@code initial} text, runs {@code action}
+     * with the result (null = canceled), then re-opens a fresh copy of this editor.
+     *
+     * <p>{@code state.subEditorGoingToAnvil} is set to {@code true} before the AnvilInput
+     * opens so the state listener ignores the close of this window.  It is reset to
+     * {@code false} just before the fresh AdvancedEditor is opened, so the state can once
+     * again track the sub-editor lifecycle.</p>
+     */
+    private void openAnvilAndReturn(@NotNull String initial,
+                                    @NotNull Consumer<@Nullable String> action) {
+        // Tell the state: "don't reopen AdminEditor when this window closes"
+        state.subEditorGoingToAnvil = true;
         new AnvilInput(player, initial, input -> {
             action.accept(input);
-            anvilEdit = false;
-            refreshDisplay();
-            this.open(player);
+            // Re-enable state tracking, then open a fresh AdvancedEditor
+            state.subEditorGoingToAnvil = false;
+            createReopened().open(player);
         });
-    }
-
-    // =========================================================================
-    //  Navigation helpers
-    // =========================================================================
-
-    private void returnToParent() {
-        player.sendMessage(ChatColor.GRAY + "Returning to main editor...");
-        anvilEdit = true;
-        parent.open(player);
-    }
-
-    @Override
-    protected void onClose(@NotNull InventoryCloseEvent event) {
-        if (anvilEdit) return;
-        // User closed without using Exit — go back to parent
-        returnToParent();
     }
 }

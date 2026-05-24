@@ -4,17 +4,17 @@ import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.ShopType;
 import fr.milekat.shops.api.classes.Trade;
+import fr.milekat.shops.workers.gui.AdminEditorState.DraftTrade;
 import fr.milekat.shops.workers.utils.Buttons;
 import fr.milekat.shops.workers.utils.TradeUtils;
 import fr.mrmicky.fastinv.FastInv;
 import fr.mrmicky.fastinv.ItemBuilder;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Tag;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -23,385 +23,406 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * Admin GUI for editing a shop's trades.
  *
+ * <h3>Architecture</h3>
+ * All mutable state lives in {@link AdminEditorState}, which outlives any individual FastInv
+ * window. Because FastInv loses its event handlers when an inventory closes, this class is
+ * re-created every time the player returns from a sub-editor — the
+ * {@link AdminEditorState} reference is simply passed to the new instance.
+ *
+ * <p>Escape-to-close is blocked by {@code setCloseFilter} while there are unsaved changes.
+ * Only the <b>Save&nbsp;&amp;&nbsp;Exit</b> and <b>Exit without Save</b> buttons can dismiss
+ * the editor.</p>
+ *
  * <h3>Inventory layout (54 slots, 6 rows)</h3>
  * <pre>
- * Row 0 (0 – 8)  : controls (save, page nav, exit, advanced toggle)
+ * Row 0 (0 – 8)  : page indicator (slot 0), advanced toggle (slot 4)
  * Row 1 (9 – 17) : first items
  * Row 2 (18 – 26): second items (VANILLA shop only)
- * Row 3 (27 – 35): uses / trade-limit configuration  ← new
+ * Row 3 (27 – 35): uses / trade-limit items
  * Row 4 (36 – 44): result items
- * Row 5 (45 – 53): save / page nav / exit
+ * Row 5 (45 – 53): prev page (45), exit without save (48), save &amp; exit (50), next page (53)
  * </pre>
  */
 @SuppressWarnings("deprecation")
 public class AdminEditor extends FastInv {
+
     public static final int EDITOR_TRADES_PER_PAGE = 9;
-    private static final int ADVANCED_TOGGLE_SLOT = 4;
 
-    /** Marker prefix for every decoration lore line we add/detect. */
-    static final String LORE_MARKER = ChatColor.DARK_GRAY.toString() + ChatColor.ITALIC + "[MS] ";
+    // ---- Slot constants ----
+    private static final int SLOT_PAGE_INDICATOR  = 0;
+    private static final int SLOT_ADVANCED_TOGGLE = 4;
+    private static final int SLOT_PREV_PAGE       = 45;
+    private static final int SLOT_EXIT_NO_SAVE    = 48;
+    private static final int SLOT_SAVE_AND_EXIT   = 50;
+    private static final int SLOT_NEXT_PAGE       = 53;
 
-    // Lore keys
+    // ---- Lore decoration ----
+    static final String LORE_MARKER  = ChatColor.DARK_GRAY.toString() + ChatColor.ITALIC + "[MS] ";
     static final String KEY_TAG      = "Tag";
     static final String KEY_MONEY    = "Money";
     static final String KEY_USES     = "Uses";
     static final String KEY_USES_TAG = "UsesTag";
 
-    private final Player player;
-    private final Shop shop;
-    private final Map<Integer, List<Trade>> trades;
-    private int currentPage = 1;
-    private boolean advancedMode = false;
-    private boolean preventSave = true;
+    // =========================================================================
+    //  Fields
+    // =========================================================================
 
-    public AdminEditor(Player player, @NotNull Shop shop, @NotNull List<Trade> trades) {
+    /** All mutable state, shared with sub-editors and preserved across re-instantiations. */
+    private final AdminEditorState state;
+
+    /**
+     * {@code true} just before opening a sub-editor so the close filter allows the implicit
+     * close that Minecraft fires when the new inventory takes over.
+     */
+    private boolean subEditorOpen    = false;
+    /**
+     * {@code true} when a button (save / exit) triggered the close, so the filter allows it.
+     */
+    private boolean closingViaButton = false;
+
+    // =========================================================================
+    //  Constructors
+    // =========================================================================
+
+    /**
+     * Primary constructor: opens (or re-opens after a sub-editor) from an existing state.
+     */
+    public AdminEditor(@NotNull AdminEditorState state) {
         super(54, Main.getConfigs()
                 .getMessage("messages.gui.admin-shop.title", "&3Editing <shop_name>")
-                .replaceAll("<shop_name>", shop.getName()));
-        this.player = player;
-        this.shop = shop;
-        Map<Integer, List<Trade>> tradesPages = new HashMap<>();
-        int pageTradeCount = 1;
-        int page = 1;
-        List<Trade> tradesLoop = new LinkedList<>();
-        for (Trade trade : trades) {
-            tradesLoop.add(trade);
-            pageTradeCount++;
-            tradesPages.put(page, tradesLoop);
-            if (pageTradeCount > EDITOR_TRADES_PER_PAGE) {
-                tradesLoop = new LinkedList<>();
-                pageTradeCount = 1;
-                page++;
-            }
-        }
-        this.trades = tradesPages;
-        //  Setup base inventory
+                .replaceAll("<shop_name>", state.shop.getName()));
+        this.state = state;
+
         setItems(0, getInventory().getSize(), Buttons.PANE_BLACK.get());
-        //  Setup exit button
-        setItem(getInventory().getSize() - 5, Buttons.EXIT.get(),
-                event -> event.getWhoClicked().closeInventory());
         updatePageContent();
+
+        // Block Escape-close while there are unsaved changes.
+        setCloseFilter(p -> {
+            if (subEditorOpen)     return false;              // allow: sub-editor is taking over
+            if (closingViaButton)  { closingViaButton = false; return false; } // allow: button
+            if (!state.hasChanges) return false;              // allow: nothing to lose
+            Main.message(p, "&eUse the &aSave & Exit &eor &cExit without Save &ebutton to close.");
+            return true; // block
+        });
     }
 
-    @Override
-    protected void onOpen(InventoryOpenEvent ignored) {
-        preventSave = false;
+    /**
+     * Convenience constructor for the very first opening (no pre-existing state).
+     * Called from {@link fr.milekat.shops.workers.utils.ShopUtils}.
+     */
+    public AdminEditor(@NotNull Player player, @NotNull Shop shop, @NotNull List<Trade> trades) {
+        this(new AdminEditorState(player, shop, trades));
     }
 
     // =========================================================================
-    //  Page controls
+    //  Display / rendering  (state → inventory)
     // =========================================================================
 
-    private void pageButtons() {
-        if (this.currentPage > 1) {
-            setItem(45, Buttons.PREVIOUS.get(), event -> {
-                savePage();
-                if (this.currentPage > 1) this.currentPage--;
-                updatePageContent();
-            });
-        } else {
-            setItem(45, Buttons.PANE_BLACK.get());
+    private void updatePageContent() {
+        setItems(9,  18, new ItemStack(Material.AIR));
+        if (state.shop.getType().equals(ShopType.VANILLA))
+            setItems(18, 27, new ItemStack(Material.AIR));
+        setItems(27, 36, new ItemStack(Material.AIR));
+        setItems(36, 45, new ItemStack(Material.AIR));
+
+        int startAbs = (state.currentPage - 1) * EDITOR_TRADES_PER_PAGE + 1;
+        for (int i = 0; i < EDITOR_TRADES_PER_PAGE; i++) {
+            DraftTrade d = state.drafts.get(startAbs + i);
+            if (d != null) displayDraft(i, d);
         }
-        if ((nonNullItem(getFirstItemPos(8)) && nonNullItem(getResultItemPos(8))) ||
-                trades.containsKey(currentPage + 1)) {
-            setItem(53, Buttons.NEXT.get(), event -> {
-                if (this.currentPage >= 64) return;
-                savePage();
-                this.currentPage++;
-                updatePageContent();
-            });
-        } else {
-            setItem(53, Buttons.PANE_BLACK.get());
-        }
-        advancedToggleButton();
+
+        updateControls();
     }
 
-    private void advancedToggleButton() {
-        if (advancedMode) {
-            setItem(ADVANCED_TOGGLE_SLOT, new ItemBuilder(Material.ENCHANTED_BOOK)
+    private void displayDraft(int pagePosition, @NotNull DraftTrade d) {
+        if (d.firstItem != null)
+            setItem(9  + pagePosition, decorateTagItem(d.firstItem.clone(), d.firstItemTag));
+
+        if (state.shop.getType().equals(ShopType.VANILLA) && d.secondItem != null)
+            setItem(18 + pagePosition, decorateTagItem(d.secondItem.clone(), d.secondItemTag));
+
+        if (d.firstItem != null || d.resultItem != null)
+            setItem(27 + pagePosition, decorateUsesItem(d.maxTradeUse, d.maxTradeTagsNames));
+
+        if (d.resultItem != null)
+            setItem(36 + pagePosition, decorateResultItem(d.resultItem.clone(), d.moneyResult));
+    }
+
+    private void updateControls() {
+        // Page indicator
+        setItem(SLOT_PAGE_INDICATOR, new ItemBuilder(Material.PAPER)
+                .amount(Math.min(state.currentPage, 64))
+                .name(ChatColor.GOLD + "Page " + state.currentPage)
+                .lore(ChatColor.GRAY + "Drafts loaded: " + ChatColor.WHITE + state.drafts.size())
+                .build());
+
+        // Advanced toggle
+        if (state.advancedMode) {
+            setItem(SLOT_ADVANCED_TOGGLE, new ItemBuilder(Material.ENCHANTED_BOOK)
                             .name(ChatColor.LIGHT_PURPLE + "Advanced Edit: ON")
                             .lore(ChatColor.GRAY + "Click an item to edit tags / money / uses")
                             .lore(ChatColor.GRAY + "Click here to disable")
                             .build(),
-                    event -> {
-                        savePage();
-                        advancedMode = false;
-                        updatePageContent();
-                    });
+                    event -> { state.advancedMode = false; updatePageContent(); });
         } else {
-            setItem(ADVANCED_TOGGLE_SLOT, new ItemBuilder(Material.BOOK)
+            setItem(SLOT_ADVANCED_TOGGLE, new ItemBuilder(Material.BOOK)
                             .name(ChatColor.GRAY + "Advanced Edit: OFF")
                             .lore(ChatColor.GRAY + "Click to enable advanced editing")
                             .lore(ChatColor.DARK_GRAY + "(tag selector + money result + uses)")
                             .build(),
-                    event -> {
-                        savePage();
-                        advancedMode = true;
-                        updatePageContent();
-                    });
+                    event -> { state.advancedMode = true; updatePageContent(); });
+        }
+
+        // Previous page
+        if (state.currentPage > 1) {
+            setItem(SLOT_PREV_PAGE, Buttons.PREVIOUS.get(), event -> {
+                state.currentPage--;
+                updatePageContent();
+            });
+        } else {
+            setItem(SLOT_PREV_PAGE, Buttons.PANE_BLACK.get());
+        }
+
+        // Next page: visible when the 9th slot of the current page is complete, or drafts exist beyond
+        if (canShowNextPage()) {
+            setItem(SLOT_NEXT_PAGE, Buttons.NEXT.get(), event -> {
+                if (state.currentPage >= 64) return;
+                state.currentPage++;
+                updatePageContent();
+            });
+        } else {
+            setItem(SLOT_NEXT_PAGE, Buttons.PANE_BLACK.get());
+        }
+
+        // Exit without save (always available)
+        setItem(SLOT_EXIT_NO_SAVE, new ItemBuilder(Material.RED_DYE)
+                        .name(ChatColor.RED + "Exit without saving")
+                        .lore(ChatColor.GRAY + "Discard all unsaved changes")
+                        .build(),
+                event -> exitWithoutSave());
+
+        // Save & Exit: BEDROCK if any draft is partial (incomplete)
+        if (hasPartialDrafts()) {
+            setItem(SLOT_SAVE_AND_EXIT, new ItemBuilder(Material.BEDROCK)
+                    .name(ChatColor.RED + "Cannot save")
+                    .lore(ChatColor.GRAY + "At least one trade is incomplete")
+                    .lore(ChatColor.DARK_GRAY + "(missing first OR result item)")
+                    .build());
+        } else {
+            setItem(SLOT_SAVE_AND_EXIT, new ItemBuilder(Material.LIME_DYE)
+                            .name(ChatColor.GREEN + "Save & Exit")
+                            .lore(ChatColor.GRAY + "Commit all changes")
+                            .lore(ChatColor.DARK_GRAY + "Empty slots will be shrunk")
+                            .build(),
+                    event -> saveAndExit());
         }
     }
 
-    // =========================================================================
-    //  Display / update
-    // =========================================================================
-
-    private void updatePageContent() {
-        // Row 1: first items
-        setItems(9, 18, new ItemStack(Material.AIR));
-        // Row 2: second items (If not VANILLA shop)
-        if (!shop.getType().equals(ShopType.VANILLA)) {
-            setItems(18, 27, new ItemStack(Material.AIR));
-        }
-        // Row 3: uses / trade-limit
-        setItems(27, 36, new ItemStack(Material.AIR));
-        // Row 4: result items
-        setItems(36, 45, new ItemStack(Material.AIR));
-        if (trades.containsKey(this.currentPage)) {
-            int position = 0;
-            for (Trade trade : trades.get(this.currentPage)) {
-                displayTrade(position, trade);
-                position++;
-            }
-        }
-        pageButtons();
+    private boolean canShowNextPage() {
+        int lastAbs = state.currentPage * EDITOR_TRADES_PER_PAGE;
+        DraftTrade last = state.drafts.get(lastAbs);
+        if (last != null && last.isComplete()) return true;
+        for (Integer abs : state.drafts.keySet()) if (abs > lastAbs) return true;
+        return false;
     }
 
-    private void displayTrade(int pagePosition, @NotNull Trade trade) {
-        // Row 1: first items
-        setItem(9 + pagePosition, decorateTagItem(
-                trade.getFirstItem().clone(), trade.getFirstItemTag()));
-        // Row 2: second items (If not VANILLA shop)
-        if (shop.getType().equals(ShopType.VANILLA) && trade.getSecondItem() != null) {
-            setItem(18 + pagePosition, decorateTagItem(
-                    trade.getSecondItem().clone(), trade.getSecondItemTag()));
-        }
-        // Row 3: uses / trade-limit
-        setItem(27 + pagePosition, decorateUsesItem(
-                trade.getMaxTradeUse(), trade.getMaxTradeTagsNames()));
-        // Row 4: result items
-        setItem(36 + pagePosition, decorateResultItem(
-                trade.getResultItem().clone(), trade.getMoneyResult()));
+    private boolean hasPartialDrafts() {
+        for (DraftTrade d : state.drafts.values()) if (d.isPartial()) return true;
+        return false;
     }
 
     // =========================================================================
-    //  Save
-    // =========================================================================
-
-    private void savePage() {
-        List<Trade> newTrades = new LinkedList<>();
-        IntStream.rangeClosed(0, 8).forEach(index -> {
-            ItemStack rawFirst  = getFirstItemPos(index);
-            ItemStack rawResult = getResultItemPos(index);
-            if (nonNullItem(rawFirst) && nonNullItem(rawResult)) {
-                ItemStack rawSecond = shop.getType().equals(ShopType.VANILLA) ? getSecondItemPos(index) : null;
-                ItemStack rawUses   = getUsesItemPos(index);
-
-                Tag<Material> firstTag  = extractTag(rawFirst);
-                Tag<Material> secondTag = nonNullItem(rawSecond) ? extractTag(rawSecond) : null;
-                Map<String, Integer> money = extractMoney(rawResult);
-                int maxTradeUse = extractMaxTradeUse(rawUses);
-                List<String> usesTags = extractUsesTags(rawUses);
-
-                newTrades.add(new Trade(
-                        shop.getUuid(),
-                        index + (9 * currentPage),
-                        cleanup(rawFirst),  firstTag,
-                        nonNullItem(rawSecond) ? cleanup(rawSecond) : null, secondTag,
-                        cleanup(rawResult),
-                        maxTradeUse, usesTags,
-                        money));
-            }
-        });
-        this.trades.put(this.currentPage, newTrades);
-    }
-
-    // =========================================================================
-    //  Click / sub-editor routing
+    //  Click handling
     // =========================================================================
 
     @Override
     protected void onClick(@NotNull InventoryClickEvent event) {
         if (event.getClickedInventory() == null
-                || event.getClickedInventory().getType().equals(InventoryType.CHEST)) {
-            int slot = event.getSlot();
-
-            // Row 3 (uses) is always managed — block free editing regardless of mode
-            boolean inUsesRow = slot >= 27 && slot <= 35;
-
-            // Trade area: rows where free-form item editing is allowed in normal mode
-            boolean inTradeArea;
-            if (shop.getType().equals(ShopType.VANILLA)) {
-                // rows 1, 2, 4 (first, second, result)
-                inTradeArea = (slot >= 9 && slot <= 26) || (slot >= 36 && slot <= 44);
-            } else {
-                // rows 1, 4 (first, result)
-                inTradeArea = (slot >= 9 && slot <= 17) || (slot >= 36 && slot <= 44);
-            }
-
-            if (!inTradeArea && !inUsesRow) return;
-
-            if (advancedMode) {
-                event.setCancelled(true);
-                if (event.getCurrentItem() == null || event.getCurrentItem().getType().equals(Material.AIR)) {
-                    advancedMode = false;
-                    advancedToggleButton();
-                }
-                openAdvancedSubEditor(slot);
-                return;
-            }
-
-            // Non-advanced mode: protect uses row from free editing
-            if (inUsesRow) {
-                event.setCancelled(true);
-                return;
-            }
+                || event.getClickedInventory().getType() != InventoryType.CHEST) {
+            event.setCancelled(false);
+            return;
         }
+
+        int slot = event.getSlot();
+
+        boolean inUsesRow   = slot >= 27 && slot <= 35;
+        boolean inTradeArea = state.shop.getType().equals(ShopType.VANILLA)
+                ? (slot >= 9 && slot <= 26) || (slot >= 36 && slot <= 44)
+                : (slot >= 9 && slot <= 17) || (slot >= 36 && slot <= 44);
+
+        if (!inTradeArea && !inUsesRow) return;
+
+        if (state.advancedMode) {
+            event.setCancelled(true);
+            ItemStack clicked = event.getCurrentItem();
+            if (clicked == null || clicked.getType() == Material.AIR) return;
+            openAdvancedSubEditor(slot);
+            return;
+        }
+
+        if (inUsesRow) { event.setCancelled(true); return; }
+
+        // Non-advanced: allow drag-drop; sync cache after event resolves
         event.setCancelled(false);
-        savePage();
+        final int pageAtClick = state.currentPage;
+        final int slotAtClick = slot;
+        Bukkit.getScheduler().runTask(Main.getInstance(), () -> {
+            if (pageAtClick != state.currentPage) return;
+            syncSlotFromInventory(slotAtClick);
+            state.hasChanges = true;
+            updateControls();
+        });
+    }
+
+    private void syncSlotFromInventory(int slot) {
+        int posInPage = -1, row = -1;
+        if      (slot >= 9  && slot <= 17) { posInPage = slot - 9;  row = 1; }
+        else if (slot >= 18 && slot <= 26) { posInPage = slot - 18; row = 2; }
+        else if (slot >= 36 && slot <= 44) { posInPage = slot - 36; row = 4; }
+        if (posInPage < 0) return;
+
+        int absPos  = (state.currentPage - 1) * EDITOR_TRADES_PER_PAGE + posInPage + 1;
+        ItemStack raw = getInventory().getItem(slot);
+        boolean isAir = raw == null || raw.getType() == Material.AIR;
+
+        DraftTrade d = state.drafts.computeIfAbsent(absPos, k -> new DraftTrade());
+
+        switch (row) {
+            case 1 -> { d.firstItem    = isAir ? null : cleanup(raw.clone());
+                        d.firstItemTag = isAir ? null : extractTag(raw); }
+            case 2 -> { d.secondItem    = isAir ? null : cleanup(raw.clone());
+                        d.secondItemTag = isAir ? null : extractTag(raw); }
+            case 4 -> { d.resultItem  = isAir ? null : cleanup(raw.clone());
+                        d.moneyResult = isAir ? new HashMap<>() : extractMoney(raw); }
+        }
+
+        if (d.isEmpty()) state.drafts.remove(absPos);
     }
 
     private void openAdvancedSubEditor(int slot) {
-        if (slot >= 9 && slot <= 17) {
-            int pos = slot - 9;
-            ItemStack item = getFirstItemPos(pos);
-            if (!nonNullItem(item)) return;
-            savePage();
-            new AdvancedEditor(this, player, pos, true, cleanup(item), extractTag(item)).open(player);
+        int posInPage, absPos;
+        DraftTrade d;
 
-        } else if (slot >= 18 && slot <= 26 && shop.getType().equals(ShopType.VANILLA)) {
-            int pos = slot - 18;
-            ItemStack item = getSecondItemPos(pos);
-            if (!nonNullItem(item)) return;
-            savePage();
-            new AdvancedEditor(this, player, pos, false, cleanup(item), extractTag(item)).open(player);
+        if (slot >= 9 && slot <= 17) {
+            posInPage = slot - 9;
+            absPos    = (state.currentPage - 1) * EDITOR_TRADES_PER_PAGE + posInPage + 1;
+            d = state.drafts.get(absPos);
+            if (d == null || d.firstItem == null) return;
+            subEditorOpen = true;
+            new AdvancedEditor(state, posInPage, true,
+                    d.firstItem.clone(), d.firstItemTag).open(state.player);
+
+        } else if (slot >= 18 && slot <= 26 && state.shop.getType().equals(ShopType.VANILLA)) {
+            posInPage = slot - 18;
+            absPos    = (state.currentPage - 1) * EDITOR_TRADES_PER_PAGE + posInPage + 1;
+            d = state.drafts.get(absPos);
+            if (d == null || d.secondItem == null) return;
+            subEditorOpen = true;
+            new AdvancedEditor(state, posInPage, false,
+                    d.secondItem.clone(), d.secondItemTag).open(state.player);
 
         } else if (slot >= 27 && slot <= 35) {
-            int pos = slot - 27;
-            // Only open if a valid trade exists at this position
-            if (!nonNullItem(getFirstItemPos(pos)) || !nonNullItem(getResultItemPos(pos))) return;
-            ItemStack rawUses = getUsesItemPos(pos);
-            int currentMax = extractMaxTradeUse(rawUses);
-            List<String> currentTags = extractUsesTags(rawUses);
-            savePage();
-            new AdvancedEditor(this, player, pos,
-                    currentMax, currentTags != null ? currentTags : List.of()).open(player);
+            posInPage = slot - 27;
+            absPos    = (state.currentPage - 1) * EDITOR_TRADES_PER_PAGE + posInPage + 1;
+            d = state.drafts.get(absPos);
+            if (d == null || !d.isComplete()) return;
+            subEditorOpen = true;
+            new AdvancedEditor(state, posInPage,
+                    d.maxTradeUse,
+                    d.maxTradeTagsNames != null ? d.maxTradeTagsNames : List.of()).open(state.player);
 
         } else if (slot >= 36 && slot <= 44) {
-            int pos = slot - 36;
-            ItemStack item = getResultItemPos(pos);
-            if (!nonNullItem(item)) return;
-            savePage();
-            new AdvancedEditor(this, player, pos, cleanup(item), extractMoney(item)).open(player);
+            posInPage = slot - 36;
+            absPos    = (state.currentPage - 1) * EDITOR_TRADES_PER_PAGE + posInPage + 1;
+            d = state.drafts.get(absPos);
+            if (d == null || d.resultItem == null) return;
+            subEditorOpen = true;
+            new AdvancedEditor(state, posInPage,
+                    d.resultItem.clone(), new HashMap<>(d.moneyResult)).open(state.player);
         }
     }
 
     // =========================================================================
-    //  Callbacks from AdvancedEditor
+    //  Save / Exit
     // =========================================================================
 
-    /** MATERIAL_TAG mode: update the first/second item slot with the new tag decoration. */
-    void applyAdvancedTagEdit(int position, boolean firstItem, @Nullable Tag<Material> newTag) {
-        int slot = firstItem ? 9 + position : 18 + position;
-        ItemStack current = firstItem ? getFirstItemPos(position) : getSecondItemPos(position);
-        if (!nonNullItem(current)) return;
-        getInventory().setItem(slot, decorateTagItem(cleanup(current), newTag));
+    private void saveAndExit() {
+        if (hasPartialDrafts()) return;
+
+        List<Trade> tradeList = new LinkedList<>();
+        int newPos = 1;
+        for (Map.Entry<Integer, DraftTrade> entry : state.drafts.entrySet()) {
+            DraftTrade d = entry.getValue();
+            if (!d.isComplete()) continue;
+            tradeList.add(new Trade(
+                    state.shop.getUuid(), newPos++,
+                    d.firstItem.clone(),  d.firstItemTag,
+                    d.secondItem != null ? d.secondItem.clone() : null, d.secondItemTag,
+                    d.resultItem.clone(),
+                    d.maxTradeUse, d.maxTradeTagsNames,
+                    new HashMap<>(d.moneyResult)));
+        }
+
+        closingViaButton = true;
+        state.dispose();
+        if (tradeList.isEmpty()) {
+            Main.message(state.player, "&cNo valid trades — shop disabled.");
+        } else {
+            Main.message(state.player, "&6Saving " + tradeList.size() + " trade(s)…");
+            Main.getStorage().asyncSaveShopTrades(state.shop, tradeList, state.player);
+        }
+        state.player.closeInventory();
     }
 
-    /** MONEY_TAG mode: update the result slot with the new money-result decoration. */
-    void applyAdvancedResultEdit(int position, @NotNull Map<String, Integer> moneyResult) {
-        ItemStack current = getResultItemPos(position);
-        if (!nonNullItem(current)) return;
-        getInventory().setItem(36 + position, decorateResultItem(cleanup(current), moneyResult));
-    }
-
-    /** USES_TAG mode: update the uses slot with the new uses' decoration. */
-    void applyAdvancedUsesEdit(int position, int maxTradeUse, @NotNull List<String> tagNames) {
-        getInventory().setItem(27 + position,
-                decorateUsesItem(maxTradeUse, tagNames.isEmpty() ? null : tagNames));
-    }
-
-    /** Called by sub-editors before re-opening this editor to skip the storage save in onClose. */
-    void advancedEditorGuiOpen() {
-        this.preventSave = true;
-    }
-
-    // =========================================================================
-    //  Item slot readers
-    // =========================================================================
-
-    private boolean nonNullItem(ItemStack item) {
-        return item != null && !item.getType().equals(Material.AIR);
-    }
-
-    private @NotNull ItemStack getFirstItemPos(int position) {
-        return Objects.requireNonNullElse(getInventory().getItem(9  + position),
-                new ItemStack(Material.AIR)).clone();
-    }
-
-    private @NotNull ItemStack getSecondItemPos(int position) {
-        return Objects.requireNonNullElse(getInventory().getItem(18 + position),
-                new ItemStack(Material.AIR)).clone();
-    }
-
-    private @NotNull ItemStack getUsesItemPos(int position) {
-        return Objects.requireNonNullElse(getInventory().getItem(27 + position),
-                new ItemStack(Material.AIR)).clone();
-    }
-
-    private @NotNull ItemStack getResultItemPos(int position) {
-        return Objects.requireNonNullElse(getInventory().getItem(36 + position),
-                new ItemStack(Material.AIR)).clone();
+    private void exitWithoutSave() {
+        closingViaButton = true;
+        state.dispose();
+        if (state.hasChanges) Main.message(state.player, "&7Changes discarded.");
+        state.player.closeInventory();
     }
 
     // =========================================================================
-    //  Item decoration (glint + lore) / cleanup
+    //  Item decoration helpers  (used by AdvancedEditor + sync layer)
     // =========================================================================
 
-    private static @NotNull ItemStack decorateTagItem(@NotNull ItemStack base, @Nullable Tag<Material> tag) {
+    static @NotNull ItemStack decorateTagItem(@NotNull ItemStack base,
+                                              @Nullable Tag<Material> tag) {
         if (tag == null) return base;
         return applyDecoration(base, List.of(buildLoreLine(KEY_TAG, tag.getKey().toString())));
     }
 
-    private static @NotNull ItemStack decorateResultItem(@NotNull ItemStack base,
-                                                         @NotNull Map<String, Integer> money) {
+    static @NotNull ItemStack decorateResultItem(@NotNull ItemStack base,
+                                                 @NotNull Map<String, Integer> money) {
         if (money.isEmpty()) return base;
         List<String> additions = new ArrayList<>();
-        for (Map.Entry<String, Integer> entry : money.entrySet()) {
-            additions.add(buildLoreLine(KEY_MONEY, entry.getKey() + " x" + entry.getValue()));
-        }
+        for (Map.Entry<String, Integer> e : money.entrySet())
+            additions.add(buildLoreLine(KEY_MONEY, e.getKey() + " x" + e.getValue()));
         return applyDecoration(base, additions);
     }
 
-    private static @NotNull ItemStack decorateUsesItem(int maxTradeUse,
-                                                       @Nullable List<String> tagNames) {
+    static @NotNull ItemStack decorateUsesItem(int maxTradeUse,
+                                               @Nullable List<String> tagNames) {
         ItemStack base = new ItemBuilder(Material.PAPER)
-                .name(ChatColor.GRAY + "Usage limit")
-                .build();
+                .name(ChatColor.GRAY + "Usage limit").build();
         if (maxTradeUse <= 0) return base;
         List<String> additions = new ArrayList<>();
         additions.add(buildLoreLine(KEY_USES, String.valueOf(maxTradeUse)));
-        if (tagNames != null) {
-            for (String tag : tagNames) {
-                additions.add(buildLoreLine(KEY_USES_TAG, tag));
-            }
-        }
+        if (tagNames != null)
+            for (String tag : tagNames) additions.add(buildLoreLine(KEY_USES_TAG, tag));
         return applyDecoration(base, additions);
     }
 
-    static @NotNull ItemStack applyDecoration(@NotNull ItemStack base, @NotNull List<String> additionLines) {
-        ItemStack out = base.clone();
-        ItemMeta meta = out.getItemMeta();
+    static @NotNull ItemStack applyDecoration(@NotNull ItemStack base,
+                                              @NotNull List<String> additionLines) {
+        ItemStack out  = base.clone();
+        ItemMeta  meta = out.getItemMeta();
         if (meta == null) return out;
         meta.setEnchantmentGlintOverride(true);
-        List<String> lore = meta.getLore() != null
-                ? new ArrayList<>(meta.getLore())
-                : new ArrayList<>();
+        List<String> lore = meta.getLore() != null ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
         lore.removeIf(line -> line != null && line.startsWith(LORE_MARKER));
         lore.addAll(additionLines);
         meta.setLore(lore);
@@ -412,7 +433,7 @@ public class AdminEditor extends FastInv {
     static @NotNull ItemStack cleanup(@NotNull ItemStack item) {
         if (item.getType().equals(Material.AIR)) return item;
         ItemStack clean = item.clone();
-        ItemMeta meta = clean.getItemMeta();
+        ItemMeta  meta  = clean.getItemMeta();
         if (meta == null) return clean;
         if (meta.hasEnchantmentGlintOverride()) meta.setEnchantmentGlintOverride(null);
         if (meta.getLore() != null) {
@@ -433,81 +454,39 @@ public class AdminEditor extends FastInv {
     //  Lore extraction helpers
     // =========================================================================
 
-    /** Returns the single value stored under {@code key}, or {@code null} if absent. */
-    static @Nullable String extractLoreValue(@NotNull ItemStack item, @NotNull String key) {
+    static @Nullable String extractLoreValue(@NotNull ItemStack item) {
         ItemMeta meta = item.getItemMeta();
         if (meta == null || meta.getLore() == null) return null;
-        String prefix = LORE_MARKER + ChatColor.AQUA + key + ChatColor.DARK_GRAY + ": " + ChatColor.GRAY;
-        for (String line : meta.getLore()) {
+        String prefix = LORE_MARKER + ChatColor.AQUA + AdminEditor.KEY_TAG + ChatColor.DARK_GRAY + ": " + ChatColor.GRAY;
+        for (String line : meta.getLore())
             if (line != null && line.startsWith(prefix)) return line.substring(prefix.length());
-        }
         return null;
     }
 
-    /** Returns all values stored under {@code key} (supports multiple lines). */
-    static @NotNull List<String> extractLoreValues(@NotNull ItemStack item, @NotNull String key) {
+    static @NotNull List<String> extractLoreValues(@NotNull ItemStack item) {
         ItemMeta meta = item.getItemMeta();
         if (meta == null || meta.getLore() == null) return List.of();
-        String prefix = LORE_MARKER + ChatColor.AQUA + key + ChatColor.DARK_GRAY + ": " + ChatColor.GRAY;
+        String prefix = LORE_MARKER + ChatColor.AQUA + AdminEditor.KEY_MONEY + ChatColor.DARK_GRAY + ": " + ChatColor.GRAY;
         List<String> out = new ArrayList<>();
-        for (String line : meta.getLore()) {
+        for (String line : meta.getLore())
             if (line != null && line.startsWith(prefix)) out.add(line.substring(prefix.length()));
-        }
         return out;
     }
 
     static @Nullable Tag<Material> extractTag(@NotNull ItemStack item) {
-        String raw = extractLoreValue(item, KEY_TAG);  // e.g. "minecraft:logs"
+        String raw = extractLoreValue(item);
         if (raw == null || raw.isEmpty()) return null;
-        return TradeUtils.getMaterialTag(raw);          // handles full namespaced keys
+        return TradeUtils.getMaterialTag(raw);
     }
 
     static @NotNull Map<String, Integer> extractMoney(@NotNull ItemStack item) {
         Map<String, Integer> result = new HashMap<>();
-        for (String line : extractLoreValues(item, KEY_MONEY)) {
+        for (String line : extractLoreValues(item)) {
             int sep = line.lastIndexOf(" x");
             if (sep < 0) continue;
-            try {
-                result.put(line.substring(0, sep), Integer.parseInt(line.substring(sep + 2)));
-            } catch (NumberFormatException ignore) { /* skip malformed */ }
+            try { result.put(line.substring(0, sep), Integer.parseInt(line.substring(sep + 2))); }
+            catch (NumberFormatException ignored) { }
         }
         return result;
-    }
-
-    static int extractMaxTradeUse(@NotNull ItemStack item) {
-        String raw = extractLoreValue(item, KEY_USES);
-        if (raw == null) return 0;
-        try { return Integer.parseInt(raw); } catch (NumberFormatException e) { return 0; }
-    }
-
-    static @Nullable List<String> extractUsesTags(@NotNull ItemStack item) {
-        List<String> tags = extractLoreValues(item, KEY_USES_TAG);
-        return tags.isEmpty() ? null : tags;
-    }
-
-    // =========================================================================
-    //  onClose
-    // =========================================================================
-
-    @Override
-    public void onClose(@NotNull InventoryCloseEvent event) {
-        if (preventSave) {
-            return;
-        }
-        Main.message(event.getPlayer(), "&6Saving trades...");
-        savePage();
-        List<Trade> tradeList = new LinkedList<>();
-        this.trades.values().forEach(t -> t.stream()
-                .sorted(Comparator.comparingInt(Trade::getTradePosition))
-                .forEach(tradeList::add));
-        if (tradeList.isEmpty()) {
-            Main.message(event.getPlayer(), "&cNo valid trades, disabling shop");
-            return;
-        }
-        int position = 1;
-        for (Trade trade : tradeList) {
-            trade.setTradePosition(position++);
-        }
-        Main.getStorage().asyncSaveShopTrades(this.shop, tradeList, player);
     }
 }
