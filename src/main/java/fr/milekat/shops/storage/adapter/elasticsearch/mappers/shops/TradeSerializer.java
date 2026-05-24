@@ -16,8 +16,10 @@ import java.util.Map;
  *         "shopUuid": UUID,
  *         "position": Location,
  *         "firstItem": ItemStack,
+ *         "firstItemTag": String,
  *         "resultItem": ItemStack,
  *         "secondItem": ItemStack,
+ *         "secondItemTag": String,
  *         "maxTradeUse": int,
  *         "maxTradeTagsNames": String[],
  *         "moneyResult": {
@@ -46,9 +48,15 @@ public class TradeSerializer extends StdSerializer<Trade> {
         gen.writeNumberField("position", value.getTradePosition());
         gen.writeFieldName("firstItem");
         gen.writeObject(value.getFirstItem());
+        if (value.getFirstItemTag() != null) {
+            gen.writeStringField("firstItemTag", value.getFirstItemTag().getKey().toString());
+        }
         if (value.getSecondItem() != null) {
             gen.writeFieldName("secondItem");
             gen.writeObject(value.getSecondItem());
+            if (value.getSecondItemTag() != null) {
+                gen.writeStringField("secondItemTag", value.getSecondItemTag().getKey().toString());
+            }
         }
         gen.writeFieldName("resultItem");
         gen.writeObject(value.getResultItem());
