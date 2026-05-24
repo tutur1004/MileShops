@@ -52,6 +52,8 @@ public class InventoryShop extends FastInv {
     private @Nullable BukkitTask carouselTask;
     private final Map<Integer, TagCarouselEntry> tagCarousels = new HashMap<>();
     private int carouselTick = 0;
+    //  Carrousel delay in ticks (20 ticks = 1 second)
+    final long carouselDelay = 16L;
 
     public InventoryShop(@NotNull InventoryShopShape inventoryShopShape, @NotNull Shop shop, @NotNull Player player)
             throws StorageExecuteException {
@@ -274,7 +276,7 @@ public class InventoryShop extends FastInv {
                 display.setItemMeta(meta);
                 getInventory().setItem(slot, display);
             }
-        }, 10L, 10L);
+        }, carouselDelay, carouselDelay);
     }
 
     private void stopCarousel() {
