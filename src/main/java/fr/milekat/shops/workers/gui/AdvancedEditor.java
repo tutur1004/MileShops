@@ -111,7 +111,7 @@ public class AdvancedEditor extends FastInv {
                 null, null,
                 new HashMap<>(currentMoney), new HashMap<>(currentMoney),
                 0, 0, new LinkedHashSet<>(), new LinkedHashSet<>(),
-                safeGetTags(session.player), List.of(), 0);
+                safeGetTags(), List.of(), 0);
     }
 
     /** USES_TAG — edit maxTradeUse count and the player-tag tracking set. */
@@ -123,7 +123,7 @@ public class AdvancedEditor extends FastInv {
                 new HashMap<>(), new HashMap<>(),
                 currentMax, currentMax,
                 new LinkedHashSet<>(currentTags), new LinkedHashSet<>(currentTags),
-                safeGetTags(session.player), List.of(), 0);
+                safeGetTags(), List.of(), 0);
     }
 
     // =========================================================================
@@ -164,7 +164,7 @@ public class AdvancedEditor extends FastInv {
         this.initialUsesTags     = initialUsesTags;
         this.usesCurrencies      = usesCurrencies;
         this.materialTags        = materialTags;
-        this.moneyCurrencies     = (mode == Mode.MONEY_TAG) ? safeGetTags(session.player) : List.of();
+        this.moneyCurrencies     = (mode == Mode.MONEY_TAG) ? safeGetTags() : List.of();
         this.tagPage             = tagPage;
     }
 
@@ -178,8 +178,8 @@ public class AdvancedEditor extends FastInv {
         };
     }
 
-    private static @NotNull List<String> safeGetTags(@NotNull Player player) {
-        try { return MileBanks.getExistingTags(player); }
+    private static @NotNull List<String> safeGetTags() {
+        try { return MileBanks.getCurrencies(); }
         catch (RuntimeException e) { return new ArrayList<>(); }
     }
 
