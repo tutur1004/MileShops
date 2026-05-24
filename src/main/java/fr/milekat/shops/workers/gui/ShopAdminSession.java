@@ -19,52 +19,57 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 /**
- * Source-of-truth for an in-progress admin edit session.
+ * Entry point and persistent state for an admin shop-editing session.
  *
- * <p>This class is intentionally decoupled from FastInv.  Because FastInv loses its event
- * handlers whenever an inventory window is closed, <em>every</em> {@link AdminEditor} and
- * {@link AdvancedEditor} window is a short-lived view over this object.  New view instances
- * are created on demand; the state here persists for the entire editing session.</p>
+ * <p>Because FastInv loses its event handlers whenever an inventory window closes, the
+ * {@link AdminEditor} and {@link AdvancedEditor} views are short-lived: a fresh instance is
+ * created each time the player returns to a view.  This class is the single object that
+ * survives the entire session and holds all mutable state.</p>
  *
- * <p>This class also owns the lifecycle glue: it registers a Bukkit {@link Listener} so it
- * can detect when the player closes the {@link AdvancedEditor} window (by any means) and
- * automatically re-open a fresh {@link AdminEditor}.</p>
+ * <p>It also acts as a Bukkit {@link Listener} to detect when {@link AdvancedEditor} closes
+ * and automatically re-opens a fresh {@link AdminEditor} — the views themselves have no
+ * back-reference to each other.</p>
+ *
+ * <h3>Usage</h3>
+ * <pre>
+ * new ShopAdminSession(player, shop, trades).open();
+ * </pre>
  *
  * <h3>Lifecycle</h3>
  * <ol>
- *   <li>Created once, via {@link AdminEditor#AdminEditor(Player, Shop, List)}.</li>
- *   <li>Stays alive until {@link #dispose()} is called (save or discard).</li>
- *   <li>Any number of {@link AdminEditor} / {@link AdvancedEditor} views are created over it
- *       during the session.</li>
+ *   <li>Created once by the caller (e.g. {@code ShopUtils}).</li>
+ *   <li>{@link #open()} shows the first {@link AdminEditor} view.</li>
+ *   <li>Any number of view instances may be created over this session object.</li>
+ *   <li>{@link #dispose()} unregisters the listener when the session ends.</li>
  * </ol>
  */
-class AdminEditorState implements Listener {
+public class ShopAdminSession implements Listener {
 
     // =========================================================================
-    //  DraftTrade — mutable, possibly-incomplete trade kept in the draft cache
+    //  DraftTrade — possibly-incomplete trade held in the in-memory cache
     // =========================================================================
 
     /**
      * In-memory representation of a trade while being edited. Any field may be {@code null};
      * a draft is "complete" only when both {@code firstItem} and {@code resultItem} are set.
      */
-    public static class DraftTrade {
-        public @Nullable ItemStack firstItem;
-        public @Nullable Tag<Material> firstItemTag;
-        public @Nullable ItemStack secondItem;
-        public @Nullable Tag<Material> secondItemTag;
-        public @Nullable ItemStack resultItem;
-        public @NotNull Map<String, Integer> moneyResult = new HashMap<>();
-        public int maxTradeUse = 0;
-        public @Nullable List<String> maxTradeTagsNames;
+    static class DraftTrade {
+        @Nullable ItemStack firstItem;
+        @Nullable Tag<Material> firstItemTag;
+        @Nullable ItemStack secondItem;
+        @Nullable Tag<Material> secondItemTag;
+        @Nullable ItemStack resultItem;
+        @NotNull Map<String, Integer> moneyResult = new HashMap<>();
+        int maxTradeUse = 0;
+        @Nullable List<String> maxTradeTagsNames;
 
-        public boolean isComplete() { return firstItem != null && resultItem != null; }
-        public boolean isEmpty() {
+        boolean isComplete() { return firstItem != null && resultItem != null; }
+        boolean isEmpty() {
             return firstItem == null && resultItem == null && secondItem == null
                     && moneyResult.isEmpty() && maxTradeUse == 0
                     && (maxTradeTagsNames == null || maxTradeTagsNames.isEmpty());
         }
-        public boolean isPartial() { return !isEmpty() && !isComplete(); }
+        boolean isPartial() { return !isEmpty() && !isComplete(); }
 
         static @NotNull DraftTrade from(@NotNull Trade t) {
             DraftTrade d = new DraftTrade();
@@ -81,7 +86,7 @@ class AdminEditorState implements Listener {
     }
 
     // =========================================================================
-    //  Editor state
+    //  Session state
     // =========================================================================
 
     final Player player;
@@ -104,29 +109,33 @@ class AdminEditorState implements Listener {
     private @Nullable Inventory activeSubEditorInventory = null;
 
     /**
-     * {@code true} while the {@link AdvancedEditor} is intentionally navigating away to an
-     * {@link AnvilInput}.  In that case the state listener must NOT reopen the AdminEditor when
-     * it detects the AdvancedEditor closing.
+     * {@code true} while {@link AdvancedEditor} is intentionally navigating to an
+     * {@link AnvilInput}.  Prevents the state listener from reopening {@link AdminEditor}
+     * when it detects the sub-editor closing.
      */
     boolean subEditorGoingToAnvil = false;
 
     // =========================================================================
-    //  Constructor / dispose
+    //  Constructor / entry point
     // =========================================================================
 
-    AdminEditorState(@NotNull Player player, @NotNull Shop shop, @NotNull List<Trade> trades) {
+    public ShopAdminSession(@NotNull Player player, @NotNull Shop shop,
+                            @NotNull List<Trade> trades) {
         this.player = player;
         this.shop   = shop;
         int absPos = 1;
-        for (Trade t : trades) {
-            drafts.put(absPos++, DraftTrade.from(t));
-        }
+        for (Trade t : trades) drafts.put(absPos++, DraftTrade.from(t));
         Bukkit.getPluginManager().registerEvents(this, Main.getInstance());
     }
 
+    /** Opens the first {@link AdminEditor} view for this session. */
+    public void open() {
+        new AdminEditor(this).open(player);
+    }
+
     /**
-     * Unregisters this listener.  Must be called when the editing session ends
-     * (save &amp; exit or exit without save).
+     * Unregisters this listener.
+     * Must be called when the editing session ends (save &amp; exit or exit without save).
      */
     void dispose() {
         HandlerList.unregisterAll(this);
@@ -138,8 +147,8 @@ class AdminEditorState implements Listener {
     // =========================================================================
 
     /**
-     * Registers the inventory of the currently open {@link AdvancedEditor} so that the
-     * Bukkit listener can detect when it closes.
+     * Registers the inventory of the currently open {@link AdvancedEditor} so this listener
+     * can detect when it closes.
      */
     void registerSubEditorInventory(@NotNull Inventory inventory) {
         this.activeSubEditorInventory = inventory;
@@ -155,17 +164,15 @@ class AdminEditorState implements Listener {
         if (activeSubEditorInventory == null) return;
         if (!event.getInventory().equals(activeSubEditorInventory)) return;
 
-        // Clear the reference immediately — the inventory is gone
         activeSubEditorInventory = null;
 
         if (subEditorGoingToAnvil) {
-            // AdvancedEditor closed because an AnvilInput is taking over; don't reopen admin yet
+            // AdvancedEditor closed to make way for an AnvilInput — do not reopen AdminEditor yet
             return;
         }
 
-        // AdvancedEditor fully dismissed (exit button or Escape) → open a fresh AdminEditor
-        Bukkit.getScheduler().runTask(Main.getInstance(),
-                () -> new AdminEditor(this).open(player));
+        // AdvancedEditor dismissed (Save / Reset / Escape) → open a fresh AdminEditor
+        Bukkit.getScheduler().runTask(Main.getInstance(), () -> new AdminEditor(this).open(player));
     }
 
     // =========================================================================
@@ -195,7 +202,7 @@ class AdminEditorState implements Listener {
         hasChanges = true;
     }
 
-    private int absPos(int position) {
+    int absPos(int position) {
         return (currentPage - 1) * AdminEditor.EDITOR_TRADES_PER_PAGE + position + 1;
     }
 }

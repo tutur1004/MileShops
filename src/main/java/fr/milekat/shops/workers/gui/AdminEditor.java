@@ -1,10 +1,9 @@
 package fr.milekat.shops.workers.gui;
 
 import fr.milekat.shops.Main;
-import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.ShopType;
 import fr.milekat.shops.api.classes.Trade;
-import fr.milekat.shops.workers.gui.AdminEditorState.DraftTrade;
+import fr.milekat.shops.workers.gui.ShopAdminSession.DraftTrade;
 import fr.milekat.shops.workers.utils.Buttons;
 import fr.milekat.shops.workers.utils.TradeUtils;
 import fr.mrmicky.fastinv.FastInv;
@@ -13,7 +12,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Tag;
-import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemStack;
@@ -25,13 +23,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Admin GUI for editing a shop's trades.
+ * Admin GUI view for editing a shop's trades.
  *
  * <h3>Architecture</h3>
- * All mutable state lives in {@link AdminEditorState}, which outlives any individual FastInv
+ * All mutable state lives in {@link ShopAdminSession}, which outlives any individual FastInv
  * window. Because FastInv loses its event handlers when an inventory closes, this class is
  * re-created every time the player returns from a sub-editor — the
- * {@link AdminEditorState} reference is simply passed to the new instance.
+ * {@link ShopAdminSession} reference is simply passed to the new instance.
  *
  * <p>Escape-to-close is blocked by {@code setCloseFilter} while there are unsaved changes.
  * Only the <b>Save&nbsp;&amp;&nbsp;Exit</b> and <b>Exit without Save</b> buttons can dismiss
@@ -71,67 +69,61 @@ public class AdminEditor extends FastInv {
     //  Fields
     // =========================================================================
 
-    /** All mutable state, shared with sub-editors and preserved across re-instantiations. */
-    private final AdminEditorState state;
+    /** Persistent session state shared with sub-editors and preserved across re-instantiations. */
+    private final ShopAdminSession session;
 
     /**
-     * {@code true} just before opening a sub-editor so the close filter allows the implicit
-     * close that Minecraft fires when the new inventory takes over.
+     * Set to {@code true} just before opening a sub-editor so the close filter allows the
+     * implicit close that Minecraft fires when the new inventory takes over.
      */
     private boolean subEditorOpen    = false;
     /**
-     * {@code true} when a button (save / exit) triggered the close, so the filter allows it.
+     * Set to {@code true} when a button (save / exit) triggered the close, so the filter
+     * allows it through.
      */
     private boolean closingViaButton = false;
 
     // =========================================================================
-    //  Constructors
+    //  Constructor
     // =========================================================================
 
     /**
-     * Primary constructor: opens (or re-opens after a sub-editor) from an existing state.
+     * Opens (or re-opens after a sub-editor) an editor view over {@code session}.
+     * Called by {@link ShopAdminSession#open()} and by the state's close listener.
      */
-    public AdminEditor(@NotNull AdminEditorState state) {
+    AdminEditor(@NotNull ShopAdminSession session) {
         super(54, Main.getConfigs()
                 .getMessage("messages.gui.admin-shop.title", "&3Editing <shop_name>")
-                .replaceAll("<shop_name>", state.shop.getName()));
-        this.state = state;
+                .replaceAll("<shop_name>", session.shop.getName()));
+        this.session = session;
 
         setItems(0, getInventory().getSize(), Buttons.PANE_BLACK.get());
         updatePageContent();
 
         // Block Escape-close while there are unsaved changes.
         setCloseFilter(p -> {
-            if (subEditorOpen)     return false;              // allow: sub-editor is taking over
+            if (subEditorOpen)       return false;              // allow: sub-editor is taking over
             if (closingViaButton)  { closingViaButton = false; return false; } // allow: button
-            if (!state.hasChanges) return false;              // allow: nothing to lose
+            if (!session.hasChanges) return false;              // allow: nothing to lose
             Main.message(p, "&eUse the &aSave & Exit &eor &cExit without Save &ebutton to close.");
             return true; // block
         });
     }
 
-    /**
-     * Convenience constructor for the very first opening (no pre-existing state).
-     * Called from {@link fr.milekat.shops.workers.utils.ShopUtils}.
-     */
-    public AdminEditor(@NotNull Player player, @NotNull Shop shop, @NotNull List<Trade> trades) {
-        this(new AdminEditorState(player, shop, trades));
-    }
-
     // =========================================================================
-    //  Display / rendering  (state → inventory)
+    //  Display / rendering  (session → inventory)
     // =========================================================================
 
     private void updatePageContent() {
         setItems(9,  18, new ItemStack(Material.AIR));
-        if (state.shop.getType().equals(ShopType.VANILLA))
+        if (session.shop.getType().equals(ShopType.VANILLA))
             setItems(18, 27, new ItemStack(Material.AIR));
         setItems(27, 36, new ItemStack(Material.AIR));
         setItems(36, 45, new ItemStack(Material.AIR));
 
-        int startAbs = (state.currentPage - 1) * EDITOR_TRADES_PER_PAGE + 1;
+        int startAbs = (session.currentPage - 1) * EDITOR_TRADES_PER_PAGE + 1;
         for (int i = 0; i < EDITOR_TRADES_PER_PAGE; i++) {
-            DraftTrade d = state.drafts.get(startAbs + i);
+            DraftTrade d = session.drafts.get(startAbs + i);
             if (d != null) displayDraft(i, d);
         }
 
@@ -142,9 +134,10 @@ public class AdminEditor extends FastInv {
         if (d.firstItem != null)
             setItem(9  + pagePosition, decorateTagItem(d.firstItem.clone(), d.firstItemTag));
 
-        if (state.shop.getType().equals(ShopType.VANILLA) && d.secondItem != null)
+        if (session.shop.getType().equals(ShopType.VANILLA) && d.secondItem != null)
             setItem(18 + pagePosition, decorateTagItem(d.secondItem.clone(), d.secondItemTag));
 
+        // Show uses paper as soon as the trade has at least one item placed
         if (d.firstItem != null || d.resultItem != null)
             setItem(27 + pagePosition, decorateUsesItem(d.maxTradeUse, d.maxTradeTagsNames));
 
@@ -155,32 +148,32 @@ public class AdminEditor extends FastInv {
     private void updateControls() {
         // Page indicator
         setItem(SLOT_PAGE_INDICATOR, new ItemBuilder(Material.PAPER)
-                .amount(Math.min(state.currentPage, 64))
-                .name(ChatColor.GOLD + "Page " + state.currentPage)
-                .lore(ChatColor.GRAY + "Drafts loaded: " + ChatColor.WHITE + state.drafts.size())
+                .amount(Math.min(session.currentPage, 64))
+                .name(ChatColor.GOLD + "Page " + session.currentPage)
+                .lore(ChatColor.GRAY + "Drafts loaded: " + ChatColor.WHITE + session.drafts.size())
                 .build());
 
         // Advanced toggle
-        if (state.advancedMode) {
+        if (session.advancedMode) {
             setItem(SLOT_ADVANCED_TOGGLE, new ItemBuilder(Material.ENCHANTED_BOOK)
                             .name(ChatColor.LIGHT_PURPLE + "Advanced Edit: ON")
                             .lore(ChatColor.GRAY + "Click an item to edit tags / money / uses")
                             .lore(ChatColor.GRAY + "Click here to disable")
                             .build(),
-                    event -> { state.advancedMode = false; updatePageContent(); });
+                    event -> { session.advancedMode = false; updatePageContent(); });
         } else {
             setItem(SLOT_ADVANCED_TOGGLE, new ItemBuilder(Material.BOOK)
                             .name(ChatColor.GRAY + "Advanced Edit: OFF")
                             .lore(ChatColor.GRAY + "Click to enable advanced editing")
                             .lore(ChatColor.DARK_GRAY + "(tag selector + money result + uses)")
                             .build(),
-                    event -> { state.advancedMode = true; updatePageContent(); });
+                    event -> { session.advancedMode = true; updatePageContent(); });
         }
 
         // Previous page
-        if (state.currentPage > 1) {
+        if (session.currentPage > 1) {
             setItem(SLOT_PREV_PAGE, Buttons.PREVIOUS.get(), event -> {
-                state.currentPage--;
+                session.currentPage--;
                 updatePageContent();
             });
         } else {
@@ -190,8 +183,8 @@ public class AdminEditor extends FastInv {
         // Next page: visible when the 9th slot of the current page is complete, or drafts exist beyond
         if (canShowNextPage()) {
             setItem(SLOT_NEXT_PAGE, Buttons.NEXT.get(), event -> {
-                if (state.currentPage >= 64) return;
-                state.currentPage++;
+                if (session.currentPage >= 64) return;
+                session.currentPage++;
                 updatePageContent();
             });
         } else {
@@ -205,10 +198,10 @@ public class AdminEditor extends FastInv {
                         .build(),
                 event -> exitWithoutSave());
 
-        // Save & Exit: BEDROCK if any draft is partial (incomplete)
+        // Save & Exit: orange dye when incomplete drafts prevent saving, green dye otherwise
         if (hasPartialDrafts()) {
-            setItem(SLOT_SAVE_AND_EXIT, new ItemBuilder(Material.BEDROCK)
-                    .name(ChatColor.RED + "Cannot save")
+            setItem(SLOT_SAVE_AND_EXIT, new ItemBuilder(Material.ORANGE_DYE)
+                    .name(ChatColor.GOLD + "Cannot save yet")
                     .lore(ChatColor.GRAY + "At least one trade is incomplete")
                     .lore(ChatColor.DARK_GRAY + "(missing first OR result item)")
                     .build());
@@ -223,15 +216,15 @@ public class AdminEditor extends FastInv {
     }
 
     private boolean canShowNextPage() {
-        int lastAbs = state.currentPage * EDITOR_TRADES_PER_PAGE;
-        DraftTrade last = state.drafts.get(lastAbs);
+        int lastAbs = session.currentPage * EDITOR_TRADES_PER_PAGE;
+        DraftTrade last = session.drafts.get(lastAbs);
         if (last != null && last.isComplete()) return true;
-        for (Integer abs : state.drafts.keySet()) if (abs > lastAbs) return true;
+        for (Integer abs : session.drafts.keySet()) if (abs > lastAbs) return true;
         return false;
     }
 
     private boolean hasPartialDrafts() {
-        for (DraftTrade d : state.drafts.values()) if (d.isPartial()) return true;
+        for (DraftTrade d : session.drafts.values()) if (d.isPartial()) return true;
         return false;
     }
 
@@ -250,13 +243,13 @@ public class AdminEditor extends FastInv {
         int slot = event.getSlot();
 
         boolean inUsesRow   = slot >= 27 && slot <= 35;
-        boolean inTradeArea = state.shop.getType().equals(ShopType.VANILLA)
+        boolean inTradeArea = session.shop.getType().equals(ShopType.VANILLA)
                 ? (slot >= 9 && slot <= 26) || (slot >= 36 && slot <= 44)
                 : (slot >= 9 && slot <= 17) || (slot >= 36 && slot <= 44);
 
         if (!inTradeArea && !inUsesRow) return;
 
-        if (state.advancedMode) {
+        if (session.advancedMode) {
             event.setCancelled(true);
             ItemStack clicked = event.getCurrentItem();
             if (clicked == null || clicked.getType() == Material.AIR) return;
@@ -268,13 +261,14 @@ public class AdminEditor extends FastInv {
 
         // Non-advanced: allow drag-drop; sync cache after event resolves
         event.setCancelled(false);
-        final int pageAtClick = state.currentPage;
+        final int pageAtClick = session.currentPage;
         final int slotAtClick = slot;
         Bukkit.getScheduler().runTask(Main.getInstance(), () -> {
-            if (pageAtClick != state.currentPage) return;
+            if (pageAtClick != session.currentPage) return;
             syncSlotFromInventory(slotAtClick);
-            state.hasChanges = true;
-            updateControls();
+            session.hasChanges = true;
+            // Full re-render so the uses paper appears as soon as the first item is placed
+            updatePageContent();
         });
     }
 
@@ -285,11 +279,11 @@ public class AdminEditor extends FastInv {
         else if (slot >= 36 && slot <= 44) { posInPage = slot - 36; row = 4; }
         if (posInPage < 0) return;
 
-        int absPos  = (state.currentPage - 1) * EDITOR_TRADES_PER_PAGE + posInPage + 1;
+        int absPos  = (session.currentPage - 1) * EDITOR_TRADES_PER_PAGE + posInPage + 1;
         ItemStack raw = getInventory().getItem(slot);
         boolean isAir = raw == null || raw.getType() == Material.AIR;
 
-        DraftTrade d = state.drafts.computeIfAbsent(absPos, k -> new DraftTrade());
+        DraftTrade d = session.drafts.computeIfAbsent(absPos, k -> new DraftTrade());
 
         switch (row) {
             case 1 -> { d.firstItem    = isAir ? null : cleanup(raw.clone());
@@ -300,7 +294,7 @@ public class AdminEditor extends FastInv {
                         d.moneyResult = isAir ? new HashMap<>() : extractMoney(raw); }
         }
 
-        if (d.isEmpty()) state.drafts.remove(absPos);
+        if (d.isEmpty()) session.drafts.remove(absPos);
     }
 
     private void openAdvancedSubEditor(int slot) {
@@ -309,40 +303,40 @@ public class AdminEditor extends FastInv {
 
         if (slot >= 9 && slot <= 17) {
             posInPage = slot - 9;
-            absPos    = (state.currentPage - 1) * EDITOR_TRADES_PER_PAGE + posInPage + 1;
-            d = state.drafts.get(absPos);
+            absPos    = (session.currentPage - 1) * EDITOR_TRADES_PER_PAGE + posInPage + 1;
+            d = session.drafts.get(absPos);
             if (d == null || d.firstItem == null) return;
             subEditorOpen = true;
-            new AdvancedEditor(state, posInPage, true,
-                    d.firstItem.clone(), d.firstItemTag).open(state.player);
+            new AdvancedEditor(session, posInPage, true,
+                    d.firstItem.clone(), d.firstItemTag).open(session.player);
 
-        } else if (slot >= 18 && slot <= 26 && state.shop.getType().equals(ShopType.VANILLA)) {
+        } else if (slot >= 18 && slot <= 26 && session.shop.getType().equals(ShopType.VANILLA)) {
             posInPage = slot - 18;
-            absPos    = (state.currentPage - 1) * EDITOR_TRADES_PER_PAGE + posInPage + 1;
-            d = state.drafts.get(absPos);
+            absPos    = (session.currentPage - 1) * EDITOR_TRADES_PER_PAGE + posInPage + 1;
+            d = session.drafts.get(absPos);
             if (d == null || d.secondItem == null) return;
             subEditorOpen = true;
-            new AdvancedEditor(state, posInPage, false,
-                    d.secondItem.clone(), d.secondItemTag).open(state.player);
+            new AdvancedEditor(session, posInPage, false,
+                    d.secondItem.clone(), d.secondItemTag).open(session.player);
 
         } else if (slot >= 27 && slot <= 35) {
             posInPage = slot - 27;
-            absPos    = (state.currentPage - 1) * EDITOR_TRADES_PER_PAGE + posInPage + 1;
-            d = state.drafts.get(absPos);
+            absPos    = (session.currentPage - 1) * EDITOR_TRADES_PER_PAGE + posInPage + 1;
+            d = session.drafts.get(absPos);
             if (d == null || !d.isComplete()) return;
             subEditorOpen = true;
-            new AdvancedEditor(state, posInPage,
+            new AdvancedEditor(session, posInPage,
                     d.maxTradeUse,
-                    d.maxTradeTagsNames != null ? d.maxTradeTagsNames : List.of()).open(state.player);
+                    d.maxTradeTagsNames != null ? d.maxTradeTagsNames : List.of()).open(session.player);
 
         } else if (slot >= 36 && slot <= 44) {
             posInPage = slot - 36;
-            absPos    = (state.currentPage - 1) * EDITOR_TRADES_PER_PAGE + posInPage + 1;
-            d = state.drafts.get(absPos);
+            absPos    = (session.currentPage - 1) * EDITOR_TRADES_PER_PAGE + posInPage + 1;
+            d = session.drafts.get(absPos);
             if (d == null || d.resultItem == null) return;
             subEditorOpen = true;
-            new AdvancedEditor(state, posInPage,
-                    d.resultItem.clone(), new HashMap<>(d.moneyResult)).open(state.player);
+            new AdvancedEditor(session, posInPage,
+                    d.resultItem.clone(), new HashMap<>(d.moneyResult)).open(session.player);
         }
     }
 
@@ -355,11 +349,11 @@ public class AdminEditor extends FastInv {
 
         List<Trade> tradeList = new LinkedList<>();
         int newPos = 1;
-        for (Map.Entry<Integer, DraftTrade> entry : state.drafts.entrySet()) {
-            DraftTrade d = entry.getValue();
-            if (!d.isComplete()) continue;
+        for (DraftTrade d : session.drafts.values()) {
+            // isComplete() guarantees firstItem and resultItem are non-null
+            if (d.firstItem == null || d.resultItem == null) continue;
             tradeList.add(new Trade(
-                    state.shop.getUuid(), newPos++,
+                    session.shop.getUuid(), newPos++,
                     d.firstItem.clone(),  d.firstItemTag,
                     d.secondItem != null ? d.secondItem.clone() : null, d.secondItemTag,
                     d.resultItem.clone(),
@@ -368,21 +362,21 @@ public class AdminEditor extends FastInv {
         }
 
         closingViaButton = true;
-        state.dispose();
+        session.dispose();
         if (tradeList.isEmpty()) {
-            Main.message(state.player, "&cNo valid trades — shop disabled.");
+            Main.message(session.player, "&cNo valid trades — shop disabled.");
         } else {
-            Main.message(state.player, "&6Saving " + tradeList.size() + " trade(s)…");
-            Main.getStorage().asyncSaveShopTrades(state.shop, tradeList, state.player);
+            Main.message(session.player, "&6Saving " + tradeList.size() + " trade(s)…");
+            Main.getStorage().asyncSaveShopTrades(session.shop, tradeList, session.player);
         }
-        state.player.closeInventory();
+        session.player.closeInventory();
     }
 
     private void exitWithoutSave() {
         closingViaButton = true;
-        state.dispose();
-        if (state.hasChanges) Main.message(state.player, "&7Changes discarded.");
-        state.player.closeInventory();
+        session.dispose();
+        if (session.hasChanges) Main.message(session.player, "&7Changes discarded.");
+        session.player.closeInventory();
     }
 
     // =========================================================================
@@ -457,7 +451,7 @@ public class AdminEditor extends FastInv {
     static @Nullable String extractLoreValue(@NotNull ItemStack item) {
         ItemMeta meta = item.getItemMeta();
         if (meta == null || meta.getLore() == null) return null;
-        String prefix = LORE_MARKER + ChatColor.AQUA + AdminEditor.KEY_TAG + ChatColor.DARK_GRAY + ": " + ChatColor.GRAY;
+        String prefix = LORE_MARKER + ChatColor.AQUA + KEY_TAG + ChatColor.DARK_GRAY + ": " + ChatColor.GRAY;
         for (String line : meta.getLore())
             if (line != null && line.startsWith(prefix)) return line.substring(prefix.length());
         return null;
@@ -466,7 +460,7 @@ public class AdminEditor extends FastInv {
     static @NotNull List<String> extractLoreValues(@NotNull ItemStack item) {
         ItemMeta meta = item.getItemMeta();
         if (meta == null || meta.getLore() == null) return List.of();
-        String prefix = LORE_MARKER + ChatColor.AQUA + AdminEditor.KEY_MONEY + ChatColor.DARK_GRAY + ": " + ChatColor.GRAY;
+        String prefix = LORE_MARKER + ChatColor.AQUA + KEY_MONEY + ChatColor.DARK_GRAY + ": " + ChatColor.GRAY;
         List<String> out = new ArrayList<>();
         for (String line : meta.getLore())
             if (line != null && line.startsWith(prefix)) out.add(line.substring(prefix.length()));
