@@ -366,7 +366,7 @@ public class AdminEditor extends FastInv {
         if (tradeList.isEmpty()) {
             Main.message(session.player, "&cNo valid trades — shop disabled.");
         } else {
-            Main.message(session.player, "&6Saving " + tradeList.size() + " trade(s)…");
+            Main.message(session.player, "&6Saving " + tradeList.size() + " trade(s)...");
             Main.getStorage().asyncSaveShopTrades(session.shop, tradeList, session.player);
         }
         session.player.closeInventory();

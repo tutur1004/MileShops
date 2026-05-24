@@ -37,6 +37,11 @@ settings:
   #   SHULKER             |=>  Trade items from player inventory and Shulkers
   #   END_SHULKER         |=>  Trade items from player inventory, EnderChest and Shulkers
   default-trade-mode: "INVENTORY"
+  # Font style for messages
+  # Available styles:
+  #   default     |=>  Minecraft default font
+  #   equinox     |=>  A clean and modern font from Equinox resource pack
+  font-style: "default"
 
 # Messages
 messages:

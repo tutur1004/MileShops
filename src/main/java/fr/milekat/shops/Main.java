@@ -168,8 +168,12 @@ public class Main extends JavaPlugin {
     /**
      * Send a formatted BaseComponent message to sender
      */
+    @SuppressWarnings("SwitchStatementWithTooFewBranches")
     public static void message(@NotNull Player player, @NotNull Component message) {
-        player.sendMessage(message.style(message.style().merge(ColorStyles.INFO_VALUE)));
+        switch(Main.getConfigs().getString("settings.font-style", "default").toLowerCase(Locale.ROOT)) {
+            case "equinox" -> player.sendMessage(message.style(message.style().merge(ColorStyles.INFO_VALUE)));
+            default -> player.sendMessage(LegacyComponentSerializer.legacyAmpersand().serialize(message));
+        }
     }
 
     /**
