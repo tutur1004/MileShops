@@ -22,6 +22,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Utility class for handling trade operations including calculation, simulation, and execution.
@@ -42,6 +44,20 @@ public class TradeUtils {
             return tag != null;
         }
     }
+
+    /**
+     * Monitor objects keyed by {@code (shopUuid, position)} used to serialize
+     * {@link #processedTrades} on the same trade. Without this, two near-simultaneous
+     * calls — typically two players sharing a usage-limit tag, or one Bukkit click + one
+     * API call from an async thread — could both observe the same pre-trade count and
+     * both succeed, breaking the limit. The monitor only protects a single trade slot,
+     * so unrelated trades stay concurrent.
+     *
+     * <p>The map grows by trade slot configured on the server (admin-bounded); we never
+     * remove entries since the cardinality is negligible.</p>
+     */
+    private record TradeKey(@NotNull UUID shopUuid, int position) {}
+    private static final ConcurrentMap<TradeKey, Object> PROCESS_LOCKS = new ConcurrentHashMap<>();
     /** Maximum stack size for items in Minecraft inventory (standard stack) */
     private static final int MAX_STACK_SIZE = 64;
 
@@ -156,78 +172,87 @@ public class TradeUtils {
      * @return the number of trade processed
      */
     public static int processedTrades(@NotNull Player player,
-                                @NotNull TradeMode tradeMode,
-                                @NotNull Shop shop,
-                                @NotNull Trade trade,
-                                boolean multiple) {
-        //  Trade locks — warm-up still running for this player, or an external plugin holds
-        //  an API lock matching one of the player's tag values. Applies to unlimited trades too.
-        Map<String, Object> playerTagsForLock = API.getPlayerTagsStatic(player.getUniqueId());
-        if (CacheManager.isTradeLockedForPlayer(
-                trade.getShopUuid(), trade.getTradePosition(), player.getUniqueId(),
-                playerTagsForLock != null ? playerTagsForLock : Map.of())) {
-            Main.message(player, Main.getConfigs().getMessage(
-                    "messages.gui.chest-shop.messages.trade-locked",
-                    "&cThis trade is temporarily locked, please retry in a moment."));
-            return 0;
-        }
+                                      @NotNull TradeMode tradeMode,
+                                      @NotNull Shop shop,
+                                      @NotNull Trade trade,
+                                      boolean multiple) {
+        // Serialize callers on the same (shopUuid, position) — two players with shared
+        // usage-limit tags, or one Bukkit click + one async API call, must observe each
+        // other's bumpTradeUses before computing their own allowance. Bukkit click events
+        // are already main-thread-serialized, but the API exposes processedTrades to
+        // third-party plugins that may call it from async contexts.
+        Object processLock = PROCESS_LOCKS.computeIfAbsent(
+                new TradeKey(trade.getShopUuid(), trade.getTradePosition()), k -> new Object());
+        synchronized (processLock) {
+            //  Trade locks — warm-up still running for this player, or an external plugin holds
+            //  an API lock matching one of the player's tag values. Applies to unlimited trades too.
+            Map<String, Object> playerTagsForLock = API.getPlayerTagsStatic(player.getUniqueId());
+            if (CacheManager.isTradeLockedForPlayer(
+                    trade.getShopUuid(), trade.getTradePosition(), player.getUniqueId(),
+                    playerTagsForLock != null ? playerTagsForLock : Map.of())) {
+                Main.message(player, Main.getConfigs().getMessage(
+                        "messages.gui.chest-shop.messages.trade-locked",
+                        "&cThis trade is temporarily locked, please retry in a moment."));
+                return 0;
+            }
 
-        //  Set the trade requirements (item + optional tag)
-        List<TradeRequirement> tradeRequirements = new LinkedList<>();
-        tradeRequirements.add(new TradeRequirement(trade.getFirstItem().clone(), trade.getFirstItemTag()));
-        if (trade.getSecondItem() != null) {
-            tradeRequirements.add(new TradeRequirement(trade.getSecondItem().clone(), trade.getSecondItemTag()));
-        }
+            //  Set the trade requirements (item + optional tag)
+            List<TradeRequirement> tradeRequirements = new LinkedList<>();
+            tradeRequirements.add(new TradeRequirement(trade.getFirstItem().clone(), trade.getFirstItemTag()));
+            if (trade.getSecondItem() != null) {
+                tradeRequirements.add(new TradeRequirement(trade.getSecondItem().clone(), trade.getSecondItemTag()));
+            }
 
-        //  Calculate the max doable trades
-        int maxDoAbleTrades = TradeUtils.maxDoAbleTrades(player, tradeRequirements,
-                trade.getResultItem().clone(), multiple, tradeMode);
+            //  Calculate the max doable trades
+            int maxDoAbleTrades = TradeUtils.maxDoAbleTrades(player, tradeRequirements,
+                    trade.getResultItem().clone(), multiple, tradeMode);
 
-        //  If no trades can be done, return 0
-        if (maxDoAbleTrades <= 0) {
-            Main.message(player, Main.getConfigs().getMessage("messages.gui.chest-shop.messages.no-trade",
-                    "&cYou don't have the required items to trade, or your inventory is full"));
-            return 0;
-        }
+            //  If no trades can be done, return 0
+            if (maxDoAbleTrades <= 0) {
+                Main.message(player, Main.getConfigs().getMessage("messages.gui.chest-shop.messages.no-trade",
+                        "&cYou don't have the required items to trade, or your inventory is full"));
+                return 0;
+            }
 
-        //  Trade usage limitation — each configured tag has its own limit; the most restrictive wins
-        if (trade.isUsageLimited()) {
-            Map<String, Object> playerTags = API.getPlayerTagsStatic(player.getUniqueId());
-            if (playerTags != null && !playerTags.isEmpty()) {
-                boolean notified = false;
-                for (Map.Entry<String, Integer> limit : trade.getMaxTradeUses().entrySet()) {
-                    String tagName = limit.getKey();
-                    int    max     = limit.getValue();
-                    if (max <= 0 || !playerTags.containsKey(tagName)) continue;
-                    Map<String, Object> singleTag = new HashMap<>();
-                    singleTag.put(tagName, playerTags.get(tagName));
-                    int tradeUses = Main.getStorage().getCacheTradeUses(singleTag, trade);
-                    int allowed   = max - tradeUses;
-                    if (allowed < maxDoAbleTrades) {
-                        if (!notified) {
-                            Main.message(player, Main.getConfigs().getMessage(
-                                            "messages.gui.chest-shop.messages.max-trade",
-                                            "&cYou have reached the maximum number of uses for this trade(<trade_limit>).")
-                                    .replace("<trade_limit>", String.valueOf(tradeUses)));
-                            notified = true;
+            //  Trade usage limitation — each configured tag has its own limit; the most restrictive wins
+            if (trade.isUsageLimited()) {
+                Map<String, Object> playerTags = API.getPlayerTagsStatic(player.getUniqueId());
+                if (playerTags != null && !playerTags.isEmpty()) {
+                    boolean notified = false;
+                    for (Map.Entry<String, Integer> limit : trade.getMaxTradeUses().entrySet()) {
+                        String tagName = limit.getKey();
+                        int    max     = limit.getValue();
+                        if (max <= 0 || !playerTags.containsKey(tagName)) continue;
+                        Map<String, Object> singleTag = new HashMap<>();
+                        singleTag.put(tagName, playerTags.get(tagName));
+                        int tradeUses = Main.getStorage().getCacheTradeUses(singleTag, trade);
+                        int allowed   = max - tradeUses;
+                        if (allowed < maxDoAbleTrades) {
+                            if (!notified) {
+                                Main.message(player, Main.getConfigs().getMessage(
+                                                "messages.gui.chest-shop.messages.max-trade",
+                                                "&cYou have reached the maximum number of uses for this trade(<trade_limit>).")
+                                        .replace("<trade_limit>", String.valueOf(tradeUses)));
+                                notified = true;
+                            }
+                            if (allowed <= 0) return 0;
+                            maxDoAbleTrades = allowed;
                         }
-                        if (allowed <= 0) return 0;
-                        maxDoAbleTrades = allowed;
                     }
                 }
             }
-        }
 
-        //  Execute the trade
-        TradeUtils.executeTrade(player, trade, tradeRequirements, trade.getResultItem().clone(),
-                maxDoAbleTrades, tradeMode);
+            //  Execute the trade
+            TradeUtils.executeTrade(player, trade, tradeRequirements, trade.getResultItem().clone(),
+                    maxDoAbleTrades, tradeMode);
 
-        //  Call the TradeCompleteEvent
-        for (int i = 0; i < maxDoAbleTrades; i++) {
-            TradeCompleteEvent event = new TradeCompleteEvent(player, shop, trade);
-            Main.getInstance().getServer().getPluginManager().callEvent(event);
+            //  Call the TradeCompleteEvent
+            for (int i = 0; i < maxDoAbleTrades; i++) {
+                TradeCompleteEvent event = new TradeCompleteEvent(player, shop, trade);
+                Main.getInstance().getServer().getPluginManager().callEvent(event);
+            }
+            return maxDoAbleTrades;
         }
-        return maxDoAbleTrades;
     }
 
     /**
