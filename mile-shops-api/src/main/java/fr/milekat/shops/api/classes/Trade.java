@@ -6,7 +6,6 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,31 +21,31 @@ public class Trade {
     private ItemStack secondItem;
     private Tag<Material> secondItemTag;
     private ItemStack resultItem;
-    private int maxTradeUse;
-    private List<String> maxTradeTagsNames;
+    private Map<String, Integer> maxTradeUses;
     private Map<String, Integer> moneyResult;
     private boolean enabled; // TODO implement
 
     /**
      * Constructs a new Trade instance with the specified parameters.
      *
-     * @param shopUuid          The UUID of the shop that contains the trade.
-     * @param tradePosition     The position of the trade in the shop.
-     * @param firstItem         The first item of the trade.
-     * @param firstItemTag      If set, all materials from this tags will be allowed.
-     * @param secondItem        The second item of the trade.
-     * @param secondItemTag     If set, all materials from this tags will be allowed.
-     * @param resultItem        The resulting item of the trade.
-     * @param maxTradeUse       The maximum number of times the trade can be used. (0 to disable limit)
-     * @param maxTradeTagsNames The tags associated with the maximum trade uses.
-     * @param moneyResult       If set, the trade will give money instead of items.
-     *                          The map key is the money type and the value is the amount of money to give.
+     * @param shopUuid      The UUID of the shop that contains the trade.
+     * @param tradePosition The position of the trade in the shop.
+     * @param firstItem     The first item of the trade.
+     * @param firstItemTag  If set, all materials from this tags will be allowed.
+     * @param secondItem    The second item of the trade.
+     * @param secondItemTag If set, all materials from this tags will be allowed.
+     * @param resultItem    The resulting item of the trade.
+     * @param maxTradeUses  Per-tag usage limits. Each entry is a player-tag name and the
+     *                      maximum number of trades allowed when sharing that tag value.
+     *                      Empty map disables usage tracking.
+     * @param moneyResult   If set, the trade will give money instead of items.
+     *                      The map key is the money type and the value is the amount of money to give.
      */
     public Trade(@NotNull UUID shopUuid, int tradePosition,
                  @NotNull ItemStack firstItem, @Nullable Tag<Material> firstItemTag,
                  @Nullable ItemStack secondItem, @Nullable Tag<Material> secondItemTag,
                  @NotNull ItemStack resultItem,
-                 int maxTradeUse, @Nullable List<String> maxTradeTagsNames,
+                 @NotNull Map<String, Integer> maxTradeUses,
                  @NotNull Map<String, Integer> moneyResult) {
         this.shopUuid = shopUuid;
         this.tradePosition = tradePosition;
@@ -55,9 +54,8 @@ public class Trade {
         this.secondItem = secondItem;
         this.secondItemTag = secondItemTag;
         this.resultItem = resultItem;
-        enabled = true;
-        this.maxTradeUse = maxTradeUse;
-        this.maxTradeTagsNames = maxTradeTagsNames;
+        this.enabled = true;
+        this.maxTradeUses = maxTradeUses;
         this.moneyResult = moneyResult;
     }
 
@@ -175,48 +173,31 @@ public class Trade {
     }
 
     /**
-     * Retrieves the maximum number of times the trade can be used.
+     * Retrieves the per-tag usage limits for this trade.
      *
-     * @return The maximum trade uses.
+     * @return A map where each entry is a player-tag name and the maximum number of trades
+     *         allowed when sharing that tag value. Empty means no usage tracking.
      */
-    public int getMaxTradeUse() {
-        return maxTradeUse;
+    public @NotNull Map<String, Integer> getMaxTradeUses() {
+        return maxTradeUses;
     }
 
     /**
-     * Sets the maximum number of times the trade can be used.
+     * Sets the per-tag usage limits for this trade.
      *
-     * @param maxTradeUse The new maximum trade uses.
+     * @param maxTradeUses Map of tag name to maximum number of trades.
      */
-    public void setMaxTradeUse(int maxTradeUse) {
-        this.maxTradeUse = maxTradeUse;
-    }
-
-    /**
-     * Retrieves the tags associated with the maximum trade uses.
-     *
-     * @return The tags associated with the maximum trade uses.
-     */
-    public List<String> getMaxTradeTagsNames() {
-        return maxTradeTagsNames;
-    }
-
-    /**
-     * Sets the tags associated with the maximum trade uses.
-     *
-     * @param maxTradeTagsNames The new tags associated with the maximum trade uses.
-     */
-    public void setMaxTradeTags(List<String> maxTradeTagsNames) {
-        this.maxTradeTagsNames = maxTradeTagsNames;
+    public void setMaxTradeUses(@NotNull Map<String, Integer> maxTradeUses) {
+        this.maxTradeUses = maxTradeUses;
     }
 
     /**
      * Checks if the trade is limited by usage.
      *
-     * @return true if the trade is limited by usage, false otherwise.
+     * @return true if the trade has at least one per-tag usage limit, false otherwise.
      */
     public boolean isUsageLimited() {
-        return maxTradeUse > 0 && maxTradeTagsNames != null && !maxTradeTagsNames.isEmpty();
+        return maxTradeUses != null && !maxTradeUses.isEmpty();
     }
 
     /**
@@ -270,6 +251,6 @@ public class Trade {
      * @return true if the trade is complex, false otherwise.
      */
     public boolean isComplex() {
-        return firstItemTag != null || secondItemTag != null || maxTradeUse > 0 || maxTradeTagsNames != null;
+        return firstItemTag != null || secondItemTag != null || isUsageLimited();
     }
 }

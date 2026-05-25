@@ -13,7 +13,6 @@ import org.bukkit.inventory.ItemStack;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -27,8 +26,11 @@ import java.util.UUID;
  *         "resultItem": ItemStack,
  *         "secondItem": ItemStack,
  *         "secondItemTag": String,
- *         "maxTradeUse": int,
- *         "maxTradeTagsNames": String[],
+ *         "maxTradeUses": {
+ *             "tagA": int,
+ *             "tagB": int,
+ *             ...
+ *         },
  *         "moneyResult": {
  *             "moneyA": int,
  *             "moneyB": int,
@@ -66,11 +68,16 @@ public class TradeDeserializer extends StdDeserializer<Trade> {
                 secondItemTag = TradeUtils.getMaterialTag(node.get("secondItemTag").asText());
             }
         }
-        int maxTradeUse = 0;
-        List<String> maxTradeTagsNames = null;
-        if (node.has("maxTradeUse") && node.has("maxTradeTagsNames")) {
-            maxTradeUse = node.get("maxTradeUse").asInt();
-            maxTradeTagsNames = List.of(mapper.convertValue(node.get("maxTradeTagsNames"), String[].class));
+        Map<String, Integer> maxTradeUses = new HashMap<>();
+        if (node.has("maxTradeUses")) {
+            maxTradeUses = mapper.convertValue(node.get("maxTradeUses"),
+                    mapper.getTypeFactory().constructMapType(Map.class, String.class, Integer.class));
+        } else if (node.has("maxTradeUse") && node.has("maxTradeTagsNames")) {
+            // Legacy format: single int shared by a list of tag names.
+            int legacyMax = node.get("maxTradeUse").asInt();
+            for (JsonNode tagNode : node.get("maxTradeTagsNames")) {
+                maxTradeUses.put(tagNode.asText(), legacyMax);
+            }
         }
         Map<String, Integer> moneyResult = new HashMap<>();
         if (node.has("moneyResult")) {
@@ -82,8 +89,7 @@ public class TradeDeserializer extends StdDeserializer<Trade> {
                 firstItem, firstItemTag,
                 secondItem, secondItemTag,
                 resultItem,
-                maxTradeUse, maxTradeTagsNames,
+                maxTradeUses,
                 moneyResult);
     }
 }
-

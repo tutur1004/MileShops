@@ -20,8 +20,11 @@ import java.util.Map;
  *         "resultItem": ItemStack,
  *         "secondItem": ItemStack,
  *         "secondItemTag": String,
- *         "maxTradeUse": int,
- *         "maxTradeTagsNames": String[],
+ *         "maxTradeUses": {
+ *             "tagA": int,
+ *             "tagB": int,
+ *             ...
+ *         },
  *         "moneyResult": {
  *             "moneyA": int,
  *             "moneyB": int,
@@ -61,12 +64,11 @@ public class TradeSerializer extends StdSerializer<Trade> {
         gen.writeFieldName("resultItem");
         gen.writeObject(value.getResultItem());
         if (value.isUsageLimited()) {
-            gen.writeNumberField("maxTradeUse", value.getMaxTradeUse());
-            gen.writeArrayFieldStart("maxTradeTagsNames");
-            for (String tag : value.getMaxTradeTagsNames()) {
-                gen.writeString(tag);
+            gen.writeObjectFieldStart("maxTradeUses");
+            for (Map.Entry<String, Integer> e : value.getMaxTradeUses().entrySet()) {
+                gen.writeNumberField(e.getKey(), e.getValue());
             }
-            gen.writeEndArray();
+            gen.writeEndObject();
         }
         if (value.isMoneyTrade()) {
             gen.writeObjectFieldStart("moneyResult");

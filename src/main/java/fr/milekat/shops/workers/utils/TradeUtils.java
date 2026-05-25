@@ -177,24 +177,29 @@ public class TradeUtils {
             return 0;
         }
 
-        //  Trade usage limitation
+        //  Trade usage limitation — each configured tag has its own limit; the most restrictive wins
         if (trade.isUsageLimited()) {
             Map<String, Object> playerTags = API.getPlayerTagsStatic(player.getUniqueId());
             if (playerTags != null && !playerTags.isEmpty()) {
-                Map<String, Object> playerTradeTags = new HashMap<>();
-                trade.getMaxTradeTagsNames().stream()
-                        .filter(playerTags::containsKey)
-                        .forEach(tag -> playerTradeTags.put(tag, playerTags.get(tag)));
-                if (!playerTradeTags.isEmpty()) {
-                    int tradeUses = Main.getStorage().getTradeUses(playerTradeTags, trade);
-                    int maxDoAllowedTrades = trade.getMaxTradeUse() - tradeUses;
-                    if (maxDoAllowedTrades < maxDoAbleTrades) {
-                        Main.message(player, Main.getConfigs().getMessage(
-                                        "messages.gui.chest-shop.messages.max-trade",
-                                        "&cYou have reached the maximum number of uses for this trade(<trade_limit>).")
-                                .replace("<trade_limit>", String.valueOf(tradeUses)));
-                        if (maxDoAllowedTrades <= 0) return 0;
-                        maxDoAbleTrades = maxDoAllowedTrades;
+                boolean notified = false;
+                for (Map.Entry<String, Integer> limit : trade.getMaxTradeUses().entrySet()) {
+                    String tagName = limit.getKey();
+                    int    max     = limit.getValue();
+                    if (max <= 0 || !playerTags.containsKey(tagName)) continue;
+                    Map<String, Object> singleTag = new HashMap<>();
+                    singleTag.put(tagName, playerTags.get(tagName));
+                    int tradeUses = Main.getStorage().getTradeUses(singleTag, trade);
+                    int allowed   = max - tradeUses;
+                    if (allowed < maxDoAbleTrades) {
+                        if (!notified) {
+                            Main.message(player, Main.getConfigs().getMessage(
+                                            "messages.gui.chest-shop.messages.max-trade",
+                                            "&cYou have reached the maximum number of uses for this trade(<trade_limit>).")
+                                    .replace("<trade_limit>", String.valueOf(tradeUses)));
+                            notified = true;
+                        }
+                        if (allowed <= 0) return 0;
+                        maxDoAbleTrades = allowed;
                     }
                 }
             }

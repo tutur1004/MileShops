@@ -1,5 +1,6 @@
 package fr.milekat.shops.workers.gui;
 
+import fr.milekat.shops.Main;
 import fr.milekat.shops.hooks.MileBanks;
 import fr.milekat.shops.workers.utils.Buttons;
 import fr.milekat.shops.workers.utils.TradeUtils;
@@ -26,22 +27,10 @@ import java.util.function.Consumer;
  *       first/second item. At most one tag active; clicking the active tag deselects it.</li>
  *   <li><b>MONEY_TAG</b> — configure the money-result map. Multiple currencies selectable;
  *       amounts entered via an Anvil prompt (0 / negative removes the currency).</li>
- *   <li><b>USES_TAG</b> — configure {@code maxTradeUse} (Anvil prompt) and the set of
- *       MileBanks player-tags that track per-player usage (multi-select toggle).</li>
+ *   <li><b>USES_TAG</b> — configure the per-player-tag usage limits. Each tag (from
+ *       {@link Main#TAGS}) can have its own max value; the trade is blocked when the
+ *       player has any tag whose count reached its configured max.</li>
  * </ul>
- *
- * <h3>Lifecycle / re-instantiation</h3>
- * FastInv loses its event handlers when an inventory window closes. Two transitions require
- * a fresh instance:
- * <ol>
- *   <li><b>AnvilInput → AdvancedEditor</b>: {@link #openAnvilAndReturn} sets
- *       {@code session.subEditorGoingToAnvil = true} so the state listener does not reopen
- *       {@link AdminEditor}, then creates a fresh AdvancedEditor via {@link #createReopened()}
- *       after the anvil closes.</li>
- *   <li><b>AdvancedEditor → AdminEditor</b>: calling {@link #save()} or {@link #reset()}
- *       (or Escape) closes this window. {@link ShopAdminSession} detects the close and
- *       creates a fresh AdminEditor automatically.</li>
- * </ol>
  */
 @SuppressWarnings("deprecation")
 public class AdvancedEditor extends FastInv {
@@ -58,7 +47,7 @@ public class AdvancedEditor extends FastInv {
 
     // ---- Shared session state ----
     private final ShopAdminSession session;
-    private final Player           player; // convenience alias for session.player
+    private final Player           player;
 
     // ---- Editor identity ----
     private final int       position;
@@ -66,22 +55,20 @@ public class AdvancedEditor extends FastInv {
     private final Mode      mode;
     private final ItemStack editedItem;
 
-    // ---- MATERIAL_TAG current + initial (for Reset) ----
+    // ---- MATERIAL_TAG ----
     private final List<Tag<Material>> materialTags;
     private @Nullable Tag<Material>   selectedMaterialTag;
     private final @Nullable Tag<Material> initialMaterialTag;
 
-    // ---- MONEY_TAG current + initial ----
+    // ---- MONEY_TAG ----
     private final List<String>         moneyCurrencies;
     private final Map<String, Integer> selectedMoney;
     private final Map<String, Integer> initialMoney;
 
-    // ---- USES_TAG current + initial ----
-    private final List<String> usesCurrencies;
-    private int                selectedMaxUse;
-    private final int          initialMaxUse;
-    private final Set<String>  selectedUsesTags;
-    private final Set<String>  initialUsesTags;
+    // ---- USES_TAG ----
+    private final List<String>         usesTagNames;
+    private final Map<String, Integer> selectedUses;
+    private final Map<String, Integer> initialUses;
 
     // ---- Pagination ----
     private int tagPage;
@@ -98,8 +85,9 @@ public class AdvancedEditor extends FastInv {
         this(session, position, firstItem, Mode.MATERIAL_TAG, editedItem,
                 currentTag, currentTag,
                 new HashMap<>(), new HashMap<>(),
-                0, 0, new LinkedHashSet<>(), new LinkedHashSet<>(),
-                List.of(), TradeUtils.getMaterialTagsContaining(editedItem.getType()), 0);
+                new HashMap<>(), new HashMap<>(),
+                List.of(), TradeUtils.getMaterialTagsContaining(editedItem.getType()),
+                List.of(), 0);
     }
 
     /** MONEY_TAG — edit the money-result map of a result slot. */
@@ -110,20 +98,21 @@ public class AdvancedEditor extends FastInv {
         this(session, position, true, Mode.MONEY_TAG, editedItem,
                 null, null,
                 new HashMap<>(currentMoney), new HashMap<>(currentMoney),
-                0, 0, new LinkedHashSet<>(), new LinkedHashSet<>(),
-                safeGetTags(), List.of(), 0);
+                new HashMap<>(), new HashMap<>(),
+                safeGetCurrencies(), List.of(),
+                List.of(), 0);
     }
 
-    /** USES_TAG — edit maxTradeUse count and the player-tag tracking set. */
+    /** USES_TAG — edit the per-player-tag usage limits. */
     public AdvancedEditor(@NotNull ShopAdminSession session,
                           int position,
-                          int currentMax, @NotNull List<String> currentTags) {
+                          @NotNull Map<String, Integer> currentUses) {
         this(session, position, true, Mode.USES_TAG, new ItemStack(Material.PAPER),
                 null, null,
                 new HashMap<>(), new HashMap<>(),
-                currentMax, currentMax,
-                new LinkedHashSet<>(currentTags), new LinkedHashSet<>(currentTags),
-                safeGetTags(), List.of(), 0);
+                new HashMap<>(currentUses), new HashMap<>(currentUses),
+                List.of(), List.of(),
+                new ArrayList<>(Main.TAGS.keySet()), 0);
     }
 
     // =========================================================================
@@ -139,12 +128,11 @@ public class AdvancedEditor extends FastInv {
             @Nullable Tag<Material> initialMaterialTag,
             @NotNull Map<String, Integer> selectedMoney,
             @NotNull Map<String, Integer> initialMoney,
-            int selectedMaxUse,
-            int initialMaxUse,
-            @NotNull Set<String> selectedUsesTags,
-            @NotNull Set<String> initialUsesTags,
-            @NotNull List<String> usesCurrencies,
+            @NotNull Map<String, Integer> selectedUses,
+            @NotNull Map<String, Integer> initialUses,
+            @NotNull List<String> moneyCurrencies,
             @NotNull List<Tag<Material>> materialTags,
+            @NotNull List<String> usesTagNames,
             int tagPage
     ) {
         super(45, buildTitle(mode, editedItem));
@@ -158,13 +146,11 @@ public class AdvancedEditor extends FastInv {
         this.initialMaterialTag  = initialMaterialTag;
         this.selectedMoney       = selectedMoney;
         this.initialMoney        = initialMoney;
-        this.selectedMaxUse      = selectedMaxUse;
-        this.initialMaxUse       = initialMaxUse;
-        this.selectedUsesTags    = selectedUsesTags;
-        this.initialUsesTags     = initialUsesTags;
-        this.usesCurrencies      = usesCurrencies;
+        this.selectedUses        = selectedUses;
+        this.initialUses         = initialUses;
+        this.moneyCurrencies     = moneyCurrencies;
         this.materialTags        = materialTags;
-        this.moneyCurrencies     = (mode == Mode.MONEY_TAG) ? safeGetTags() : List.of();
+        this.usesTagNames        = usesTagNames;
         this.tagPage             = tagPage;
     }
 
@@ -178,23 +164,19 @@ public class AdvancedEditor extends FastInv {
         };
     }
 
-    private static @NotNull List<String> safeGetTags() {
+    private static @NotNull List<String> safeGetCurrencies() {
         try { return MileBanks.getCurrencies(); }
         catch (RuntimeException e) { return new ArrayList<>(); }
     }
 
-    /**
-     * Creates a fresh {@link AdvancedEditor} preserving all current UI state (selections, page).
-     * Used after an {@link AnvilInput} returns to re-register FastInv event handlers.
-     */
+    /** Creates a fresh editor preserving all UI state — used after an AnvilInput returns. */
     private @NotNull AdvancedEditor createReopened() {
         return new AdvancedEditor(
                 session, position, firstItem, mode, editedItem,
                 selectedMaterialTag, initialMaterialTag,
                 new HashMap<>(selectedMoney), new HashMap<>(initialMoney),
-                selectedMaxUse, initialMaxUse,
-                new LinkedHashSet<>(selectedUsesTags), new LinkedHashSet<>(initialUsesTags),
-                usesCurrencies, materialTags, tagPage);
+                new HashMap<>(selectedUses),  new HashMap<>(initialUses),
+                moneyCurrencies, materialTags, usesTagNames, tagPage);
     }
 
     // =========================================================================
@@ -257,8 +239,10 @@ public class AdvancedEditor extends FastInv {
                 }
                 case USES_TAG -> {
                     String tag  = (String) sorted.get(i);
-                    boolean sel = selectedUsesTags.contains(tag);
-                    setItem(slot, buildUsesTagItem(tag, sel), event -> onUsesTagClick(tag));
+                    boolean sel = selectedUses.containsKey(tag);
+                    int     amt = selectedUses.getOrDefault(tag, 0);
+                    setItem(slot, buildUsesTagItem(tag, sel, amt),
+                            event -> onUsesTagClick(tag));
                 }
             }
         }
@@ -290,10 +274,10 @@ public class AdvancedEditor extends FastInv {
                 yield sel;
             }
             case USES_TAG -> {
-                List<String> sel      = new ArrayList<>(selectedUsesTags);
+                List<String> sel      = new ArrayList<>();
                 List<String> unSelect = new ArrayList<>();
-                for (String c : usesCurrencies)
-                    if (!selectedUsesTags.contains(c)) unSelect.add(c);
+                for (String t : usesTagNames)
+                    (selectedUses.containsKey(t) ? sel : unSelect).add(t);
                 sel.addAll(unSelect);
                 yield sel;
             }
@@ -328,20 +312,21 @@ public class AdvancedEditor extends FastInv {
                 yield item;
             }
             case USES_TAG -> {
-                if (selectedMaxUse > 0) {
-                    ItemBuilder b = new ItemBuilder(Material.PAPER)
-                            .name(ChatColor.GREEN + "Max uses: " + selectedMaxUse);
-                    for (String t : selectedUsesTags)
-                        b.lore(ChatColor.GRAY + "Tag: " + ChatColor.WHITE + t);
-                    b.lore("").lore(ChatColor.GRAY + "Click to change count");
-                    ItemStack item = b.build();
-                    applyGlint(item);
-                    yield item;
+                if (selectedUses.isEmpty()) {
+                    yield new ItemBuilder(Material.PAPER)
+                            .name(ChatColor.GRAY + "No uses limit")
+                            .lore(ChatColor.GRAY + "Click a tag to set a limit")
+                            .build();
                 }
-                yield new ItemBuilder(Material.PAPER)
-                        .name(ChatColor.GRAY + "No uses limit")
-                        .lore(ChatColor.GRAY + "Click to set max uses")
-                        .build();
+                ItemBuilder b = new ItemBuilder(Material.PAPER)
+                        .name(ChatColor.GREEN + "Uses limits");
+                for (Map.Entry<String, Integer> e : selectedUses.entrySet())
+                    b.lore(ChatColor.DARK_GRAY + e.getKey()
+                            + ChatColor.GRAY + " ×" + ChatColor.WHITE + e.getValue());
+                b.lore("").lore(ChatColor.GRAY + "Click to clear all limits");
+                ItemStack item = b.build();
+                applyGlint(item);
+                yield item;
             }
         };
     }
@@ -378,14 +363,16 @@ public class AdvancedEditor extends FastInv {
         return b.lore(ChatColor.GRAY + "Click to set amount").build();
     }
 
-    private @NotNull ItemStack buildUsesTagItem(@NotNull String tag, boolean selected) {
+    private @NotNull ItemStack buildUsesTagItem(@NotNull String tag,
+                                                boolean selected, int amount) {
         ItemBuilder b = new ItemBuilder(Material.PAPER)
                 .name((selected ? ChatColor.GREEN : ChatColor.YELLOW) + tag);
         if (selected) {
-            b.lore("").lore(ChatColor.GREEN + "✔ Active  —  click to remove");
+            b.lore(ChatColor.GRAY + "Max uses: " + ChatColor.WHITE + amount)
+             .lore("").lore(ChatColor.GREEN + "✔ Active  —  click to change");
             ItemStack item = b.build(); applyGlint(item); return item;
         }
-        return b.lore(ChatColor.GRAY + "Click to add").build();
+        return b.lore(ChatColor.GRAY + "Click to set max uses").build();
     }
 
     private static void applyGlint(@NotNull ItemStack item) {
@@ -411,7 +398,11 @@ public class AdvancedEditor extends FastInv {
                 session.applyResultEdit(position, new HashMap<>());
                 refreshDisplay();
             }
-            case USES_TAG -> onUsesCountClick();
+            case USES_TAG -> {
+                selectedUses.clear();
+                session.applyUsesEdit(position, new HashMap<>());
+                refreshDisplay();
+            }
         }
     }
 
@@ -436,25 +427,18 @@ public class AdvancedEditor extends FastInv {
         });
     }
 
-    private void onUsesCountClick() {
-        String initial = selectedMaxUse > 0 ? String.valueOf(selectedMaxUse) : "1";
+    private void onUsesTagClick(@NotNull String tag) {
+        String initial = String.valueOf(selectedUses.getOrDefault(tag, 1));
         openAnvilAndReturn(initial, input -> {
             if (input != null && !input.isBlank()) {
-                int count;
-                try { count = Integer.parseInt(input.trim()); }
-                catch (NumberFormatException e) { count = 0; }
-                selectedMaxUse = Math.max(0, count);
-                if (selectedMaxUse == 0) selectedUsesTags.clear();
-                session.applyUsesEdit(position, selectedMaxUse, new ArrayList<>(selectedUsesTags));
+                int amount;
+                try { amount = Integer.parseInt(input.trim()); }
+                catch (NumberFormatException e) { amount = 0; }
+                if (amount <= 0) selectedUses.remove(tag);
+                else             selectedUses.put(tag, amount);
+                session.applyUsesEdit(position, new HashMap<>(selectedUses));
             }
         });
-    }
-
-    private void onUsesTagClick(@NotNull String tag) {
-        if (selectedUsesTags.contains(tag)) selectedUsesTags.remove(tag);
-        else                                selectedUsesTags.add(tag);
-        session.applyUsesEdit(position, selectedMaxUse, new ArrayList<>(selectedUsesTags));
-        refreshDisplay();
     }
 
     // =========================================================================
@@ -478,8 +462,7 @@ public class AdvancedEditor extends FastInv {
         switch (mode) {
             case MATERIAL_TAG -> session.applyTagEdit(position, firstItem, initialMaterialTag);
             case MONEY_TAG    -> session.applyResultEdit(position, new HashMap<>(initialMoney));
-            case USES_TAG     -> session.applyUsesEdit(position, initialMaxUse,
-                                         new ArrayList<>(initialUsesTags));
+            case USES_TAG     -> session.applyUsesEdit(position, new HashMap<>(initialUses));
         }
         player.closeInventory();
     }

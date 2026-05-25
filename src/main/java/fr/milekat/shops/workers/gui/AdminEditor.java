@@ -63,7 +63,6 @@ public class AdminEditor extends FastInv {
     static final String KEY_TAG      = "Tag";
     static final String KEY_MONEY    = "Money";
     static final String KEY_USES     = "Uses";
-    static final String KEY_USES_TAG = "UsesTag";
 
     // =========================================================================
     //  Fields
@@ -139,7 +138,7 @@ public class AdminEditor extends FastInv {
 
         // Show uses paper as soon as the trade has at least one item placed
         if (d.firstItem != null || d.resultItem != null)
-            setItem(27 + pagePosition, decorateUsesItem(d.maxTradeUse, d.maxTradeTagsNames));
+            setItem(27 + pagePosition, decorateUsesItem(d.maxTradeUses));
 
         if (d.resultItem != null)
             setItem(36 + pagePosition, decorateResultItem(d.resultItem.clone(), d.moneyResult));
@@ -326,8 +325,7 @@ public class AdminEditor extends FastInv {
             if (d == null || !d.isComplete()) return;
             subEditorOpen = true;
             new AdvancedEditor(session, posInPage,
-                    d.maxTradeUse,
-                    d.maxTradeTagsNames != null ? d.maxTradeTagsNames : List.of()).open(session.player);
+                    new HashMap<>(d.maxTradeUses)).open(session.player);
 
         } else if (slot >= 36 && slot <= 44) {
             posInPage = slot - 36;
@@ -357,7 +355,7 @@ public class AdminEditor extends FastInv {
                     d.firstItem.clone(),  d.firstItemTag,
                     d.secondItem != null ? d.secondItem.clone() : null, d.secondItemTag,
                     d.resultItem.clone(),
-                    d.maxTradeUse, d.maxTradeTagsNames,
+                    new HashMap<>(d.maxTradeUses),
                     new HashMap<>(d.moneyResult)));
         }
 
@@ -398,15 +396,13 @@ public class AdminEditor extends FastInv {
         return applyDecoration(base, additions);
     }
 
-    static @NotNull ItemStack decorateUsesItem(int maxTradeUse,
-                                               @Nullable List<String> tagNames) {
+    static @NotNull ItemStack decorateUsesItem(@NotNull Map<String, Integer> maxTradeUses) {
         ItemStack base = new ItemBuilder(Material.PAPER)
                 .name(ChatColor.GRAY + "Usage limit").build();
-        if (maxTradeUse <= 0) return base;
+        if (maxTradeUses.isEmpty()) return base;
         List<String> additions = new ArrayList<>();
-        additions.add(buildLoreLine(KEY_USES, String.valueOf(maxTradeUse)));
-        if (tagNames != null)
-            for (String tag : tagNames) additions.add(buildLoreLine(KEY_USES_TAG, tag));
+        for (Map.Entry<String, Integer> e : maxTradeUses.entrySet())
+            additions.add(buildLoreLine(KEY_USES, e.getKey() + " x" + e.getValue()));
         return applyDecoration(base, additions);
     }
 

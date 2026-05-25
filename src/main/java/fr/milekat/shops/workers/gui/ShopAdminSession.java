@@ -60,27 +60,24 @@ public class ShopAdminSession implements Listener {
         @Nullable Tag<Material> secondItemTag;
         @Nullable ItemStack resultItem;
         @NotNull Map<String, Integer> moneyResult = new HashMap<>();
-        int maxTradeUse = 0;
-        @Nullable List<String> maxTradeTagsNames;
+        @NotNull Map<String, Integer> maxTradeUses = new HashMap<>();
 
         boolean isComplete() { return firstItem != null && resultItem != null; }
         boolean isEmpty() {
             return firstItem == null && resultItem == null && secondItem == null
-                    && moneyResult.isEmpty() && maxTradeUse == 0
-                    && (maxTradeTagsNames == null || maxTradeTagsNames.isEmpty());
+                    && moneyResult.isEmpty() && maxTradeUses.isEmpty();
         }
         boolean isPartial() { return !isEmpty() && !isComplete(); }
 
         static @NotNull DraftTrade from(@NotNull Trade t) {
             DraftTrade d = new DraftTrade();
-            d.firstItem         = t.getFirstItem();
-            d.firstItemTag      = t.getFirstItemTag();
-            d.secondItem        = t.getSecondItem();
-            d.secondItemTag     = t.getSecondItemTag();
-            d.resultItem        = t.getResultItem();
-            d.moneyResult       = new HashMap<>(t.getMoneyResult());
-            d.maxTradeUse       = t.getMaxTradeUse();
-            d.maxTradeTagsNames = t.getMaxTradeTagsNames();
+            d.firstItem     = t.getFirstItem();
+            d.firstItemTag  = t.getFirstItemTag();
+            d.secondItem    = t.getSecondItem();
+            d.secondItemTag = t.getSecondItemTag();
+            d.resultItem    = t.getResultItem();
+            d.moneyResult   = new HashMap<>(t.getMoneyResult());
+            d.maxTradeUses  = new HashMap<>(t.getMaxTradeUses());
             return d;
         }
     }
@@ -194,11 +191,10 @@ public class ShopAdminSession implements Listener {
         hasChanges = true;
     }
 
-    void applyUsesEdit(int position, int maxTradeUse, @NotNull List<String> tagNames) {
+    void applyUsesEdit(int position, @NotNull Map<String, Integer> maxTradeUses) {
         DraftTrade d = drafts.get(absPos(position));
         if (d == null) return;
-        d.maxTradeUse       = maxTradeUse;
-        d.maxTradeTagsNames = tagNames.isEmpty() ? null : new ArrayList<>(tagNames);
+        d.maxTradeUses = new HashMap<>(maxTradeUses);
         hasChanges = true;
     }
 
