@@ -27,6 +27,14 @@ storage:
     enabled: true
     # Cache time in seconds (Recommended 300s = 5min)
     time: 300
+    # Per-tag trade usage counts (Trade.maxTradeUses). Reduces DB load on every trade-limit
+    # check by caching counts per (shop, position, tag, value). Disable when player-tags are
+    # shared across multiple servers — an external write would be invisible until TTL expires.
+    trade-uses:
+      # Disable if you need a perfect sync between servers
+      enable: true
+      # Cache time in seconds. Defaults to `storage.cache.time` when omitted.
+      time: 60
 
 # Shop settings
 settings:

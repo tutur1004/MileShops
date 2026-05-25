@@ -188,7 +188,7 @@ public class TradeUtils {
                     if (max <= 0 || !playerTags.containsKey(tagName)) continue;
                     Map<String, Object> singleTag = new HashMap<>();
                     singleTag.put(tagName, playerTags.get(tagName));
-                    int tradeUses = Main.getStorage().getTradeUses(singleTag, trade);
+                    int tradeUses = Main.getStorage().getCacheTradeUses(singleTag, trade);
                     int allowed   = max - tradeUses;
                     if (allowed < maxDoAbleTrades) {
                         if (!notified) {

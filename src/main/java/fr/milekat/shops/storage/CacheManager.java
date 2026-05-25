@@ -5,6 +5,8 @@ import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.storage.utils.PlayerTradeMode;
 import fr.milekat.shops.storage.utils.ShopTrades;
+import fr.milekat.shops.storage.utils.TradeUsesEntry;
+import fr.milekat.shops.storage.utils.TradeUsesKey;
 import fr.milekat.shops.api.classes.TradeMode;
 import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import org.jetbrains.annotations.NotNull;
@@ -174,5 +176,60 @@ public interface CacheManager {
             Main.getMileLogger().debug("Trades mode for player '" + playerUuid + "' not found in cache, try to search them.");
             return Main.getStorage().getTradeMode(playerUuid);
         }
+    }
+
+    /**
+     * Cache-aware variant of {@link StorageImplementation#getTradeUses(Map, Trade)}
+     * used by the trade-limit check. Falls back to a direct storage call when:
+     * <ul>
+     *   <li>{@link Main#TRADE_USES_DELAY} is {@code 0} (cache disabled by config), or</li>
+     *   <li>{@code tags} doesn't contain exactly one entry — we only cache per-single-tag
+     *       lookups, since limits are checked tag-by-tag.</li>
+     * </ul>
+     *
+     * <p>On cache hit, returns the cached count without touching storage. On miss or
+     * expired entry, performs the storage call and stores the fresh result.</p>
+     */
+    default int getCacheTradeUses(@NotNull Map<String, Object> tags,
+                                  @NotNull Trade trade) {
+        if (Main.TRADE_USES_DELAY <= 0 || tags.size() != 1) {
+            return Main.getStorage().getTradeUses(tags, trade);
+        }
+        Map.Entry<String, Object> e = tags.entrySet().iterator().next();
+        TradeUsesKey key = new TradeUsesKey(trade.getShopUuid(), trade.getTradePosition(),
+                e.getKey(), e.getValue());
+        TradeUsesEntry entry = Main.TRADE_USES_CACHE.get(key);
+        if (entry != null
+                && entry.fetchedAt().getTime() + Main.TRADE_USES_DELAY > System.currentTimeMillis()) {
+            Main.getMileLogger().debug("[Cache] trade-uses hit '" + key + "' = " + entry.count());
+            return entry.count();
+        }
+        int count = Main.getStorage().getTradeUses(tags, trade);
+        Main.TRADE_USES_CACHE.put(key, new TradeUsesEntry(count, new Date()));
+        return count;
+    }
+
+    /**
+     * Drops the cache entry for a specific {@code (shop, position, tag, value)} tuple
+     * so the next lookup re-fetches from storage. Useful for external plugins that have
+     * mutated the underlying count out-of-band.
+     */
+    static void invalidateTradeUses(@NotNull UUID shopUuid, int position,
+                                    @NotNull String tagName, @NotNull Object tagValue) {
+        Main.TRADE_USES_CACHE.remove(new TradeUsesKey(shopUuid, position, tagName, tagValue));
+    }
+
+    /**
+     * Increments the cached count for {@code (shop, position, tag, value)} by {@code delta}
+     * if an entry exists. Used right after a successful trade is logged so the next
+     * lookup doesn't have to re-hit storage. No-op when no entry is cached — we don't
+     * pre-create an entry from a partial increment because the base count is unknown.
+     */
+    static void bumpTradeUses(@NotNull UUID shopUuid, int position,
+                              @NotNull String tagName, @NotNull Object tagValue, int delta) {
+        Main.TRADE_USES_CACHE.computeIfPresent(
+                new TradeUsesKey(shopUuid, position, tagName, tagValue),
+                (k, e) -> new TradeUsesEntry(e.count() + delta, e.fetchedAt())
+        );
     }
 }

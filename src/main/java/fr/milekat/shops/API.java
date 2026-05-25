@@ -4,6 +4,7 @@ import fr.milekat.shops.api.MileShopsIAPI;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.exceptions.StorageException;
+import fr.milekat.shops.storage.CacheManager;
 import fr.milekat.shops.workers.utils.ShopUtils;
 import fr.milekat.shops.api.classes.TradeMode;
 import fr.milekat.shops.workers.utils.TradeUtils;
@@ -110,6 +111,12 @@ public class API implements MileShopsIAPI {
     }
     public static void setPlayerTagsStatic(@NotNull UUID uuid, @NotNull Map<String, Object> tags) {
         Main.PLAYER_TAGS.put(uuid, tags);
+    }
+
+    @Override
+    public void refreshTradeUses(@NotNull UUID shopUuid, int position,
+                                 @NotNull String tagName, @NotNull Object tagValue) {
+        CacheManager.invalidateTradeUses(shopUuid, position, tagName, tagValue);
     }
 
     @Override

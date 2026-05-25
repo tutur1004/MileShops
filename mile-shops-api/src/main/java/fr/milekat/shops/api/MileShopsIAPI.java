@@ -127,6 +127,22 @@ public interface MileShopsIAPI {
     void setPlayerTags(@NotNull UUID uuid, @NotNull Map<String, Object> tags);
 
     /**
+     * Invalidate the cached usage count for a specific {@code (shop, position, tag, value)}
+     * tuple. The next limit check will re-fetch the count from storage.
+     *
+     * <p>Use this when an external plugin has mutated the underlying trade-history
+     * out-of-band (e.g. a cross-server reset of a "team" counter) so this server's
+     * in-memory cache doesn't keep serving the stale count.</p>
+     *
+     * @param shopUuid The UUID of the shop the trade belongs to.
+     * @param position The 1-based position of the trade within the shop.
+     * @param tagName  The name of the player-tag whose limit should be refreshed.
+     * @param tagValue The value of that tag (must equal the cached entry's value).
+     */
+    void refreshTradeUses(@NotNull UUID shopUuid, int position,
+                          @NotNull String tagName, @NotNull Object tagValue);
+
+    /**
      * Get the current player modifier
      *
      * @param uuid The UUID of the player.

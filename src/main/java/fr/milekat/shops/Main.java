@@ -11,6 +11,8 @@ import fr.milekat.shops.storage.adapter.elasticsearch.ESStorage;
 import fr.milekat.shops.storage.adapter.sql.SQLStorage;
 import fr.milekat.shops.storage.utils.PlayerTradeMode;
 import fr.milekat.shops.storage.utils.ShopTrades;
+import fr.milekat.shops.storage.utils.TradeUsesEntry;
+import fr.milekat.shops.storage.utils.TradeUsesKey;
 import fr.milekat.shops.workers.commands.ShopsCmd;
 import fr.milekat.shops.workers.listeners.ShopsListeners;
 import fr.milekat.shops.workers.listeners.TradeListeners;
@@ -42,6 +44,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 public class Main extends JavaPlugin {
@@ -66,6 +69,9 @@ public class Main extends JavaPlugin {
     public static Map<ShopTrades, Date> TRADE_CACHE = new HashMap<>();
     public static long TRADE_MODE_DELAY = TimeUnit.MILLISECONDS.convert(5L, TimeUnit.MINUTES);
     public static Map<PlayerTradeMode, Date> TRADE_MODE_CACHE = new HashMap<>();
+    /** TTL (ms) for the per-(shop,position,tag,value) trade-uses cache; 0 disables it. */
+    public static long TRADE_USES_DELAY = TimeUnit.MILLISECONDS.convert(1L, TimeUnit.MINUTES);
+    public static final Map<TradeUsesKey, TradeUsesEntry> TRADE_USES_CACHE = new ConcurrentHashMap<>();
 
     @Override
     public void onEnable() {
@@ -252,16 +258,28 @@ public class Main extends JavaPlugin {
             Main.SHOP_DELAY = delay;
             Main.TRADE_DELAY = delay;
             Main.TRADE_MODE_DELAY = delay;
-            logger.debug("Storage cache delay set to " + delay + "ms");
+            // Per-tag trade-uses cache is opt-out (turn off when tags are shared across servers).
+            if (config.getBoolean("storage.cache.trade-uses.enable", true)) {
+                Main.TRADE_USES_DELAY = TimeUnit.MILLISECONDS.convert(
+                        config.getLong("storage.cache.trade-uses.time",
+                                config.getLong("storage.cache.time", 5L)),
+                        TimeUnit.SECONDS);
+            } else {
+                Main.TRADE_USES_DELAY = 0L;
+            }
+            logger.debug("Storage cache delay set to " + delay + "ms (trade-uses="
+                    + Main.TRADE_USES_DELAY + "ms)");
         } else {
             Main.SHOP_DELAY = 0L;
             Main.TRADE_DELAY = 0L;
             Main.TRADE_MODE_DELAY = 0L;
+            Main.TRADE_USES_DELAY = 0L;
             logger.debug("Storage cache disabled");
         }
         Main.SHOP_CACHE.clear();
         Main.TRADE_CACHE.clear();
         Main.TRADE_MODE_CACHE.clear();
+        Main.TRADE_USES_CACHE.clear();
         logger.debug("Storage enable, API is now available");
     }
 
@@ -276,6 +294,7 @@ public class Main extends JavaPlugin {
         Main.SHOP_CACHE.clear();
         Main.TRADE_CACHE.clear();
         Main.TRADE_MODE_CACHE.clear();
+        Main.TRADE_USES_CACHE.clear();
         try {
             List<Shop> shops = getStorage().getAllShops();
             loaded = shops.size();
