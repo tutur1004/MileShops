@@ -1,6 +1,7 @@
 package fr.milekat.shops.api;
 
 import fr.milekat.shops.api.classes.Shop;
+import fr.milekat.shops.api.classes.TagValue;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.classes.TradeMode;
 import fr.milekat.shops.api.exceptions.StorageException;
@@ -10,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -127,46 +129,91 @@ public interface MileShopsIAPI {
     void setPlayerTags(@NotNull UUID uuid, @NotNull Map<String, Object> tags);
 
     /**
-     * Invalidate the cached usage count for a specific {@code (shop, position, tag, value)}
-     * tuple. The next limit check will re-fetch the count from storage.
+     * Returns the names of the player-tags configured on this server — the exact set the
+     * admin editor offers in its USES_TAG sub-editor and the same set that gates
+     * {@link Trade#getMaxTradeUses()} and the lock-API methods.
+     *
+     * <p>Use this to discover which {@code tagName} values are valid arguments for
+     * {@link #lockTrade}, {@link #unlockTrade} and {@link #refreshTradeUses}.</p>
+     *
+     * @return An unmodifiable view of the configured tag names. Empty if none are configured.
+     */
+    @NotNull
+    Set<String> getAvailableTags();
+
+    /**
+     * Invalidate the cached usage count for a specific {@code (trade, tag, value)} tuple.
+     * The next limit check will re-fetch the count from storage.
      *
      * <p>Use this when an external plugin has mutated the underlying trade-history
      * out-of-band (e.g. a cross-server reset of a "team" counter) so this server's
      * in-memory cache doesn't keep serving the stale count.</p>
      *
-     * @param shopUuid The UUID of the shop the trade belongs to.
-     * @param position The 1-based position of the trade within the shop.
+     * @param trade    The trade whose cached usage count should be invalidated.
      * @param tagName  The name of the player-tag whose limit should be refreshed.
-     * @param tagValue The value of that tag (must equal the cached entry's value).
+     * @param tagValue The value of that tag, wrapped via one of the
+     *                 {@link TagValue#of(String) TagValue.of(...)} factories. Its boxed
+     *                 type must match the type registered for {@code tagName} in
+     *                 {@code Main.TAGS}, otherwise the lookup will simply not match.
      */
-    void refreshTradeUses(@NotNull UUID shopUuid, int position,
-                          @NotNull String tagName, @NotNull Object tagValue);
+    void refreshTradeUses(@NotNull Trade trade,
+                          @NotNull String tagName, @NotNull TagValue tagValue);
 
     /**
-     * Locks a trade for any player holding {@code (tagName, tagValue)}. Locked players see
-     * a configurable message instead of processing the trade. Works even on trades without
-     * a usage limit. Stays held until {@link #unlockTrade} is called.
+     * Acquires a lock on a single trade scoped to a specific player-tag value. As long
+     * as the lock is held, any player whose {@code Main.PLAYER_TAGS} contains
+     * {@code tagName} equal to {@code tagValue} will be denied execution of that trade.
      *
-     * @param shopUuid The UUID of the shop the trade belongs to.
-     * @param position The 1-based position of the trade within the shop.
-     * @param tagName  Player-tag name to lock against.
-     * @param tagValue Value of that tag; only players whose tag equals this are blocked.
+     * <p>This is independent of the usage-limit map on the {@link Trade}: locks apply
+     * even to trades with no {@code maxTradeUses} configured.</p>
+     *
+     * @param trade    The trade to lock.
+     * @param tagName  The player-tag name to lock against (must be a key registered in
+     *                 the {@code tags} config — i.e. one of {@code Main.TAGS}).
+     * @param tagValue The value of that tag, wrapped via {@link TagValue#of}. Only players
+     *                 whose live tag value {@link Object#equals(Object) equals} the boxed
+     *                 underlying value are blocked; the wrapper itself enforces that the
+     *                 type is one of the supported shapes
+     *                 ({@code String / int / long / double / boolean}).
      */
-    void lockTrade(@NotNull UUID shopUuid, int position,
-                   @NotNull String tagName, @NotNull Object tagValue);
+    void lockTrade(@NotNull Trade trade,
+                   @NotNull String tagName, @NotNull TagValue tagValue);
 
     /**
-     * Releases a lock previously acquired through {@link #lockTrade}. No-op if no matching
-     * lock is currently held.
+     * Releases a lock previously acquired through {@link #lockTrade} and, by design,
+     * also drops the cached usage count for the same key — so the next limit check
+     * re-fetches from storage instead of trusting the value that was potentially
+     * mutated while the lock was held.
+     *
+     * @param trade    The trade to unlock.
+     * @param tagName  The player-tag name that was used to acquire the lock.
+     * @param tagValue The tag value that was used to acquire the lock, wrapped via
+     *                 {@link TagValue#of}. Must equal (boxed value + type) the one passed
+     *                 to the originating {@link #lockTrade}.
      */
-    void unlockTrade(@NotNull UUID shopUuid, int position,
-                     @NotNull String tagName, @NotNull Object tagValue);
+    void unlockTrade(@NotNull Trade trade,
+                     @NotNull String tagName, @NotNull TagValue tagValue);
 
     /**
-     * @return {@code true} if the trade is currently locked for the player by either an
-     * active warm-up of their personal cache or an API lock matching one of their tags.
+     * Tests whether a given trade is currently locked for a specific player. A trade
+     * is considered locked when either:
+     * <ul>
+     *   <li>A cache warm-up is in progress for that player on that trade — i.e. they
+     *       just opened a shop that triggered the async preload of their per-tag usage
+     *       counts and the relevant entry hasn't settled yet.</li>
+     *   <li>One of the player's tag values matches an active API lock placed via
+     *       {@link #lockTrade}.</li>
+     * </ul>
+     *
+     * @param trade      The trade to test.
+     * @param playerUuid The UUID of the player to test against. The player's tags are
+     *                   resolved from {@code Main.PLAYER_TAGS}; an unknown player is
+     *                   considered unlocked unless a warm-up lock matches the UUID
+     *                   directly.
+     * @return {@code true} if any active lock would block this player from this trade,
+     *         {@code false} otherwise.
      */
-    boolean isTradeLocked(@NotNull UUID shopUuid, int position, @NotNull UUID playerUuid);
+    boolean isTradeLocked(@NotNull Trade trade, @NotNull UUID playerUuid);
 
     /**
      * Get the current player modifier

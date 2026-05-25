@@ -1,6 +1,6 @@
 package fr.milekat.shops.workers.gui;
 
-import fr.milekat.shops.Main;
+import fr.milekat.shops.API;
 import fr.milekat.shops.hooks.MileBanks;
 import fr.milekat.shops.workers.utils.Buttons;
 import fr.milekat.shops.workers.utils.TradeUtils;
@@ -28,8 +28,8 @@ import java.util.function.Consumer;
  *   <li><b>MONEY_TAG</b> — configure the money-result map. Multiple currencies selectable;
  *       amounts entered via an Anvil prompt (0 / negative removes the currency).</li>
  *   <li><b>USES_TAG</b> — configure the per-player-tag usage limits. Each tag (from
- *       {@link Main#TAGS}) can have its own max value; the trade is blocked when the
- *       player has any tag whose count reached its configured max.</li>
+ *       {@link API#getAvailableTagsStatic()}) can have its own max value; the trade is
+ *       blocked when the player has any tag whose count reached its configured max.</li>
  * </ul>
  */
 @SuppressWarnings("deprecation")
@@ -112,7 +112,7 @@ public class AdvancedEditor extends FastInv {
                 new HashMap<>(), new HashMap<>(),
                 new HashMap<>(currentUses), new HashMap<>(currentUses),
                 List.of(), List.of(),
-                new ArrayList<>(Main.TAGS.keySet()), 0);
+                new ArrayList<>(API.getAvailableTagsStatic()), 0);
     }
 
     // =========================================================================

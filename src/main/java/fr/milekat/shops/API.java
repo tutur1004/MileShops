@@ -2,6 +2,7 @@ package fr.milekat.shops;
 
 import fr.milekat.shops.api.MileShopsIAPI;
 import fr.milekat.shops.api.classes.Shop;
+import fr.milekat.shops.api.classes.TagValue;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.exceptions.StorageException;
 import fr.milekat.shops.storage.CacheManager;
@@ -12,9 +13,12 @@ import fr.milekat.utils.storage.exceptions.StorageExecuteException;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.UnmodifiableView;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class API implements MileShopsIAPI {
@@ -114,28 +118,39 @@ public class API implements MileShopsIAPI {
     }
 
     @Override
-    public void refreshTradeUses(@NotNull UUID shopUuid, int position,
-                                 @NotNull String tagName, @NotNull Object tagValue) {
-        CacheManager.invalidateTradeUses(shopUuid, position, tagName, tagValue);
+    public @NotNull Set<String> getAvailableTags() {
+        return getAvailableTagsStatic();
+    }
+    public static @NotNull @UnmodifiableView Set<String> getAvailableTagsStatic() {
+        return Collections.unmodifiableSet(Main.TAGS.keySet());
     }
 
     @Override
-    public void lockTrade(@NotNull UUID shopUuid, int position,
-                          @NotNull String tagName, @NotNull Object tagValue) {
-        CacheManager.lockTrade(shopUuid, position, tagName, tagValue);
+    public void refreshTradeUses(@NotNull Trade trade,
+                                 @NotNull String tagName, @NotNull TagValue tagValue) {
+        CacheManager.invalidateTradeUses(trade.getShopUuid(), trade.getTradePosition(),
+                tagName, tagValue.raw());
     }
 
     @Override
-    public void unlockTrade(@NotNull UUID shopUuid, int position,
-                            @NotNull String tagName, @NotNull Object tagValue) {
-        CacheManager.unlockTrade(shopUuid, position, tagName, tagValue);
+    public void lockTrade(@NotNull Trade trade,
+                          @NotNull String tagName, @NotNull TagValue tagValue) {
+        CacheManager.lockTrade(trade.getShopUuid(), trade.getTradePosition(),
+                tagName, tagValue.raw());
     }
 
     @Override
-    public boolean isTradeLocked(@NotNull UUID shopUuid, int position, @NotNull UUID playerUuid) {
+    public void unlockTrade(@NotNull Trade trade,
+                            @NotNull String tagName, @NotNull TagValue tagValue) {
+        CacheManager.unlockTrade(trade.getShopUuid(), trade.getTradePosition(),
+                tagName, tagValue.raw());
+    }
+
+    @Override
+    public boolean isTradeLocked(@NotNull Trade trade, @NotNull UUID playerUuid) {
         Map<String, Object> tags = getPlayerTagsStatic(playerUuid);
-        return CacheManager.isTradeLockedForPlayer(shopUuid, position, playerUuid,
-                tags != null ? tags : Map.of());
+        return CacheManager.isTradeLockedForPlayer(trade.getShopUuid(), trade.getTradePosition(),
+                playerUuid, tags != null ? tags : Map.of());
     }
 
     @Override
