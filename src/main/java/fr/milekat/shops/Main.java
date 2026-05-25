@@ -15,6 +15,7 @@ import fr.milekat.shops.workers.commands.ShopsCmd;
 import fr.milekat.shops.workers.listeners.ShopsListeners;
 import fr.milekat.shops.workers.listeners.TradeListeners;
 import fr.milekat.shops.workers.utils.ColorStyles;
+import fr.milekat.shops.workers.utils.TagExporter;
 import fr.milekat.utils.Configs;
 import fr.milekat.utils.McTools;
 import fr.milekat.utils.MileLogger;
@@ -104,6 +105,8 @@ public class Main extends JavaPlugin {
         }
         //  Init internal lib
         FastInvManager.register(plugin);
+        //  Export item tags to JSON
+        TagExporter.asyncExportItemTags(plugin.getDataFolder());
         //  Load storage
         try {
             reloadStorage();
