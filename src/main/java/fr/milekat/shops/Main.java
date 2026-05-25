@@ -11,6 +11,8 @@ import fr.milekat.shops.storage.adapter.elasticsearch.ESStorage;
 import fr.milekat.shops.storage.adapter.sql.SQLStorage;
 import fr.milekat.shops.storage.utils.PlayerTradeMode;
 import fr.milekat.shops.storage.utils.ShopTrades;
+import fr.milekat.shops.storage.utils.TradePlayerLock;
+import fr.milekat.shops.storage.utils.TradeTagLock;
 import fr.milekat.shops.storage.utils.TradeUsesEntry;
 import fr.milekat.shops.storage.utils.TradeUsesKey;
 import fr.milekat.shops.workers.commands.ShopsCmd;
@@ -72,6 +74,10 @@ public class Main extends JavaPlugin {
     /** TTL (ms) for the per-(shop,position,tag,value) trade-uses cache; 0 disables it. */
     public static long TRADE_USES_DELAY = TimeUnit.MILLISECONDS.convert(1L, TimeUnit.MINUTES);
     public static final Map<TradeUsesKey, TradeUsesEntry> TRADE_USES_CACHE = new ConcurrentHashMap<>();
+    /** Per-player trade lock; held while the warm-up populates that player's cache. */
+    public static final Set<TradePlayerLock> TRADE_WARMUP_LOCKS = ConcurrentHashMap.newKeySet();
+    /** Per-tag-value trade lock; held by external plugins via the API. */
+    public static final Set<TradeTagLock> TRADE_API_LOCKS = ConcurrentHashMap.newKeySet();
 
     @Override
     public void onEnable() {
@@ -295,6 +301,8 @@ public class Main extends JavaPlugin {
         Main.TRADE_CACHE.clear();
         Main.TRADE_MODE_CACHE.clear();
         Main.TRADE_USES_CACHE.clear();
+        Main.TRADE_WARMUP_LOCKS.clear();
+        Main.TRADE_API_LOCKS.clear();
         try {
             List<Shop> shops = getStorage().getAllShops();
             loaded = shops.size();

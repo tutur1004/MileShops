@@ -126,6 +126,7 @@ messages:
         no-item: "&cNot enough items"
         no-trade: "&cYou don't have the required items to trade, or your inventory is full"
         max-trade: "&cYou have reached the maximum number of uses for this trade (<trade_limit>)."
+        trade-locked: "&cThis trade is temporarily locked, please retry in a moment."
         trade-processing: "&cA trade is already being processed, please wait..."
         trade-result: "&2You trade <first_total_amount>x<first_material>, for <result_total_amount>x<result_material>."
         trade-result-hover:

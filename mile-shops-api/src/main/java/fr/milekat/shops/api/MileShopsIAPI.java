@@ -143,6 +143,32 @@ public interface MileShopsIAPI {
                           @NotNull String tagName, @NotNull Object tagValue);
 
     /**
+     * Locks a trade for any player holding {@code (tagName, tagValue)}. Locked players see
+     * a configurable message instead of processing the trade. Works even on trades without
+     * a usage limit. Stays held until {@link #unlockTrade} is called.
+     *
+     * @param shopUuid The UUID of the shop the trade belongs to.
+     * @param position The 1-based position of the trade within the shop.
+     * @param tagName  Player-tag name to lock against.
+     * @param tagValue Value of that tag; only players whose tag equals this are blocked.
+     */
+    void lockTrade(@NotNull UUID shopUuid, int position,
+                   @NotNull String tagName, @NotNull Object tagValue);
+
+    /**
+     * Releases a lock previously acquired through {@link #lockTrade}. No-op if no matching
+     * lock is currently held.
+     */
+    void unlockTrade(@NotNull UUID shopUuid, int position,
+                     @NotNull String tagName, @NotNull Object tagValue);
+
+    /**
+     * @return {@code true} if the trade is currently locked for the player by either an
+     * active warm-up of their personal cache or an API lock matching one of their tags.
+     */
+    boolean isTradeLocked(@NotNull UUID shopUuid, int position, @NotNull UUID playerUuid);
+
+    /**
      * Get the current player modifier
      *
      * @param uuid The UUID of the player.

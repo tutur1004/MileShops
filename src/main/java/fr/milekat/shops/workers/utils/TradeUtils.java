@@ -7,6 +7,7 @@ import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.api.classes.TradeMode;
 import fr.milekat.shops.api.events.TradeCompleteEvent;
 import fr.milekat.shops.hooks.MileBanks;
+import fr.milekat.shops.storage.CacheManager;
 import fr.milekat.shops.workers.gui.InventoryStorage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -159,6 +160,18 @@ public class TradeUtils {
                                 @NotNull Shop shop,
                                 @NotNull Trade trade,
                                 boolean multiple) {
+        //  Trade locks — warm-up still running for this player, or an external plugin holds
+        //  an API lock matching one of the player's tag values. Applies to unlimited trades too.
+        Map<String, Object> playerTagsForLock = API.getPlayerTagsStatic(player.getUniqueId());
+        if (CacheManager.isTradeLockedForPlayer(
+                trade.getShopUuid(), trade.getTradePosition(), player.getUniqueId(),
+                playerTagsForLock != null ? playerTagsForLock : Map.of())) {
+            Main.message(player, Main.getConfigs().getMessage(
+                    "messages.gui.chest-shop.messages.trade-locked",
+                    "&cThis trade is temporarily locked, please retry in a moment."));
+            return 0;
+        }
+
         //  Set the trade requirements (item + optional tag)
         List<TradeRequirement> tradeRequirements = new LinkedList<>();
         tradeRequirements.add(new TradeRequirement(trade.getFirstItem().clone(), trade.getFirstItemTag()));

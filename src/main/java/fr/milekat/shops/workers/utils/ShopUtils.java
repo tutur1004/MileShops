@@ -3,6 +3,7 @@ package fr.milekat.shops.workers.utils;
 import fr.milekat.shops.Main;
 import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
+import fr.milekat.shops.storage.CacheManager;
 import fr.milekat.shops.workers.gui.InventoryShop;
 import fr.milekat.shops.workers.gui.ShopAdminSession;
 import fr.milekat.shops.workers.gui.InventoryShopShape;
@@ -11,6 +12,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,11 +51,31 @@ public class ShopUtils {
         Map<String, Object> playerTags = Main.PLAYER_TAGS.get(playerUuid);
         if (playerTags == null || playerTags.isEmpty()) return;
 
+        // Collect (trade, tags-to-warm) up-front and acquire warm-up locks on the main path.
+        // Acquiring before the async task starts means the player cannot beat the lock by
+        // clicking a trade between scheduling and the task actually running.
+        List<Trade> toWarm;
+        try {
+            toWarm = Main.getStorage().getCacheTrades(shopUuid);
+        } catch (Exception ex) {
+            Main.getMileLogger().debug("Trade-uses cache warm-up: cache trades fetch failed: "
+                    + ex.getMessage());
+            return;
+        }
+        List<Trade> locked = new ArrayList<>();
+        for (Trade trade : toWarm) {
+            if (!trade.isUsageLimited()) continue;
+            boolean playerHasAny = trade.getMaxTradeUses().keySet().stream()
+                    .anyMatch(playerTags::containsKey);
+            if (!playerHasAny) continue;
+            CacheManager.lockWarmup(trade.getShopUuid(), trade.getTradePosition(), playerUuid);
+            locked.add(trade);
+        }
+        if (locked.isEmpty()) return;
+
         Bukkit.getScheduler().runTaskAsynchronously(Main.getInstance(), () -> {
-            try {
-                List<Trade> trades = Main.getStorage().getCacheTrades(shopUuid);
-                for (Trade trade : trades) {
-                    if (!trade.isUsageLimited()) continue;
+            for (Trade trade : locked) {
+                try {
                     for (String tagName : trade.getMaxTradeUses().keySet()) {
                         Object value = playerTags.get(tagName);
                         if (value == null) continue;
@@ -62,10 +84,15 @@ public class ShopUtils {
                         // getCacheTradeUses stores the count in TRADE_USES_CACHE
                         Main.getStorage().getCacheTradeUses(singleTag, trade);
                     }
+                } catch (Exception ex) {
+                    Main.getMileLogger().debug("Trade-uses cache warm-up failed for trade "
+                            + trade.getShopUuid() + "#" + trade.getTradePosition() + ": "
+                            + ex.getMessage());
+                } finally {
+                    // Release as soon as THIS trade is done so the player can act on it
+                    // while the next ones are still warming.
+                    CacheManager.unlockWarmup(trade.getShopUuid(), trade.getTradePosition(), playerUuid);
                 }
-            } catch (Exception ex) {
-                Main.getMileLogger().debug("Trade-uses cache warm-up failed for shop "
-                        + shopUuid + ": " + ex.getMessage());
             }
         });
     }

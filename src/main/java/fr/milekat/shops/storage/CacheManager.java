@@ -5,6 +5,8 @@ import fr.milekat.shops.api.classes.Shop;
 import fr.milekat.shops.api.classes.Trade;
 import fr.milekat.shops.storage.utils.PlayerTradeMode;
 import fr.milekat.shops.storage.utils.ShopTrades;
+import fr.milekat.shops.storage.utils.TradePlayerLock;
+import fr.milekat.shops.storage.utils.TradeTagLock;
 import fr.milekat.shops.storage.utils.TradeUsesEntry;
 import fr.milekat.shops.storage.utils.TradeUsesKey;
 import fr.milekat.shops.api.classes.TradeMode;
@@ -231,5 +233,57 @@ public interface CacheManager {
                 new TradeUsesKey(shopUuid, position, tagName, tagValue),
                 (k, e) -> new TradeUsesEntry(e.count() + delta, e.fetchedAt())
         );
+    }
+
+    // =========================================================================
+    //  Trade locks — warm-up (per-player) + API (per-tag-value)
+    // =========================================================================
+
+    /** Acquire a warm-up lock blocking this single player from this trade. */
+    static void lockWarmup(@NotNull UUID shopUuid, int position, @NotNull UUID playerUuid) {
+        Main.TRADE_WARMUP_LOCKS.add(new TradePlayerLock(shopUuid, position, playerUuid));
+    }
+
+    /** Release the warm-up lock for this player + trade. */
+    static void unlockWarmup(@NotNull UUID shopUuid, int position, @NotNull UUID playerUuid) {
+        Main.TRADE_WARMUP_LOCKS.remove(new TradePlayerLock(shopUuid, position, playerUuid));
+    }
+
+    /** Acquire a per-tag-value API lock; any player carrying {@code (tagName, tagValue)} is blocked. */
+    static void lockTrade(@NotNull UUID shopUuid, int position,
+                          @NotNull String tagName, @NotNull Object tagValue) {
+        Main.TRADE_API_LOCKS.add(new TradeTagLock(shopUuid, position, tagName, tagValue));
+    }
+
+    /**
+     * Release a per-tag-value API lock and drop the matching trade-uses cache entry so
+     * the next limit check re-fetches from storage. The invalidation is unconditional:
+     * a plugin generally locks because it is mutating the underlying counter, so the
+     * cached value can no longer be trusted once the lock is released.
+     */
+    static void unlockTrade(@NotNull UUID shopUuid, int position,
+                            @NotNull String tagName, @NotNull Object tagValue) {
+        Main.TRADE_API_LOCKS.remove(new TradeTagLock(shopUuid, position, tagName, tagValue));
+        invalidateTradeUses(shopUuid, position, tagName, tagValue);
+    }
+
+    /**
+     * True if any active lock — warm-up for this player, or API lock matching one of the
+     * player's tag values — blocks this trade for this player.
+     */
+    static boolean isTradeLockedForPlayer(@NotNull UUID shopUuid, int position,
+                                          @NotNull UUID playerUuid,
+                                          @NotNull Map<String, Object> playerTags) {
+        if (Main.TRADE_WARMUP_LOCKS.contains(new TradePlayerLock(shopUuid, position, playerUuid))) {
+            return true;
+        }
+        if (Main.TRADE_API_LOCKS.isEmpty()) return false;
+        for (Map.Entry<String, Object> e : playerTags.entrySet()) {
+            if (Main.TRADE_API_LOCKS.contains(
+                    new TradeTagLock(shopUuid, position, e.getKey(), e.getValue()))) {
+                return true;
+            }
+        }
+        return false;
     }
 }

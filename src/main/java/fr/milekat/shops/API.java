@@ -120,6 +120,25 @@ public class API implements MileShopsIAPI {
     }
 
     @Override
+    public void lockTrade(@NotNull UUID shopUuid, int position,
+                          @NotNull String tagName, @NotNull Object tagValue) {
+        CacheManager.lockTrade(shopUuid, position, tagName, tagValue);
+    }
+
+    @Override
+    public void unlockTrade(@NotNull UUID shopUuid, int position,
+                            @NotNull String tagName, @NotNull Object tagValue) {
+        CacheManager.unlockTrade(shopUuid, position, tagName, tagValue);
+    }
+
+    @Override
+    public boolean isTradeLocked(@NotNull UUID shopUuid, int position, @NotNull UUID playerUuid) {
+        Map<String, Object> tags = getPlayerTagsStatic(playerUuid);
+        return CacheManager.isTradeLockedForPlayer(shopUuid, position, playerUuid,
+                tags != null ? tags : Map.of());
+    }
+
+    @Override
     public double getPlayerModifier(@NotNull UUID uuid) {
         return getPlayerModifierStatic(uuid);
     }
